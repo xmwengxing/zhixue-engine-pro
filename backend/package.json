@@ -45,6 +45,6 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8",
-    "fast-check": "^3.24.2"
+    "fast-check": "^3.23.0"
   }
 }
