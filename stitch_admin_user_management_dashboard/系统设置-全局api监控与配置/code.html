@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>系统设置 - 全局API监控与配置</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4913ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0f0c1d",
+                        "card-dark": "#1a162e",
+                        "border-dark": "#2c2348"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-placeholder {
+            background: linear-gradient(180deg, rgba(73, 19, 236, 0.05) 0%, rgba(73, 19, 236, 0) 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-slate-900 dark:text-white font-display">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-solid border-slate-200 dark:border-border-dark bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 py-3">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">school</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">智能进阶训练平台</h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-[#a092c9] hover:text-primary dark:hover:text-white text-sm font-medium transition-colors" href="#">控制台</a>
+<a class="text-slate-500 dark:text-[#a092c9] hover:text-primary dark:hover:text-white text-sm font-medium transition-colors" href="#">教学管理</a>
+<a class="text-slate-500 dark:text-[#a092c9] hover:text-primary dark:hover:text-white text-sm font-medium transition-colors" href="#">用户管理</a>
+<a class="text-primary dark:text-white text-sm font-bold border-b-2 border-primary pb-1" href="#">系统设置</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="bg-slate-100 dark:bg-card-dark border-none rounded-lg pl-9 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="搜索配置项..."/>
+</div>
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-card-dark text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-border-dark transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-card-dark text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-border-dark transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<div class="max-w-[1440px] mx-auto flex">
+<!-- Side Navigation -->
+<aside class="w-64 hidden lg:flex flex-col gap-4 p-6 border-r border-slate-200 dark:border-border-dark min-h-[calc(100vh-64px)]">
+<div class="mb-4">
+<h1 class="text-slate-900 dark:text-white text-sm font-bold uppercase tracking-wider">系统管理后台</h1>
+<p class="text-slate-500 dark:text-[#a092c9] text-xs mt-1">管理员: SuperAdmin_01</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#a092c9] hover:bg-slate-100 dark:hover:bg-border-dark transition-all" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="text-sm font-medium">运行概览</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 dark:text-white transition-all" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1">monitoring</span>
+<span class="text-sm font-medium">API监控与配置</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#a092c9] hover:bg-slate-100 dark:hover:bg-border-dark transition-all" href="#">
+<span class="material-symbols-outlined text-xl">memory</span>
+<span class="text-sm font-medium">模型库管理</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#a092c9] hover:bg-slate-100 dark:hover:bg-border-dark transition-all" href="#">
+<span class="material-symbols-outlined text-xl">security</span>
+<span class="text-sm font-medium">安全审计</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#a092c9] hover:bg-slate-100 dark:hover:bg-border-dark transition-all" href="#">
+<span class="material-symbols-outlined text-xl">payments</span>
+<span class="text-sm font-medium">费用账单</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-border-dark">
+<div class="bg-primary/5 dark:bg-primary/10 rounded-xl p-4 border border-primary/20">
+<p class="text-xs font-bold text-primary mb-2 uppercase">系统负载</p>
+<div class="w-full bg-slate-200 dark:bg-border-dark h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[42%]"></div>
+</div>
+<p class="text-[10px] text-slate-500 dark:text-[#a092c9] mt-2">正常运行时间: 14d 6h 12m</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 p-6 md:p-8 overflow-y-auto">
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h1 class="text-slate-900 dark:text-white text-3xl font-black tracking-tight mb-2">全局API监控与配置</h1>
+<p class="text-slate-500 dark:text-[#a092c9] text-sm">实时监控 AI 接口健康度、消耗分布及系统核心策略配置</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 bg-slate-100 dark:bg-card-dark text-slate-700 dark:text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 dark:hover:bg-border-dark transition-all">
+<span class="material-symbols-outlined text-lg">download</span>
+                        数据导出
+                    </button>
+<button class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
+<span class="material-symbols-outlined text-lg">bolt</span>
+                        连通性一键测试
+                    </button>
+</div>
+</div>
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-slate-200 dark:border-border-dark">
+<div class="flex justify-between items-start mb-4">
+<p class="text-slate-500 dark:text-[#a092c9] text-xs font-bold uppercase tracking-wider">今日调用总量</p>
+<span class="text-emerald-500 text-xs font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">+12.4%</span>
+</div>
+<p class="text-2xl font-black text-slate-900 dark:text-white">1,284,902</p>
+<p class="text-slate-400 dark:text-[#a092c9]/50 text-[10px] mt-1">vs 昨日同期: 1,142,300</p>
+</div>
+<div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-slate-200 dark:border-border-dark">
+<div class="flex justify-between items-start mb-4">
+<p class="text-slate-500 dark:text-[#a092c9] text-xs font-bold uppercase tracking-wider">总 Token 消耗</p>
+<span class="text-emerald-500 text-xs font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">+8.2%</span>
+</div>
+<p class="text-2xl font-black text-slate-900 dark:text-white">42.8M</p>
+<p class="text-slate-400 dark:text-[#a092c9]/50 text-[10px] mt-1">昨日总计: 39.5M Tokens</p>
+</div>
+<div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-slate-200 dark:border-border-dark">
+<div class="flex justify-between items-start mb-4">
+<p class="text-slate-500 dark:text-[#a092c9] text-xs font-bold uppercase tracking-wider">平均响应延迟</p>
+<span class="text-orange-500 text-xs font-bold bg-orange-500/10 px-1.5 py-0.5 rounded">-15.3%</span>
+</div>
+<p class="text-2xl font-black text-slate-900 dark:text-white">842ms</p>
+<p class="text-slate-400 dark:text-[#a092c9]/50 text-[10px] mt-1">P95 延迟: 1,420ms</p>
+</div>
+<div class="bg-white dark:bg-card-dark rounded-xl p-5 border border-slate-200 dark:border-border-dark">
+<div class="flex justify-between items-start mb-4">
+<p class="text-slate-500 dark:text-[#a092c9] text-xs font-bold uppercase tracking-wider">系统错误率</p>
+<span class="text-emerald-500 text-xs font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">-0.02%</span>
+</div>
+<p class="text-2xl font-black text-slate-900 dark:text-white">0.04%</p>
+<p class="text-slate-400 dark:text-[#a092c9]/50 text-[10px] mt-1">最近1小时无严重故障</p>
+</div>
+</div>
+<!-- Real-time Monitoring Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<!-- Line Chart: Request Frequency -->
+<div class="lg:col-span-2 bg-white dark:bg-card-dark rounded-xl p-6 border border-slate-200 dark:border-border-dark">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">实时调用频率 (RPM)</h3>
+<div class="flex gap-2">
+<span class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#a092c9]">
+<span class="size-2 rounded-full bg-primary"></span> 成功
+                            </span>
+<span class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#a092c9]">
+<span class="size-2 rounded-full bg-red-500"></span> 失败
+                            </span>
+</div>
+</div>
+<div class="h-64 flex flex-col justify-end gap-1 relative overflow-hidden rounded-lg chart-placeholder p-4 border border-primary/5">
+<div class="absolute inset-0 flex items-end justify-between px-4 pb-2">
+<!-- Simple SVG Visualization for Line Chart -->
+<svg class="w-full h-40" preserveaspectratio="none" viewbox="0 0 1000 100">
+<path d="M0,80 Q100,20 200,60 T400,30 T600,70 T800,20 T1000,50" fill="none" stroke="#4913ec" stroke-width="3"></path>
+<path d="M0,80 Q100,20 200,60 T400,30 T600,70 T800,20 T1000,50 L1000,100 L0,100 Z" fill="url(#grad1)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#4913ec;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#4913ec;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 dark:text-[#a092c9] z-10">
+<span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span><span>16:00</span><span>现在</span>
+</div>
+</div>
+</div>
+<!-- Pie Chart: Distribution -->
+<div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-slate-200 dark:border-border-dark flex flex-col">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-6">服务商消耗分布</h3>
+<div class="flex-1 flex flex-col items-center justify-center py-4">
+<div class="relative size-40 rounded-full border-[16px] border-slate-100 dark:border-border-dark flex items-center justify-center">
+<div class="absolute inset-[-16px] size-40 rounded-full border-[16px] border-primary border-r-transparent border-b-transparent rotate-45"></div>
+<div class="absolute inset-[-16px] size-40 rounded-full border-[16px] border-cyan-400 border-l-transparent border-t-transparent border-b-transparent -rotate-12"></div>
+<div class="text-center">
+<p class="text-2xl font-black text-slate-900 dark:text-white">62%</p>
+<p class="text-[10px] text-slate-500 dark:text-[#a092c9] uppercase font-bold">OpenAI</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mt-4">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-primary"></span>
+<span class="text-xs text-slate-600 dark:text-[#a092c9]">OpenAI (62%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-cyan-400"></span>
+<span class="text-xs text-slate-600 dark:text-[#a092c9]">Anthropic (24%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-indigo-400"></span>
+<span class="text-xs text-slate-600 dark:text-[#a092c9]">DeepSeek (10%)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-slate-400"></span>
+<span class="text-xs text-slate-600 dark:text-[#a092c9]">其他 (4%)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Configuration Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Global Config Items -->
+<div class="space-y-6">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-primary">settings_applications</span>
+                        通用运行策略
+                    </h2>
+<div class="bg-white dark:bg-card-dark rounded-xl p-6 border border-slate-200 dark:border-border-dark space-y-6">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">默认主服务商</p>
+<p class="text-xs text-slate-500 dark:text-[#a092c9]">系统默认使用的 AI 模型接口服务</p>
+</div>
+<select class="bg-slate-100 dark:bg-border-dark border-none rounded-lg text-sm min-w-40 focus:ring-primary text-slate-900 dark:text-white">
+<option>OpenAI - GPT-4o</option>
+<option>Anthropic - Claude 3.5 Sonnet</option>
+<option>DeepSeek - Chat V3</option>
+</select>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">灾备备用服务商</p>
+<p class="text-xs text-slate-500 dark:text-[#a092c9]">当主服务商响应超过阈值时自动切换</p>
+</div>
+<select class="bg-slate-100 dark:bg-border-dark border-none rounded-lg text-sm min-w-40 focus:ring-primary text-slate-900 dark:text-white">
+<option>Anthropic - Claude 3.5 Sonnet</option>
+<option>DeepSeek - Chat V3</option>
+<option>Google - Gemini 1.5 Pro</option>
+</select>
+</div>
+<div class="h-px bg-slate-100 dark:bg-border-dark w-full"></div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">敏感词过滤开关</p>
+<p class="text-xs text-slate-500 dark:text-[#a092c9]">针对学生训练内容的合规性审计</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-border-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">流式响应 (Stream)</p>
+<p class="text-xs text-slate-500 dark:text-[#a092c9]">启用后模型输出内容将实时打字呈现</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-border-dark peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Connectivity Status List -->
+<div class="space-y-6">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 px-1">
+<span class="material-symbols-outlined text-emerald-500">health_and_safety</span>
+                        健康度实时状态
+                    </h2>
+<div class="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden">
+<table class="w-full text-left text-sm">
+<thead class="bg-slate-50 dark:bg-border-dark/50 text-slate-500 dark:text-[#a092c9] text-xs uppercase font-bold">
+<tr>
+<th class="px-6 py-4">服务提供商</th>
+<th class="px-6 py-4">延迟 (ms)</th>
+<th class="px-6 py-4">可用性</th>
+<th class="px-6 py-4 text-right">上次检测</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-border-dark">
+<tr>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-slate-100 dark:bg-border-dark rounded flex items-center justify-center font-bold text-[10px]">OA</div>
+<span class="font-medium text-slate-900 dark:text-white">OpenAI API</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-slate-600 dark:text-[#a092c9]">412ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-emerald-500 text-xs font-bold">
+<span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            正常
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right text-slate-400 dark:text-[#a092c9]/50 text-xs">刚刚</td>
+</tr>
+<tr>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-slate-100 dark:bg-border-dark rounded flex items-center justify-center font-bold text-[10px]">AN</div>
+<span class="font-medium text-slate-900 dark:text-white">Anthropic</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-slate-600 dark:text-[#a092c9]">890ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-orange-500 text-xs font-bold">
+<span class="size-1.5 rounded-full bg-orange-500"></span>
+                                            高延迟
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right text-slate-400 dark:text-[#a092c9]/50 text-xs">2 分钟前</td>
+</tr>
+<tr>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-slate-100 dark:bg-border-dark rounded flex items-center justify-center font-bold text-[10px]">DS</div>
+<span class="font-medium text-slate-900 dark:text-white">DeepSeek</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-slate-600 dark:text-[#a092c9]">305ms</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-emerald-500 text-xs font-bold">
+<span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                            正常
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right text-slate-400 dark:text-[#a092c9]/50 text-xs">刚刚</td>
+</tr>
+<tr>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-slate-100 dark:bg-border-dark rounded flex items-center justify-center font-bold text-[10px]">GM</div>
+<span class="font-medium text-slate-900 dark:text-white">Google Gemini</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-slate-600 dark:text-[#a092c9]">--</span>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-red-500 text-xs font-bold">
+<span class="size-1.5 rounded-full bg-red-500"></span>
+                                            连接失败
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right text-slate-400 dark:text-[#a092c9]/50 text-xs">5 分钟前</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 bg-slate-50 dark:bg-border-dark/30 border-t border-slate-100 dark:border-border-dark">
+<button class="w-full text-center text-xs font-bold text-primary hover:underline">查看所有 12 个服务商状态</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Save Bar (Mock) -->
+<div class="fixed bottom-8 right-8 z-40">
+<button class="flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-full font-bold shadow-2xl shadow-primary/40 hover:-translate-y-1 transition-all">
+<span class="material-symbols-outlined">save</span>
+                    保存所有配置更改
+                </button>
+</div>
+</main>
+</div>
+</body></html>

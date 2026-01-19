@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>家长端 - 添加/绑定学员账号</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4913ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#151022",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3f3267;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-[#2c2348] px-10 py-3 bg-white dark:bg-background-dark">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">智能提升训练平台</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="flex items-center gap-9">
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">首页</a>
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">学员管理</a>
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">课程中心</a>
+<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary" href="#">个人中心</a>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQcZVQEN4rt2aqLd-3S5srpxi7Wem5opmibOxhexVUg6HdedEX9w0m42FzUqeqi7-mK0rrzp5p20J7cPrpVLpgsz_MMb5F3SXe_-R5fHsTmrIuSZdsNyYfwGJLbNYXYveBgdbv7Qx5a2MJ4_JBQ6iyQZZ4Iich8BDTa8a63c8QbF32Gho4EwbA97QB9wCuM7akiW58e4cyuHyE5pfFasmWkYpLPEuPY35C906TW_grRfkI4JtIkuWoQJo2rVbSJ86-wvGPElDfmW4");'></div>
+</div>
+</header>
+<main class="flex-1 flex items-center justify-center p-6 md:p-12">
+<!-- Modal Container -->
+<div class="w-full max-w-[1024px] bg-white dark:bg-[#1c162e] rounded-xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-slate-200 dark:border-[#2c2348]">
+<!-- Left Content Area (Form) -->
+<div class="flex-1 p-8 lg:p-12">
+<!-- Page Heading -->
+<div class="mb-8">
+<h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">添加/绑定学员账号</h1>
+<p class="text-slate-500 dark:text-[#a092c9] text-base mt-2">为您的孩子开启智能学习之旅，同步学习数据与报告</p>
+</div>
+<!-- Segmented Buttons -->
+<div class="flex mb-8">
+<div class="flex h-12 w-full items-center justify-center rounded-xl bg-slate-100 dark:bg-[#2c2348] p-1.5">
+<label class="flex cursor-pointer h-full grow items-center justify-center rounded-lg px-4 transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-[#151122] has-[:checked]:shadow-md text-slate-500 dark:text-[#a092c9] has-[:checked]:text-primary dark:has-[:checked]:text-white text-sm font-bold leading-normal">
+<span class="truncate">直接绑定已有账号</span>
+<input checked="" class="hidden" name="mode-switch" type="radio" value="bind"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center rounded-lg px-4 transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-[#151122] has-[:checked]:shadow-md text-slate-500 dark:text-[#a092c9] has-[:checked]:text-primary dark:has-[:checked]:text-white text-sm font-bold leading-normal">
+<span class="truncate">创建新学员账号</span>
+<input class="hidden" name="mode-switch" type="radio" value="create"/>
+</label>
+</div>
+</div>
+<!-- Form Content: Mode 2 - Create New Student (Detailed Version) -->
+<div class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Student Name -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-bold">孩子姓名</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#a092c9] text-[20px]">person</span>
+<input class="flex w-full rounded-lg border border-slate-200 dark:border-[#3f3267] bg-slate-50 dark:bg-[#201933] h-12 pl-12 pr-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-[#a092c9] text-sm" placeholder="请输入孩子姓名"/>
+</div>
+</div>
+<!-- Gender Selection -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-bold">性别</label>
+<div class="flex gap-4 h-12">
+<button class="flex-1 rounded-lg border-2 border-primary bg-primary/10 text-primary font-bold text-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">male</span> 男生
+                                    </button>
+<button class="flex-1 rounded-lg border border-slate-200 dark:border-[#3f3267] bg-slate-50 dark:bg-[#201933] text-slate-500 dark:text-[#a092c9] text-sm flex items-center justify-center gap-2 hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">female</span> 女生
+                                    </button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Grade Select -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-bold">就读年级</label>
+<select class="flex w-full rounded-lg border border-slate-200 dark:border-[#3f3267] bg-slate-50 dark:bg-[#201933] h-12 px-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary text-sm appearance-none">
+<option>小学三年级</option>
+<option>小学四年级</option>
+<option>小学五年级</option>
+<option>小学六年级</option>
+<option>初中一年级</option>
+</select>
+</div>
+<!-- Textbook Select -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-bold">教材版本</label>
+<select class="flex w-full rounded-lg border border-slate-200 dark:border-[#3f3267] bg-slate-50 dark:bg-[#201933] h-12 px-4 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary text-sm appearance-none">
+<option>人教版 (PEP)</option>
+<option>北师大版</option>
+<option>苏教版</option>
+<option>沪教版</option>
+</select>
+</div>
+</div>
+<!-- Password -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-bold">初始密码</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#a092c9] text-[20px]">lock</span>
+<input class="flex w-full rounded-lg border border-slate-200 dark:border-[#3f3267] bg-slate-50 dark:bg-[#201933] h-12 pl-12 pr-12 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-[#a092c9] text-sm" placeholder="建议设置6位以上数字或字母" type="password"/>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#a092c9] text-[20px] cursor-pointer">visibility</span>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-4">
+<button class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">person_add</span>
+                                生成账号并绑定
+                            </button>
+<p class="text-center text-xs text-slate-400 dark:text-[#a092c9] mt-4">点击即代表同意《用户服务协议》与《隐私政策》</p>
+</div>
+</div>
+</div>
+<!-- Right Sidebar (Tips) -->
+<div class="w-full md:w-[320px] bg-slate-50 dark:bg-[#251f3d] p-8 border-l border-slate-200 dark:border-[#2c2348]">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary">lightbulb</span>
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">温馨提示</h3>
+</div>
+<div class="space-y-8">
+<div>
+<h4 class="text-primary text-sm font-bold mb-2">什么是授权码？</h4>
+<p class="text-slate-600 dark:text-[#a092c9] text-sm leading-relaxed">
+                                授权码是学员在校方系统中的唯一安全凭证。通过授权码绑定，您可以实时查看孩子的学习进度、错题本及AI生成的周报。
+                            </p>
+</div>
+<div>
+<h4 class="text-primary text-sm font-bold mb-3">如何获取授权码？</h4>
+<ul class="space-y-4">
+<li class="flex gap-3">
+<div class="size-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</div>
+<p class="text-slate-600 dark:text-[#a092c9] text-sm">联系班主任或科任老师获取纸质授权单</p>
+</li>
+<li class="flex gap-3">
+<div class="size-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">2</div>
+<p class="text-slate-600 dark:text-[#a092c9] text-sm">在学员端APP的“设置-个人信息”中查看</p>
+</li>
+<li class="flex gap-3">
+<div class="size-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">3</div>
+<p class="text-slate-600 dark:text-[#a092c9] text-sm">关注学校官方公众号，在个人中心查询</p>
+</li>
+</ul>
+</div>
+<div class="p-4 rounded-xl bg-white dark:bg-[#1c162e] border border-slate-200 dark:border-[#3f3267]">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-amber-500">support_agent</span>
+<span class="text-slate-700 dark:text-white text-sm font-bold">遇到问题？</span>
+</div>
+<p class="text-slate-500 dark:text-[#a092c9] text-xs">如有任何疑问，请致电客服热线：400-123-4567 (工作日 9:00-18:00)</p>
+</div>
+</div>
+<!-- Decorative Graphic -->
+<div class="mt-12 flex justify-center opacity-40">
+<div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-purple-600 blur-2xl absolute" data-alt="Abstract colorful gradient decoration"></div>
+<span class="material-symbols-outlined text-[80px] text-primary relative z-10">hub</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="px-10 py-6 text-center text-slate-400 dark:text-[#a092c9] text-sm border-t border-slate-200 dark:border-[#2c2348]">
+            © 2024 智能提升训练平台 版权所有 | 浙ICP备88888888号-1
+        </footer>
+</div>
+</body></html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>训练舱 - 个性化训练计划生成中</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glow-border {
+            box-shadow: 0 0 15px rgba(19, 91, 236, 0.3);
+        }
+        .ai-pulse {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-[#232f48] px-10 py-3 bg-white dark:bg-[#111722] sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary">
+<svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">训练舱</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-9">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">首页</a>
+<a class="text-sm font-medium text-primary" href="#">学习中心</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">我的课程</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">学情分析</a>
+</nav>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-[#232f48] hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-[#232f48] hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-xl">account_circle</span>
+</button>
+</div>
+<div class="bg-primary/10 rounded-full size-10 flex items-center justify-center border border-primary/20 overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="Student profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCxMwv6PhceJymcaM1u-5AlPoTG_UsR3oOROSYCV9PxcAnZYdALpKVasvXI85W1s6J-m0upMDTWvncPUHUYAhrTD4yPX8-mwlnwDHfbDqtZLz8OB1RA5zcXGo651Z2A1qsVdfVY10cnTrhqRN218FP3zPOYLHjP4JOM4MT3KTYgUgZc3YbOnYCt86r-l_w4UO1b4DMiPBvAiLOzmC8NvNNLYuxyjGtsoIqBPnInKybaGw1rEUVSHrnX9uE7hGNewSOMB_jV36NVgzc')"></div>
+</div>
+</div>
+</header>
+<div class="flex max-w-[1440px] mx-auto px-6 py-8 gap-8">
+<!-- Left Navigation Rail (Dynamic Training Path) -->
+<aside class="w-72 flex-shrink-0 flex flex-col gap-6 bg-white dark:bg-[#111722] p-6 rounded-xl border border-slate-200 dark:border-[#232f48] h-[calc(100vh-140px)] sticky top-24">
+<div class="flex flex-col gap-1">
+<h1 class="text-lg font-bold">训练路径</h1>
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<p class="text-slate-500 dark:text-[#92a4c9] text-xs font-medium uppercase tracking-wider">AI实时生成中</p>
+</div>
+</div>
+<div class="flex flex-col gap-4 overflow-y-auto">
+<div class="flex items-center gap-4 px-4 py-3 rounded-lg bg-primary text-white glow-border transition-all">
+<span class="material-symbols-outlined">book_5</span>
+<p class="text-sm font-bold">Step 1: 基础巩固</p>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 rounded-lg bg-slate-50 dark:bg-[#232f48] border border-primary/30 dark:border-primary/20 transition-all">
+<span class="material-symbols-outlined text-primary">track_changes</span>
+<p class="text-sm font-semibold">Step 2: 专项突破</p>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-dashed border-slate-300 dark:border-[#324467] opacity-60">
+<span class="material-symbols-outlined">content_copy</span>
+<p class="text-sm font-medium">Step 3: 强化练习</p>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-dashed border-slate-300 dark:border-[#324467] opacity-40">
+<span class="material-symbols-outlined">edit_note</span>
+<p class="text-sm font-medium">Step 4: 模拟演练</p>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 rounded-lg border border-dashed border-slate-300 dark:border-[#324467] opacity-20">
+<span class="material-symbols-outlined">emoji_events</span>
+<p class="text-sm font-medium">Step 5: 总结提升</p>
+</div>
+</div>
+<div class="mt-auto">
+<button class="w-full flex items-center justify-center rounded-lg h-11 bg-primary hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-primary/20">
+<span>返回首页</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col gap-6">
+<!-- Dynamic Heading Section -->
+<div class="bg-white dark:bg-[#111722] p-8 rounded-xl border border-slate-200 dark:border-[#232f48] relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined text-4xl ai-pulse">psychology</span>
+<span class="text-sm font-bold tracking-widest uppercase">Intelligent Analysis</span>
+</div>
+<h2 class="text-3xl md:text-4xl font-black leading-tight tracking-tight max-w-2xl">
+                        AI正在分析你的答题情况并生成训练计划...
+                    </h2>
+<p class="text-slate-500 dark:text-[#92a4c9] text-lg font-normal max-w-xl">
+                        基于你的前测数据，我们正在计算最佳学习路径。预计还需要 5 秒钟。
+                    </p>
+</div>
+</div>
+<!-- Stats & Knowledge Report -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                        知识点掌握度报告
+                    </h3>
+<span class="text-xs text-slate-500 bg-slate-100 dark:bg-[#232f48] px-2 py-1 rounded">实时更新</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- High Mastery Card -->
+<div class="group flex flex-col gap-4 bg-white dark:bg-[#111722] p-6 rounded-xl border border-slate-200 dark:border-[#324467] hover:border-primary/50 transition-all">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-medium">分数概念</p>
+<p class="text-3xl font-bold mt-1">90%</p>
+</div>
+<div class="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-full text-xs font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+15%</span>
+</div>
+</div>
+<div class="w-full bg-slate-100 dark:bg-[#232f48] h-2 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full rounded-full w-[90%] shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+</div>
+<p class="text-xs text-slate-400">你已经完美掌握了基础定义！</p>
+</div>
+<!-- Low Mastery Card -->
+<div class="group flex flex-col gap-4 bg-white dark:bg-[#111722] p-6 rounded-xl border border-slate-200 dark:border-[#324467] hover:border-orange-500/50 transition-all">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-medium">分数计算</p>
+<p class="text-3xl font-bold mt-1">40%</p>
+</div>
+<div class="flex items-center gap-1 text-orange-500 bg-orange-500/10 px-2 py-1 rounded-full text-xs font-bold">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span>-10%</span>
+</div>
+</div>
+<div class="w-full bg-slate-100 dark:bg-[#232f48] h-2 rounded-full overflow-hidden">
+<div class="bg-orange-500 h-full rounded-full w-[40%] shadow-[0_0_8px_rgba(249,115,22,0.5)]"></div>
+</div>
+<p class="text-xs text-orange-400 font-medium">重点攻克领域：异分母加减法</p>
+</div>
+</div>
+</div>
+<!-- AI Assistant Feedback Section -->
+<div class="mt-4 flex gap-6 items-end">
+<div class="flex-shrink-0 relative">
+<div class="size-16 rounded-2xl bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined text-white text-4xl">smart_toy</span>
+</div>
+<div class="absolute -bottom-1 -right-1 size-5 bg-emerald-500 border-4 border-white dark:border-background-dark rounded-full"></div>
+</div>
+<div class="flex-1 bg-white dark:bg-[#111722] p-6 rounded-2xl rounded-bl-none border border-primary/20 shadow-xl relative">
+<div class="absolute left-0 bottom-0 transform -translate-x-1/2 translate-y-0 w-0 h-0 border-t-[10px] border-t-transparent border-r-[15px] border-r-white dark:border-r-[#111722] border-b-[10px] border-b-transparent"></div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-primary tracking-widest">AI 学习导师</span>
+<div class="flex gap-1">
+<span class="size-1 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+<span class="size-1 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+<span class="size-1 bg-primary rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+</div>
+</div>
+<p class="text-lg font-medium leading-relaxed">
+                            根据你的测试表现，我为你定制了专项训练，我们要重点攻克<span class="text-primary font-bold decoration-2 underline-offset-4 underline">分数计算</span>哦！
+                        </p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer Decorative -->
+<footer class="mt-auto py-8 text-center border-t border-slate-200 dark:border-[#232f48]">
+<p class="text-slate-500 text-xs">© 2024 训练舱 AI 智能提分平台 - 你的个性化学习伙伴</p>
+</footer>
+</body></html>

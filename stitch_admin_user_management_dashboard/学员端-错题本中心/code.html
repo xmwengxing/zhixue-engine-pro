@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>学员端-错题本中心</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d121b] dark:text-gray-100 transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-[#e7ebf3] dark:border-gray-800 bg-white dark:bg-background-dark px-4 md:px-10 lg:px-40 py-3 flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#0d121b] dark:text-white text-xl font-bold leading-tight tracking-tight">智能提优平台</h2>
+</div>
+<div class="hidden lg:flex items-center gap-6">
+<a class="text-primary text-sm font-semibold border-b-2 border-primary pb-1" href="#">错题中心</a>
+<a class="text-[#4c669a] dark:text-gray-400 text-sm font-medium hover:text-primary" href="#">练习记录</a>
+<a class="text-[#4c669a] dark:text-gray-400 text-sm font-medium hover:text-primary" href="#">提优中心</a>
+<a class="text-[#4c669a] dark:text-gray-400 text-sm font-medium hover:text-primary" href="#">知识仓库</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<label class="hidden md:flex flex-col min-w-40 h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#4c669a] flex border-none bg-gray-100 dark:bg-gray-800 items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-gray-100 dark:bg-gray-800 text-[#0d121b] dark:text-white focus:ring-0 h-full placeholder:text-[#4c669a] px-4 rounded-r-lg text-sm" placeholder="搜索错题关键字" value=""/>
+</div>
+</label>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-[#0d121b] dark:text-white">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-gray-100 dark:bg-gray-800 text-[#0d121b] dark:text-white">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-gray-200" data-alt="Student user profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB3FgA8SHHXP5zLmEAOFlRdEWVq_cigPisVmXs8SZlFw91JxVSy--775iVS3p89C3X1XXxavt7UQ8uAfJKNyH1y3vRaMoffLAjsESpg400qeQrTXsjcEBn2jm_hv8nZwJJpzbs0DxQGs5v4Yr70ovcnpFKoRyltxFTDBxFlrLofZwspTf8MN7VlpX5L1dB4BXwnYJDsIawkwZCbLjKND0kOa2w5wO2_CBI91Tgav30WlykgeZSB6_ODc41f3AsZz2py9g9kmMVVF7Y");'></div>
+</div>
+</header>
+<main class="flex-1 px-4 md:px-10 lg:px-40 py-8">
+<div class="max-w-[1200px] mx-auto flex flex-col lg:flex-row gap-8">
+<!-- Main Content Area -->
+<div class="flex-1">
+<h3 class="text-[#0d121b] dark:text-white text-2xl font-bold mb-6">我的错题本</h3>
+<!-- Subject Tabs -->
+<div class="mb-6">
+<div class="flex border-b border-[#cfd7e7] dark:border-gray-800 gap-8 overflow-x-auto no-scrollbar">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-primary text-primary pb-3 pt-2 whitespace-nowrap" href="#">
+<span class="text-sm font-bold">全部科目</span>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-transparent text-[#4c669a] dark:text-gray-400 pb-3 pt-2 hover:text-primary whitespace-nowrap" href="#">
+<span class="text-sm font-bold">数学</span>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-transparent text-[#4c669a] dark:text-gray-400 pb-3 pt-2 hover:text-primary whitespace-nowrap" href="#">
+<span class="text-sm font-bold">英语</span>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-transparent text-[#4c669a] dark:text-gray-400 pb-3 pt-2 hover:text-primary whitespace-nowrap" href="#">
+<span class="text-sm font-bold">语文</span>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-transparent text-[#4c669a] dark:text-gray-400 pb-3 pt-2 hover:text-primary whitespace-nowrap" href="#">
+<span class="text-sm font-bold">物理</span>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-transparent text-[#4c669a] dark:text-gray-400 pb-3 pt-2 hover:text-primary whitespace-nowrap" href="#">
+<span class="text-sm font-bold">化学</span>
+</a>
+</div>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-3 mb-6 flex-wrap">
+<button class="flex h-9 items-center justify-center gap-x-2 rounded-full bg-primary text-white px-5 shadow-sm">
+<span class="text-sm font-medium">全部状态</span>
+</button>
+<button class="flex h-9 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-5 text-[#0d121b] dark:text-white hover:bg-gray-50 transition-colors">
+<span class="text-sm font-medium">未掌握</span>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+<button class="flex h-9 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-5 text-[#0d121b] dark:text-white hover:bg-gray-50 transition-colors">
+<span class="text-sm font-medium">攻克中</span>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+<button class="flex h-9 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-5 text-[#0d121b] dark:text-white hover:bg-gray-50 transition-colors">
+<span class="text-sm font-medium">已掌握</span>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+</div>
+<!-- Mistake Cards List -->
+<div class="flex flex-col gap-4">
+<!-- Card 1 -->
+<div class="group bg-white dark:bg-gray-900 border border-[#e7ebf3] dark:border-gray-800 rounded-xl p-5 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3 items-center">
+<span class="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs font-bold uppercase">数学</span>
+<h4 class="text-lg font-bold text-[#0d121b] dark:text-white group-hover:text-primary transition-colors leading-snug">
+                                        解二元一次方程组的加减消元法应用
+                                    </h4>
+</div>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full text-xs font-medium border border-red-100 dark:border-red-900/30">
+<span class="size-1.5 rounded-full bg-red-600 dark:bg-red-400 animate-pulse"></span>
+                                    未掌握
+                                </span>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#4c669a] dark:text-gray-300 rounded-lg text-xs">
+<span class="material-symbols-outlined text-sm">label</span>
+                                    代数方程
+                                </span>
+<span class="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#4c669a] dark:text-gray-300 rounded-lg text-xs">
+<span class="material-symbols-outlined text-sm">label</span>
+                                    消元法
+                                </span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-t border-gray-50 dark:border-gray-800">
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">错误次数</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">3 次</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">来源任务</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">10月单元测试</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">答题日期</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">2023-10-24</p>
+</div>
+<div class="flex items-center justify-end gap-3">
+<button class="text-primary text-sm font-bold hover:underline">查看详情</button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">
+                                        重做
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-white dark:bg-gray-900 border border-[#e7ebf3] dark:border-gray-800 rounded-xl p-5 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3 items-center">
+<span class="px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded text-xs font-bold uppercase">英语</span>
+<h4 class="text-lg font-bold text-[#0d121b] dark:text-white group-hover:text-primary transition-colors leading-snug">
+                                        Past Participles as Adjectives in Complex Sentences
+                                    </h4>
+</div>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-full text-xs font-medium border border-yellow-100 dark:border-yellow-900/30">
+<span class="size-1.5 rounded-full bg-yellow-600 dark:bg-yellow-400"></span>
+                                    攻克中
+                                </span>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#4c669a] dark:text-gray-300 rounded-lg text-xs">
+<span class="material-symbols-outlined text-sm">label</span>
+                                    Grammar
+                                </span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-t border-gray-50 dark:border-gray-800">
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">错误次数</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">1 次</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">来源任务</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">课后作业 #12</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">答题日期</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">2023-10-23</p>
+</div>
+<div class="flex items-center justify-end gap-3">
+<button class="text-primary text-sm font-bold hover:underline">查看详情</button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-colors">
+                                        重做
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-white dark:bg-gray-900 border border-[#e7ebf3] dark:border-gray-800 rounded-xl p-5 hover:shadow-md transition-shadow opacity-75">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-3 items-center">
+<span class="px-2.5 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded text-xs font-bold uppercase">物理</span>
+<h4 class="text-lg font-bold text-[#0d121b] dark:text-white group-hover:text-primary transition-colors leading-snug">
+                                        牛顿第一定律在非惯性参考系下的应用
+                                    </h4>
+</div>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-xs font-medium border border-green-100 dark:border-green-900/30">
+<span class="size-1.5 rounded-full bg-green-600 dark:bg-green-400"></span>
+                                    已掌握
+                                </span>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#4c669a] dark:text-gray-300 rounded-lg text-xs">
+<span class="material-symbols-outlined text-sm">label</span>
+                                    力学基础
+                                </span>
+<span class="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 text-[#4c669a] dark:text-gray-300 rounded-lg text-xs">
+<span class="material-symbols-outlined text-sm">label</span>
+                                    牛顿定律
+                                </span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-t border-gray-50 dark:border-gray-800">
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">错误次数</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">2 次</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">来源任务</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">家庭作业 (10/22)</p>
+</div>
+<div>
+<p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">答题日期</p>
+<p class="text-[#0d121b] dark:text-white font-semibold">2023-10-22</p>
+</div>
+<div class="flex items-center justify-end gap-3">
+<button class="text-primary text-sm font-bold hover:underline">查看详情</button>
+<button class="px-4 py-2 border border-primary text-primary rounded-lg text-sm font-bold hover:bg-primary hover:text-white transition-all">
+                                        巩固练
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar Gadgets -->
+<aside class="w-full lg:w-80 flex flex-col gap-6">
+<!-- Progress Card -->
+<div class="bg-white dark:bg-gray-900 border border-[#e7ebf3] dark:border-gray-800 rounded-xl p-6">
+<h4 class="text-lg font-bold mb-4">今日已攻克</h4>
+<div class="flex items-center justify-between mb-2">
+<span class="text-4xl font-bold text-primary">12</span>
+<span class="text-[#4c669a] dark:text-gray-400 text-sm">目标: 20</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-4">
+<div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
+</div>
+<p class="text-sm text-[#4c669a] dark:text-gray-400 leading-relaxed">
+                            你今天已经掌握了 <span class="text-primary font-bold">12</span> 道错题，继续加油，距离目标还差 <span class="font-bold">8</span> 道。
+                        </p>
+</div>
+<!-- Distribution Chart Gadget -->
+<div class="bg-white dark:bg-gray-900 border border-[#e7ebf3] dark:border-gray-800 rounded-xl p-6">
+<h4 class="text-lg font-bold mb-6">各科目错题分布</h4>
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-blue-500"></span>
+<span class="text-sm font-medium">数学</span>
+</div>
+<span class="text-sm font-bold">45%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
+<div class="bg-blue-500 h-1.5 rounded-full" style="width: 45%"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-purple-500"></span>
+<span class="text-sm font-medium">英语</span>
+</div>
+<span class="text-sm font-bold">25%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
+<div class="bg-purple-500 h-1.5 rounded-full" style="width: 25%"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-orange-500"></span>
+<span class="text-sm font-medium">物理</span>
+</div>
+<span class="text-sm font-bold">20%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
+<div class="bg-orange-500 h-1.5 rounded-full" style="width: 20%"></div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-green-500"></span>
+<span class="text-sm font-medium">语文</span>
+</div>
+<span class="text-sm font-bold">10%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
+<div class="bg-green-500 h-1.5 rounded-full" style="width: 10%"></div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border border-dashed border-[#cfd7e7] dark:border-gray-700 rounded-lg text-sm text-[#4c669a] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            查看详细分析报表
+                        </button>
+</div>
+<!-- Mastery Trend Card -->
+<div class="bg-primary rounded-xl p-6 text-white shadow-lg">
+<div class="flex justify-between items-start mb-6">
+<span class="material-symbols-outlined text-3xl opacity-80">insights</span>
+<span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">每周总结</span>
+</div>
+<h4 class="text-lg font-bold mb-2">掌握度显著提升</h4>
+<p class="text-white/80 text-sm mb-4 leading-relaxed">
+                            过去7天内，你在英语时态方面的正确率从 40% 提升到了 85%。
+                        </p>
+<a class="text-white text-sm font-bold flex items-center gap-1 group" href="#">
+                            去复习薄弱环节
+                            <span class="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+</a>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="mt-auto border-t border-[#e7ebf3] dark:border-gray-800 bg-white dark:bg-background-dark px-40 py-8 text-center">
+<p class="text-[#4c669a] dark:text-gray-500 text-sm font-medium">© 2023 智能提优平台 - 学员端错题管理中心</p>
+</footer>
+</div>
+</body></html>

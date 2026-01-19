@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>训练舱 - AI报告生成中</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scan-line {
+            background: linear-gradient(to bottom, transparent, #135bec, transparent);
+            height: 100px;
+            width: 100%;
+            position: absolute;
+            top: -100px;
+            opacity: 0.1;
+            animation: scan 3s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: -100px; }
+            100% { top: 100%; }
+        }
+        .data-glow {
+            box-shadow: 0 0 20px rgba(19, 91, 236, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white overflow-hidden">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#232f48] px-10 py-3 bg-background-dark/80 backdrop-blur-md z-20">
+<div class="flex items-center gap-4 text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">训练舱 <span class="text-primary font-normal text-sm ml-2">AI 智能分析</span></h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="flex items-center gap-9">
+<a class="text-white/70 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">首页</a>
+<a class="text-white/70 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">学习计划</a>
+<a class="text-white/70 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">我的训练</a>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#232f48] text-white hover:bg-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#232f48] text-white hover:bg-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/50" data-alt="Student user avatar icon" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCyvCPh4KKu8J3xEwub7ZJC7ytekdXSLHQ4vGj16FZ9aFrJlvRPXEGIQWQm4st-0SWeiSpGLCgNQMwcE195Rj4WjlCZFgKmtzNahESh6VpIdpC21rIKi2EHgXohTX9BY61VTyyS8SfnYhX-uhhigOj0uhACVi6yKp0Et7uhld-Lfjq7Ih9bXFULPoTIyF0u3152-CADiu4RY34WSGzAyEGzDi_ulfX0E_8dXykNZ3WDO1VLz4s0v73R5iGEywrNWl35i2Owv4c5Pas");'></div>
+</div>
+</header>
+<main class="flex-1 relative flex overflow-hidden">
+<!-- Background Scanning Effect -->
+<div class="absolute inset-0 z-0 opacity-20">
+<div class="scan-line"></div>
+<div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, #232f48 1px, transparent 0); background-size: 40px 40px;"></div>
+</div>
+<!-- Side Navigation (Left) -->
+<aside class="w-64 border-r border-[#232f48] bg-background-dark/50 p-6 z-10 hidden lg:flex flex-col gap-8">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 border border-primary/30">
+<span class="material-symbols-outlined text-primary">analytics</span>
+<p class="text-white text-sm font-medium">实时概览</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/50">
+<span class="material-symbols-outlined">psychology</span>
+<p class="text-sm font-medium">能力模型</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/50">
+<span class="material-symbols-outlined">hub</span>
+<p class="text-sm font-medium">知识图谱</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-white/50">
+<span class="material-symbols-outlined">history</span>
+<p class="text-sm font-medium">历史报告</p>
+</div>
+</div>
+<div class="mt-auto p-4 rounded-xl bg-[#232f48]/30 border border-[#324467]">
+<p class="text-xs text-white/60 mb-2">系统负荷</p>
+<div class="h-1.5 w-full bg-[#1a2335] rounded-full overflow-hidden">
+<div class="h-full bg-[#0bda5e]" style="width: 24%"></div>
+</div>
+<p class="text-[10px] text-[#0bda5e] mt-1">运行稳定</p>
+</div>
+</aside>
+<!-- Center Content -->
+<section class="flex-1 flex flex-col items-center justify-center px-10 relative z-10">
+<div class="max-w-[800px] w-full text-center mb-12">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+                        深度分析引擎已就绪
+                    </div>
+<h1 class="text-white tracking-tight text-4xl font-bold leading-tight mb-4">AI 正在为你生成详细训练报告...</h1>
+<p class="text-white/60 text-lg">正在多维建模你的学习表现，请稍等片刻</p>
+</div>
+<!-- Main Progress Visualization -->
+<div class="w-full max-w-[640px] bg-[#1a2335]/50 backdrop-blur-xl border border-[#324467] rounded-2xl p-8 data-glow">
+<div class="flex flex-col gap-6">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-1">
+<span class="text-primary text-sm font-bold uppercase tracking-wider">Processing Data</span>
+<p class="text-white text-xl font-medium">深度数据建模中</p>
+</div>
+<p class="text-white text-3xl font-bold">65<span class="text-sm font-normal text-white/50 ml-1">%</span></p>
+</div>
+<div class="h-4 w-full bg-[#324467] rounded-full p-1 border border-[#455b85]">
+<div class="h-full rounded-full bg-gradient-to-r from-primary to-[#4da3ff] relative" style="width: 65%;">
+<div class="absolute right-0 top-0 bottom-0 w-2 bg-white/30 blur-[2px]"></div>
+</div>
+</div>
+<div class="flex justify-between text-[#92a4c9] text-sm italic">
+<p>正在分析：错误原因聚类分析...</p>
+<p>预计还需要 15 秒</p>
+</div>
+</div>
+</div>
+<!-- Live Metrics Display -->
+<div class="flex flex-wrap gap-4 mt-12 w-full max-w-[960px]">
+<div class="flex min-w-[200px] flex-1 flex-col gap-3 rounded-xl p-6 border border-[#324467] bg-[#1a2335]/30 backdrop-blur-sm">
+<div class="flex items-center justify-between">
+<p class="text-white/70 text-sm font-medium">学习总时长</p>
+<span class="material-symbols-outlined text-primary text-sm">schedule</span>
+</div>
+<p class="text-white text-2xl font-bold">45 <span class="text-sm font-normal text-white/50">分钟</span></p>
+<div class="flex items-center gap-1 text-[#0bda5e] text-xs font-bold">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12% 同期对比</span>
+</div>
+</div>
+<div class="flex min-w-[200px] flex-1 flex-col gap-3 rounded-xl p-6 border border-[#324467] bg-[#1a2335]/30 backdrop-blur-sm">
+<div class="flex items-center justify-between">
+<p class="text-white/70 text-sm font-medium">正确率趋势</p>
+<span class="material-symbols-outlined text-primary text-sm">auto_graph</span>
+</div>
+<p class="text-white text-2xl font-bold">稳步上升</p>
+<div class="flex items-center gap-1 text-[#0bda5e] text-xs font-bold">
+<span class="material-symbols-outlined text-xs">keyboard_double_arrow_up</span>
+<span>突破：核心难点</span>
+</div>
+</div>
+<div class="flex min-w-[200px] flex-1 flex-col gap-3 rounded-xl p-6 border border-[#324467] bg-[#1a2335]/30 backdrop-blur-sm">
+<div class="flex items-center justify-between">
+<p class="text-white/70 text-sm font-medium">待提升知识点</p>
+<span class="material-symbols-outlined text-[#fa6238] text-sm">priority_high</span>
+</div>
+<p class="text-white text-2xl font-bold">数学 - 几何</p>
+<div class="flex items-center gap-1 text-[#fa6238] text-xs font-bold">
+<span class="material-symbols-outlined text-xs">warning</span>
+<span>需补习：空间想象力</span>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Assistant Sidebar (Right) -->
+<aside class="w-80 border-l border-[#232f48] bg-background-dark/80 backdrop-blur-md p-8 z-10 hidden xl:flex flex-col gap-8">
+<div class="flex flex-col items-center gap-6 mt-10">
+<div class="relative">
+<div class="absolute -inset-4 rounded-full bg-primary/20 blur-xl"></div>
+<div class="relative bg-center bg-no-repeat aspect-square bg-cover rounded-full size-24 border-4 border-primary/40" data-alt="High-tech AI Teacher avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAmEQilL-nEY_2Yp2xexjm806Msnq6vPeqtPWRNOumeiVqD20ONdscWcic4T9LViMukuRaMZCgOZ9gzV750AqgVRaJW9x54SDSrB_0XTYX65lttHC2SuA0hTdrmSQ1YwP6jhru6cmUVMrJwB5R7z2KCZFZe0hZdcWuY8tl4EJ-3SrIU5VjKFvWsb8XmjopGYLKeVluj87s8ZwK3cfCcpgfrlNI7dDx3VvH-1mGAgmNXt7CyO8qlBM--IDIaa2jrWRxfqNnTcynzbyo");'></div>
+<div class="absolute bottom-0 right-0 h-6 w-6 bg-[#0bda5e] rounded-full border-4 border-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-white font-bold">check</span>
+</div>
+</div>
+<div class="text-center">
+<h3 class="text-white text-lg font-bold">智学 AI 助手</h3>
+<p class="text-primary text-xs font-bold uppercase mt-1">Online &amp; Analyzing</p>
+</div>
+</div>
+<div class="relative mt-4">
+<div class="absolute -left-2 top-4 w-4 h-4 bg-[#232f48] rotate-45 border-l border-t border-[#324467]"></div>
+<div class="bg-[#232f48]/50 border border-[#324467] rounded-2xl p-5 relative">
+<p class="text-white/90 text-sm leading-relaxed italic">
+                            “ 报告生成后会同步给你的家长，我们先来看看你的整体表现吧！这次你在几何部分的逻辑推理有明显进步，但在空间折叠题型上还存在一些小瑕疵哦。加油！”
+                        </p>
+</div>
+</div>
+<div class="mt-auto flex flex-col gap-3">
+<p class="text-xs text-white/40 text-center">正在同步实时数据流...</p>
+<div class="flex justify-center gap-1.5">
+<div class="h-1 w-6 bg-primary rounded-full"></div>
+<div class="h-1 w-6 bg-primary/30 rounded-full"></div>
+<div class="h-1 w-6 bg-primary/30 rounded-full"></div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Bottom Status Bar -->
+<footer class="h-10 border-t border-[#232f48] bg-background-dark px-6 flex items-center justify-between text-[10px] text-white/40 uppercase tracking-[0.2em] z-20">
+<div class="flex gap-6">
+<span>Server Status: Normal</span>
+<span>Latency: 24ms</span>
+</div>
+<div class="flex gap-6">
+<span>Encrypted Connection: TLS 1.3</span>
+<span>© 2024 AI 训练舱</span>
+</div>
+</footer>
+</div>
+</body></html>

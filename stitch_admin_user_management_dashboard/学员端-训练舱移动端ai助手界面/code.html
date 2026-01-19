@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>学员端-训练舱移动端AI助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4913ec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#151022",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<!-- Desktop Container (Simulating Mobile Viewport) -->
+<div class="relative flex min-h-screen w-full flex-col items-center justify-center p-0 md:py-10 bg-slate-200 dark:bg-slate-900">
+<div class="relative flex h-[844px] w-full max-w-[420px] flex-col overflow-hidden bg-white dark:bg-background-dark shadow-2xl md:rounded-[3rem] border-[8px] border-slate-800 dark:border-slate-700">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center size-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-xl">auto_awesome</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold tracking-tight">AI 助教</h2>
+</div>
+<div class="flex items-center gap-2">
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">返回题目</a>
+<button class="flex items-center justify-center size-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</header>
+<!-- Chat Stream -->
+<main class="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-6 hide-scrollbar">
+<!-- AI Message 1 -->
+<div class="flex items-start gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 border-2 border-primary/20" data-alt="Avatar of a friendly animated female teacher" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC4MYY7o5CUv0uRep3hfWgdwnA9pvEjPDdSoc7_n3oL1m96BcPo15V6de8O7KChmujb95J4x-8lTvB8JxTXbVsQqDgWf8u_SMV4LEel5toIun9r2XacqQFCJ4MwmBFEQxDzR-ShBc-Bk64yBzf9Msg83mYVhlxYY3dW4vWaK8dpW8Pv-bpBn7jOiO0Pu1y9A0VBOMUV91ZPC1jYrNiIJsJ_DgQ59132HEpmS2bVm9OEWoFnX7ZWRzLYzOrWamqDl3oj0rBH9IVwC1Q");'>
+</div>
+<div class="flex flex-col gap-1.5 items-start">
+<p class="text-primary text-[12px] font-semibold ml-1">AI 老师</p>
+<div class="relative text-base font-normal leading-relaxed max-w-[85%] rounded-2xl rounded-tl-none px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                            你好！让我们来看看这道几何题。观察一下右边那个阴影部分，你觉得它和我们学过的哪个基本图形最像？
+                        </div>
+</div>
+</div>
+<!-- Student Message (Mock) -->
+<div class="flex flex-row-reverse items-start gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 border-2 border-slate-200" data-alt="Avatar of a young student boy" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBkYz8N5sqbS_Rgg-cpw8-v04oA6UQoAYmEnI0cxN0qx6tAPJxY0z6cBLolcdo4SC5nLeflg8vRdNDSFmT39uIYSZStGpjEBLyvAwwsCMKmCgLRbkXjEx3KrTC-O5sQurvLUKfWX5L5UQn_-w5pkUGsUJDEglVE9Sno1TkPCAQ8arSWxM3DtlPyLCaguzPdDjyx5OAXWVNv3xAQstqXa5RDeJsYoT52olNfyFjkqcOnsybaYdhOvqz32gC6VONjVtU3qu065YAy6Mk");'>
+</div>
+<div class="flex flex-col gap-1.5 items-end">
+<p class="text-slate-500 dark:text-slate-400 text-[12px] font-semibold mr-1">我</p>
+<div class="relative text-base font-normal leading-relaxed max-w-[85%] rounded-2xl rounded-tr-none px-4 py-3 bg-primary text-white">
+                            我觉得它像是一个被切掉了一半的圆形，但我不知道该怎么计算面积。
+                        </div>
+</div>
+</div>
+<!-- AI Message 2 -->
+<div class="flex items-start gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 h-10 shrink-0 border-2 border-primary/20" data-alt="Avatar of a friendly animated female teacher" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6PrR5sfPuCrzl-zeOV3b-wJR0diH2GLS4wqWhkWSV5NijfhfMZDJW9QF5B-N-3VnLnUob5637C4CXV8N5Gj7O-Qj1fiEaUwcs8lU2GEyhVNTdxC0nGGq83CsMJdxoo0Ygliaa-HhuJpXFE20J8Hj0khrNnSAPF8hxwvYWw7BS-MN-z2zfnXFLQ0xC6UNyAdJjwE_Iw0pITibQrKbOE7Mf6R2rBNoRyvoFQDaHAL-acqoKRtyA7qBDaOT4jB-QLWp511955iq6_9M");'>
+</div>
+<div class="flex flex-col gap-1.5 items-start">
+<p class="text-primary text-[12px] font-semibold ml-1">AI 老师</p>
+<div class="relative text-base font-normal leading-relaxed max-w-[85%] rounded-2xl rounded-tl-none px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                            观察得真仔细！没错，它其实是一个扇形的一部分。
+                            <br/><br/>
+                            别担心，我们可以一步步来。先试着找找题干中提到的“圆心角”和“半径”这两个关键数值？
+                        </div>
+</div>
+</div>
+<!-- Thinking State (Subtle) -->
+<div class="flex items-center gap-2 px-14 py-2">
+<span class="flex gap-1">
+<span class="size-1.5 rounded-full bg-slate-300 animate-pulse"></span>
+<span class="size-1.5 rounded-full bg-slate-300 animate-pulse delay-75"></span>
+<span class="size-1.5 rounded-full bg-slate-300 animate-pulse delay-150"></span>
+</span>
+<span class="text-xs text-slate-400 font-medium">老师正在思考...</span>
+</div>
+</main>
+<!-- Bottom Area -->
+<footer class="bg-white dark:bg-background-dark border-t border-slate-100 dark:border-slate-800 p-4 flex flex-col gap-4">
+<!-- Quick Chips -->
+<div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+<button class="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 text-primary text-sm font-semibold hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-[18px]">lightbulb</span>
+<span>求提示</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-[18px]">question_mark</span>
+<span>不明白</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-[18px]">fast_forward</span>
+<span>下一步</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800 px-4 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>我做完了</span>
+</button>
+</div>
+<!-- Composer -->
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center size-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors shrink-0">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<div class="flex-1 flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-primary/30 transition-all border border-transparent">
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-slate-800 dark:text-slate-100 text-[15px] p-0 placeholder:text-slate-400" placeholder="输入你的想法..." type="text"/>
+<div class="flex items-center gap-2 pl-2">
+<button class="text-slate-400 hover:text-primary flex items-center justify-center p-1">
+<span class="material-symbols-outlined text-[22px]">image</span>
+</button>
+<button class="flex items-center justify-center size-8 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-transform shrink-0">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</footer>
+<!-- iPhone Indicator Bar -->
+<div class="flex justify-center pb-2 bg-white dark:bg-background-dark">
+<div class="w-32 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+</div>
+</div>
+<!-- Desktop Sidebar (Contextual Info - Visible on large screens) -->
+<div class="hidden lg:flex absolute left-8 top-1/2 -translate-y-1/2 flex-col gap-6 w-[280px]">
+<div class="bg-white/50 backdrop-blur-md p-6 rounded-3xl border border-white">
+<h3 class="font-bold text-slate-800 mb-2">训练仓提示</h3>
+<p class="text-sm text-slate-600 leading-relaxed">AI老师正在引导你思考图形特征，尝试结合扇形面积公式 A = (n/360) * πr² 进行作答。</p>
+</div>
+<div class="bg-primary/5 border border-primary/10 p-6 rounded-3xl">
+<h3 class="font-bold text-primary mb-2">学习进度</h3>
+<div class="w-full bg-slate-200 rounded-full h-2 mb-2">
+<div class="bg-primary h-2 rounded-full w-[65%]"></div>
+</div>
+<p class="text-xs text-slate-500 font-medium">当前关卡：几何图形计算 (4/6)</p>
+</div>
+</div>
+</div>
+</body></html>

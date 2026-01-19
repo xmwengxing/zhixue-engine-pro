@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>系统设置 - 多AI服务商配置</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0b0e14",
+                        "card-dark": "#161b26",
+                        "border-dark": "#232f48",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "system-ui", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-glow {
+            box-shadow: 0 0 15px rgba(19, 91, 236, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 w-full border-b border-border-dark bg-background-dark/80 backdrop-blur-md px-6 lg:px-20 py-3">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xl">cognition</span>
+</div>
+<h2 class="text-white text-lg font-bold tracking-tight">智能提升训练平台</h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">仪表盘</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">内容管理</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">学生管理</a>
+<a class="text-white text-sm font-medium border-b-2 border-primary pb-1" href="#">系统配置</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
+<input class="bg-card-dark border-none rounded-lg pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-1 focus:ring-primary text-slate-200" placeholder="搜索设置..." type="text"/>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-sm">person</span>
+                    个人中心
+                </button>
+</div>
+</div>
+</header>
+<div class="max-w-[1440px] mx-auto flex gap-0 lg:px-10">
+<!-- Sidebar -->
+<aside class="hidden lg:flex flex-col w-64 border-r border-border-dark min-h-[calc(100vh-65px)] p-6 gap-8">
+<div class="space-y-1">
+<h1 class="text-white text-base font-semibold">系统配置中心</h1>
+<p class="text-slate-500 text-xs">V2.4.0 专业版</p>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-card-dark hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">全局设置</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary active-glow" href="#">
+<span class="material-symbols-outlined">cloud_sync</span>
+<span class="text-sm font-medium">AI服务商配置</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-card-dark hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="text-sm font-medium">模型库管理</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-card-dark hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">speed</span>
+<span class="text-sm font-medium">流量与并发</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-card-dark hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="text-sm font-medium">安全审计</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 lg:p-10 overflow-hidden">
+<!-- Page Header -->
+<div class="flex flex-wrap justify-between items-end gap-4 mb-8">
+<div class="space-y-2">
+<h2 class="text-white text-3xl font-bold tracking-tight">多AI服务商配置</h2>
+<p class="text-slate-400 text-sm max-w-2xl">
+                        集成全球顶尖大模型服务，支持动态链路切换、多模型负载均衡及流式响应优化。
+                    </p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add</span>
+                    添加新服务商
+                </button>
+</div>
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+<div class="bg-card-dark border border-border-dark p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+<p class="text-slate-400 text-sm mb-1">系统全局状态</p>
+<div class="flex items-center gap-2">
+<div class="size-2 bg-emerald-500 rounded-full animate-pulse"></div>
+<span class="text-white text-2xl font-bold uppercase">Healthy</span>
+</div>
+<p class="text-emerald-500 text-xs mt-2 font-medium">API 延迟: 240ms (正常)</p>
+</div>
+<div class="bg-card-dark border border-border-dark p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8"></div>
+<p class="text-slate-400 text-sm mb-1">今日Token消耗</p>
+<span class="text-white text-2xl font-bold">1,452,890</span>
+<p class="text-emerald-500 text-xs mt-2 font-medium">+14.2% 较昨日同期</p>
+</div>
+<div class="bg-card-dark border border-border-dark p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full -mr-8 -mt-8"></div>
+<p class="text-slate-400 text-sm mb-1">活跃服务商</p>
+<span class="text-white text-2xl font-bold">4 / 6</span>
+<p class="text-orange-500 text-xs mt-2 font-medium">2个服务商处于离线或欠费状态</p>
+</div>
+</div>
+<!-- Provider List Header -->
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-white text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">list_alt</span>
+                    已配置服务商清单
+                </h3>
+<div class="flex gap-2">
+<button class="p-2 text-slate-400 hover:text-white"><span class="material-symbols-outlined">filter_list</span></button>
+<button class="p-2 text-slate-400 hover:text-white"><span class="material-symbols-outlined">refresh</span></button>
+</div>
+</div>
+<!-- Cards Grid -->
+<div class="space-y-6">
+<!-- OpenAI Card -->
+<div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden transition-all hover:border-primary/50">
+<div class="p-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-white/5 flex items-center justify-center p-2">
+<img alt="OpenAI Logo" class="w-full h-full object-contain" data-alt="OpenAI brand logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYU5JthTKmGN70qCSGr5T9hVa7YNyXlLUjNU-WfhwfF_D8SwtK4BHVh9idrJ_8TpCxh2UAwqFIxGg3PHKNmHiqJG8uJ3RuCLsKYhOAGGeWHTwGYkF10x81M6VbtsVS30mFYrRaOjxPiBc2SH_F1uPrY3sKSGhogG3IZfKDxeD4euKDoSru_YeiU3A0aQiuAOAVyty5z4tMyIQNvo1YnWv_Tf5OvV1ZybnssMPKHDXD0CWYXbiQxFuonZ3jG56dCCwr_H89IoqI3cg"/>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">OpenAI</h4>
+<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Operational</span>
+</div>
+</div>
+<div class="flex flex-1 flex-wrap items-center gap-4 lg:gap-8 lg:justify-end">
+<div class="flex flex-col min-w-[140px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">当前模型</label>
+<select class="bg-background-dark border-border-dark text-slate-200 text-sm rounded-lg focus:ring-primary focus:border-primary py-1 px-3">
+<option>GPT-4o (Omni)</option>
+<option>GPT-4 Turbo</option>
+<option>GPT-3.5 Turbo</option>
+</select>
+</div>
+<div class="flex flex-col min-w-[180px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">API Key</label>
+<div class="relative">
+<input class="w-full bg-background-dark border-none text-slate-400 text-xs rounded-lg py-1.5 px-3" readonly="" type="password" value="sk-proj-xxxxxxxxxxxxxxxxxxxx"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><span class="material-symbols-outlined text-sm">visibility</span></button>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">服务状态</label>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary cursor-pointer">
+<span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Expanded Section -->
+<div class="mt-8 pt-6 border-t border-border-dark grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="space-y-2">
+<label class="text-slate-300 text-xs font-medium">API Endpoint (自定义端点)</label>
+<input class="w-full bg-background-dark border-border-dark text-slate-400 text-sm rounded-lg focus:ring-primary" type="text" value="https://api.openai.com/v1"/>
+</div>
+<div class="space-y-2">
+<label class="text-slate-300 text-xs font-medium">超时时间 (Seconds)</label>
+<div class="flex items-center gap-3">
+<input class="flex-1 accent-primary" type="range"/>
+<span class="text-white text-sm w-8">30s</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-slate-300 text-xs font-medium">最大并发限制 (Requests/min)</label>
+<input class="w-full bg-background-dark border-border-dark text-slate-400 text-sm rounded-lg focus:ring-primary" type="number" value="3500"/>
+</div>
+</div>
+<div class="mt-6 flex justify-end gap-3">
+<button class="px-4 py-2 border border-border-dark text-slate-300 rounded-lg text-sm hover:bg-slate-800 transition-colors">测试连接</button>
+<button class="px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm font-bold hover:bg-primary/30 transition-colors">保存更改</button>
+</div>
+</div>
+</div>
+<!-- Claude Card -->
+<div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden transition-all hover:border-primary/50 opacity-90">
+<div class="p-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-white/5 flex items-center justify-center p-2">
+<img alt="Claude Logo" class="w-full h-full object-contain" data-alt="Anthropic Claude brand logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6W_mtDqGp4f2KdEipRb8X2xY-F4spShBn5LQMRW3q9ERAuAfCH_iDsRqi7MsKTz5aqUVZrS4tZmMRpm4XrERvjDXI6HUBOfB38QJt44LBAb0Wv0jiHpgHMkbpNHaRb0g7GosAoj0ZfRG-chQzhpVYNpM7O5pvreOqB2KSOCr5y1tZh87taf5Sq2C63NAERTPkWH9MPRpHnbBL-KpGmPvZCTUPwDwOt6n-0Z3b8mFYwGuY21b5N3f-N9647gYf7vPIQIm0xm85Gw0"/>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">Anthropic Claude</h4>
+<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Operational</span>
+</div>
+</div>
+<div class="flex flex-1 flex-wrap items-center gap-4 lg:gap-8 lg:justify-end">
+<div class="flex flex-col min-w-[140px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">当前模型</label>
+<select class="bg-background-dark border-border-dark text-slate-200 text-sm rounded-lg focus:ring-primary focus:border-primary py-1 px-3">
+<option>Claude 3.5 Sonnet</option>
+<option>Claude 3 Opus</option>
+<option>Claude 3 Haiku</option>
+</select>
+</div>
+<div class="flex flex-col min-w-[180px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">API Key</label>
+<div class="relative">
+<input class="w-full bg-background-dark border-none text-slate-400 text-xs rounded-lg py-1.5 px-3" readonly="" type="password" value="sk-ant-xxxxxxxxxxxxxxxxxxxx"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><span class="material-symbols-outlined text-sm">visibility</span></button>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">服务状态</label>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary cursor-pointer">
+<span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ERNIE Card (Baidu) -->
+<div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden transition-all hover:border-primary/50">
+<div class="p-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-white/5 flex items-center justify-center p-2">
+<img alt="ERNIE Logo" class="w-full h-full object-contain" data-alt="Baidu ERNIE Bot brand logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIn9GN4T1XDqKgTgfX__qnbvOIXTzSW2QCiBTAzBYu5njodXsposoEKfy9_xhzvYuoKrAEsaV_KeYEE52POCzx1tas8quN81ZKXRkRpLtO4OUb8wu9VoGtDtu6yb3KsHEo7iVK9q3l5gb2OLcwZA1v-27JJTH1y5ELvPOP4l5BbtmAL7IB23MAPf5oeo5L-nhWZAOpicRJ9lBha8ABwyPNr22cPl6BZUUPLPEfmR9_ZB2V33HtF1wtWfQJstHEXZ8vWU-cWr95W_M"/>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">百度文心一言 (ERNIE)</h4>
+<span class="text-[10px] bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Degraded Performance</span>
+</div>
+</div>
+<div class="flex flex-1 flex-wrap items-center gap-4 lg:gap-8 lg:justify-end">
+<div class="flex flex-col min-w-[140px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">当前模型</label>
+<select class="bg-background-dark border-border-dark text-slate-200 text-sm rounded-lg focus:ring-primary focus:border-primary py-1 px-3">
+<option>ERNIE-4.0-8K</option>
+<option>ERNIE-3.5-128K</option>
+<option>ERNIE-Lite-8K</option>
+</select>
+</div>
+<div class="flex flex-col min-w-[180px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">Client Secret</label>
+<div class="relative">
+<input class="w-full bg-background-dark border-none text-slate-400 text-xs rounded-lg py-1.5 px-3" readonly="" type="password" value="bd-xxxxxxxxxxxxxxxxxxxx"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><span class="material-symbols-outlined text-sm">visibility</span></button>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">服务状态</label>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-700 cursor-pointer">
+<span class="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Qwen Card (Ali) -->
+<div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden transition-all hover:border-primary/50">
+<div class="p-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-white/5 flex items-center justify-center p-2">
+<img alt="Qwen Logo" class="w-full h-full object-contain" data-alt="Alibaba Qwen brand logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKj9IAibfpwOMsJJ24nPeQ_YWYL6PvyhB6TsMMVtoscPoJChDk8EqY8XSAM50dw2PcVL09iGEkhnShHgUKbjDqaStJpTuTqYVfF2O01DrIzUgfwbKDVIeA-e9MND500VY6uoMgayxqrhPR8MYhSks0Y1sWd0lbwElDkatt-XOQzrzuCIcrXr1pL1Mww6N0M1Lc56C1QviUtMd9pC4udHU7qOzpSZK6awJKRoAjFbUY4MhYy-YxmS8yzdeCGAVS5AMtErN5YfyaC7M"/>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">阿里通义千问 (Qwen)</h4>
+<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Operational</span>
+</div>
+</div>
+<div class="flex flex-1 flex-wrap items-center gap-4 lg:gap-8 lg:justify-end">
+<div class="flex flex-col min-w-[140px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">当前模型</label>
+<select class="bg-background-dark border-border-dark text-slate-200 text-sm rounded-lg focus:ring-primary focus:border-primary py-1 px-3">
+<option>Qwen-Max</option>
+<option>Qwen-Plus</option>
+<option>Qwen-Turbo</option>
+</select>
+</div>
+<div class="flex flex-col min-w-[180px]">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">Access Key</label>
+<div class="relative">
+<input class="w-full bg-background-dark border-none text-slate-400 text-xs rounded-lg py-1.5 px-3" readonly="" type="password" value="ali-xxxxxxxxxxxxxxxxxxxx"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><span class="material-symbols-outlined text-sm">visibility</span></button>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="text-slate-500 text-[10px] uppercase font-bold mb-1">服务状态</label>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary cursor-pointer">
+<span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Background Decoration Elements -->
+<div class="fixed top-0 right-0 -z-10 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full pointer-events-none"></div>
+</body></html>

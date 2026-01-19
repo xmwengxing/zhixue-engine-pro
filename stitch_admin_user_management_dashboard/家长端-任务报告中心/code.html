@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>家长端 - 任务报告中心</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', "Noto Sans SC", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-solid border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 lg:px-20 py-3">
+<div class="max-w-[1280px] mx-auto flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">grid_view</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">智能提升训练平台</h2>
+</div>
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden border border-slate-200 dark:border-slate-700">
+<div class="text-slate-400 flex bg-slate-50 dark:bg-[#1a2235] items-center justify-center pl-4">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-slate-50 dark:bg-[#1a2235] text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-400 text-sm font-normal" placeholder="搜索任务名称..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="hidden lg:flex items-center gap-8">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">首页</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-1" href="#">报告中心</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">任务列表</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">学习看板</a>
+</nav>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-[#232f48] text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-[#232f48] text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0mhksLihhLN_PRIDAfzBfA75uwpGmVc7tb8jNppxXSiDakkMFdaLsP9W78VmkAmEhERbV_qJF6QoaZ31A_Jopif_34mhMCX6ZkxZlzWpI8ncOFHFnYRxWVfvMgkgEhuu2O63CkA-CNkpsjXw-Aw1MN2Xe2lmHGzksHvfyZ6op-YXMBxV2VojQBMQiOvmu3S98pGhzYUH-NESYHyjiFk5h6u11npK-95hdwv02JgFdfPGkS6qhQna8Lz7VFGfe_eWUzYWYgVL8hKU");'></div>
+</div>
+</div>
+</header>
+<main class="max-w-[1280px] mx-auto px-6 lg:px-20 py-8">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-4 text-sm">
+<a class="text-slate-500 dark:text-[#92a4c9] hover:text-primary transition-colors" href="#">首页</a>
+<span class="text-slate-400 dark:text-[#92a4c9]">/</span>
+<span class="text-slate-900 dark:text-white font-medium">任务报告中心</span>
+</nav>
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div class="flex flex-col gap-2">
+<h1 class="text-slate-900 dark:text-white text-3xl font-bold tracking-tight">任务报告列表</h1>
+<p class="text-slate-500 dark:text-[#92a4c9] text-base">监控孩子学情动态，查看 AI 老师的专业评价及错题深度解析。</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-xl">download</span>
+                    导出月度报告
+                </button>
+</div>
+</div>
+<div class="flex flex-col lg:flex-row gap-8">
+<!-- Main Content Area -->
+<div class="flex-1 min-w-0">
+<!-- Filters & Tabs -->
+<div class="bg-white dark:bg-[#1a2235] rounded-xl border border-slate-200 dark:border-slate-800 p-2 mb-6">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex border-b border-transparent">
+<button class="px-6 py-3 border-b-2 border-primary text-primary text-sm font-bold">全部任务 (24)</button>
+<button class="px-6 py-3 text-slate-500 dark:text-[#92a4c9] text-sm font-medium hover:text-primary">已完成 (18)</button>
+<button class="px-6 py-3 text-slate-500 dark:text-[#92a4c9] text-sm font-medium hover:text-primary">进行中 (6)</button>
+</div>
+<div class="flex gap-2 p-2 pr-4 overflow-x-auto">
+<button class="flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-[#232f48] px-3 py-1.5 text-xs font-medium dark:text-white whitespace-nowrap">
+                                科目: 数学 <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-[#232f48] px-3 py-1.5 text-xs font-medium dark:text-white whitespace-nowrap">
+                                时间: 最近7天 <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-[#232f48] px-3 py-1.5 text-xs font-medium dark:text-white whitespace-nowrap">
+                                成绩: 良好及以上 <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Report List Items -->
+<div class="space-y-4">
+<!-- List Item 1 -->
+<div class="bg-white dark:bg-[#1a2235] border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all cursor-pointer group relative">
+<div class="flex flex-col md:flex-row gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-3">
+<span class="px-2.5 py-1 rounded bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-bold uppercase">已完成</span>
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">初二数学：二次根式综合训练</h3>
+<span class="text-slate-400 dark:text-slate-500 text-sm">2023-11-20 15:30</span>
+</div>
+<div class="bg-slate-50 dark:bg-background-dark/50 rounded-lg p-4 mb-4 border-l-4 border-primary">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+<p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+<span class="font-bold text-slate-800 dark:text-white">AI导师点评：</span>
+                                            孩子在基础运算部分表现稳健，但在根式复合应用题上存在思维盲区。建议加强对分母有理化的二次推导练习。
+                                        </p>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 text-sm">得分：</span>
+<span class="text-2xl font-black text-primary">88<span class="text-sm font-normal text-slate-400 ml-1">/100</span></span>
+</div>
+<div class="flex-1 max-w-[240px]">
+<div class="flex justify-between text-[10px] text-slate-400 mb-1">
+<span>错题分布</span>
+<span>4 题错误</span>
+</div>
+<div class="flex h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+<div class="h-full bg-green-500" style="width: 75%"></div>
+<div class="h-full bg-red-500" style="width: 20%"></div>
+<div class="h-full bg-slate-300 dark:bg-slate-600" style="width: 5%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-row md:flex-col justify-center items-end gap-3 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6">
+<button class="w-full md:w-auto px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all">查看详情</button>
+<button class="w-full md:w-auto px-4 py-2 bg-slate-100 dark:bg-[#232f48] text-slate-600 dark:text-white text-sm font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">错题重练</button>
+</div>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="bg-white dark:bg-[#1a2235] border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all cursor-pointer group">
+<div class="flex flex-col md:flex-row gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-3">
+<span class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase">进行中</span>
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">英语：中考高频词汇专项突破 (Unit 5-8)</h3>
+<span class="text-slate-400 dark:text-slate-500 text-sm">2023-11-21 09:15</span>
+</div>
+<div class="bg-slate-50 dark:bg-background-dark/50 rounded-lg p-4 mb-4">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-slate-400 text-xl">pending_actions</span>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed italic">
+                                            任务正在进行中，实时进度已同步至云端。完成后将自动生成 AI 深度解析报告。
+                                        </p>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 text-sm">完成进度：</span>
+<span class="text-xl font-bold text-blue-500">45%</span>
+</div>
+<div class="flex-1 max-w-[240px]">
+<div class="h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+<div class="h-full bg-blue-500" style="width: 45%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-row md:flex-col justify-center items-end gap-3 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6">
+<button class="w-full md:w-auto px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-white text-sm font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">监督进度</button>
+</div>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="bg-white dark:bg-[#1a2235] border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all cursor-pointer group relative">
+<div class="flex flex-col md:flex-row gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-3">
+<span class="px-2.5 py-1 rounded bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-bold uppercase">已完成</span>
+<h3 class="text-slate-900 dark:text-white font-bold text-lg">初二物理：光现象规律解析</h3>
+<span class="text-slate-400 dark:text-slate-500 text-sm">2023-11-19 20:10</span>
+</div>
+<div class="bg-slate-50 dark:bg-background-dark/50 rounded-lg p-4 mb-4 border-l-4 border-primary">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl">smart_toy</span>
+<p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+<span class="font-bold text-slate-800 dark:text-white">AI导师点评：</span>
+                                            孩子对折射规律掌握较好，但在“全反射”条件的判断上逻辑不够严密。已自动推荐 3 个针对性强化视频。
+                                        </p>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-slate-500 text-sm">得分：</span>
+<span class="text-2xl font-black text-primary">94<span class="text-sm font-normal text-slate-400 ml-1">/100</span></span>
+</div>
+<div class="flex-1 max-w-[240px]">
+<div class="flex justify-between text-[10px] text-slate-400 mb-1">
+<span>错题分布</span>
+<span>2 题错误</span>
+</div>
+<div class="flex h-2 w-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+<div class="h-full bg-green-500" style="width: 90%"></div>
+<div class="h-full bg-red-500" style="width: 10%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-row md:flex-col justify-center items-end gap-3 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6">
+<button class="w-full md:w-auto px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all">查看详情</button>
+<button class="w-full md:w-auto px-4 py-2 bg-slate-100 dark:bg-[#232f48] text-slate-600 dark:text-white text-sm font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">错题重练</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar -->
+<aside class="w-full lg:w-80 space-y-6">
+<!-- Wishlist Reminder Card -->
+<div class="bg-white dark:bg-[#1a2235] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+<div class="bg-primary/10 dark:bg-primary/20 px-4 py-3 border-b border-primary/10 flex items-center justify-between">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-xl">favorite</span>
+<span class="font-bold text-sm">待审批愿望</span>
+</div>
+<span class="flex items-center justify-center bg-primary text-white text-[10px] font-bold h-5 px-1.5 rounded-full">2</span>
+</div>
+<div class="p-4 space-y-4">
+<!-- Wish Item 1 -->
+<div class="bg-slate-50 dark:bg-background-dark/40 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-bold text-slate-700 dark:text-slate-300">本周末去游乐场</span>
+<span class="text-[10px] text-slate-400">2小时前</span>
+</div>
+<p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                                达成目标：英语成绩提升至90分以上
+                            </p>
+<div class="flex gap-2">
+<button class="flex-1 py-1.5 bg-primary text-white text-[11px] font-bold rounded hover:bg-primary/90 transition-colors">批准</button>
+<button class="flex-1 py-1.5 bg-slate-200 dark:bg-[#232f48] text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">讨论</button>
+</div>
+</div>
+<!-- Wish Item 2 -->
+<div class="bg-slate-50 dark:bg-background-dark/40 rounded-lg p-3 border border-slate-100 dark:border-slate-700 opacity-80">
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-bold text-slate-700 dark:text-slate-300">增加每天半小时游戏时间</span>
+<span class="text-[10px] text-slate-400">昨天</span>
+</div>
+<p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                                达成目标：连续5天完成数学错题复习
+                            </p>
+<div class="flex gap-2">
+<button class="flex-1 py-1.5 bg-primary text-white text-[11px] font-bold rounded">批准</button>
+<button class="flex-1 py-1.5 bg-slate-200 dark:bg-[#232f48] text-slate-700 dark:text-slate-300 text-[11px] font-bold rounded">讨论</button>
+</div>
+</div>
+<button class="w-full text-center text-xs text-primary font-medium hover:underline">查看全部愿望清单</button>
+</div>
+</div>
+<!-- Learning Progress Overview -->
+<div class="bg-white dark:bg-[#1a2235] border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+<h4 class="text-slate-900 dark:text-white font-bold text-sm mb-4">本周学情概览</h4>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-xs text-slate-500 dark:text-[#92a4c9]">任务完成率</span>
+<span class="text-xs font-bold text-green-500">92%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full">
+<div class="h-full bg-green-500 rounded-full" style="width: 92%"></div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs text-slate-500 dark:text-[#92a4c9]">平均得分</span>
+<span class="text-xs font-bold text-primary">86.5</span>
+</div>
+<div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full">
+<div class="h-full bg-primary rounded-full" style="width: 86.5%"></div>
+</div>
+<div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<div>
+<p class="text-[11px] text-slate-500 dark:text-[#92a4c9]">较上周提升</p>
+<p class="text-sm font-bold text-slate-900 dark:text-white">+12.4% 能力分</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- AD Banner / Quick Tips -->
+<div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary to-blue-700 p-5 text-white shadow-lg">
+<div class="relative z-10">
+<h4 class="font-bold text-sm mb-2">AI 智能辅助建议</h4>
+<p class="text-[11px] text-white/80 leading-relaxed mb-4">
+                            根据近期错题，孩子更偏向于“视觉化学习”。建议在讲解物理时光现象时，多配合模型演示。
+                        </p>
+<button class="bg-white/20 hover:bg-white/30 transition-colors text-white text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                            了解详情
+                        </button>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">tips_and_updates</span>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer Space -->
+<footer class="mt-20 border-t border-slate-200 dark:border-slate-800 py-10 px-6 lg:px-20">
+<div class="max-w-[1280px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-2 text-slate-400">
+<div class="size-6 bg-slate-400 rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">grid_view</span>
+</div>
+<span class="text-sm font-medium">智能提升训练平台 © 2023</span>
+</div>
+<div class="flex gap-8 text-sm text-slate-400">
+<a class="hover:text-primary" href="#">隐私政策</a>
+<a class="hover:text-primary" href="#">服务条款</a>
+<a class="hover:text-primary" href="#">联系客服</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>家长端 - 愿望审批列表</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#192233",
+                        "border-dark": "#232f48"
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-solid border-border-dark bg-background-dark/80 backdrop-blur-md px-6 md:px-10 py-3">
+<div class="max-w-[1200px] mx-auto flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-white">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white">auto_awesome</span>
+</div>
+<h2 class="text-white text-xl font-bold leading-tight tracking-tight">愿望审批</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">首页</a>
+<a class="text-white text-sm font-medium border-b-2 border-primary pb-1" href="#">愿望管理</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">积分商城</a>
+<a class="text-slate-400 hover:text-white text-sm font-medium transition-colors" href="#">学情报告</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden sm:flex items-center bg-border-dark rounded-full px-4 py-1.5 gap-2 border border-slate-700/50">
+<span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-500 w-32 lg:w-48 p-0" placeholder="搜索愿望或学员..."/>
+</div>
+<div class="relative cursor-pointer">
+<span class="material-symbols-outlined text-slate-300">notifications</span>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</span>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-primary/20" data-alt="Parent user profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBCrbj5gi4zbLpsUy5BHFd5ho2mr5JdFZvAfWI554wYYUmefwqzYcUoLzo5lCU1M77gLYLu2h1sOmo4Pe4mqVjZzmnhgwQNmizKazut2btwOVVLcCgCndey2dUyFQ-I1n2XE7aU2mWb0TL2SVjjhB4Bji_fhPw2PTR-fqWX6OGi29mu_X0vbsxWLpH224zySIVf9nI7x2j6NJftpJstY22q034knfABoHX32SOAY4LczxA1pCHDivWtcMv3oNXGP5FMIppMqT4ii5M");'></div>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-6 py-8">
+<!-- Statistics & Tabs Container -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div class="space-y-1">
+<h1 class="text-2xl font-bold text-white tracking-tight">愿望处理中心</h1>
+<p class="text-slate-400 text-sm font-normal">您目前有 <span class="text-primary font-bold">3</span> 个待处理的愿望申请</p>
+</div>
+<div class="flex border-b border-border-dark gap-2 sm:gap-6 self-start md:self-auto">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-400 pb-3 transition-all hover:text-slate-200" href="#">
+<p class="text-sm font-bold leading-normal">全部</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-white pb-3" href="#">
+<p class="text-sm font-bold leading-normal">待审批</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-400 pb-3 transition-all hover:text-slate-200" href="#">
+<p class="text-sm font-bold leading-normal">已通过</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-slate-400 pb-3 transition-all hover:text-slate-200" href="#">
+<p class="text-sm font-bold leading-normal">已拒绝</p>
+</a>
+</div>
+</div>
+<!-- Wish Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1: Pending -->
+<div class="flex flex-col rounded-xl overflow-hidden shadow-lg bg-card-dark border border-slate-700/30 group hover:border-primary/50 transition-all duration-300">
+<div class="relative">
+<div class="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover" data-alt="LEGO Technic model kit for kids" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAAqoSnydWa5JQkkEG1rARCCqfMNYq0IkUwWv6keMU3QEh9DO8Onjg7lrNX3vppnolfORn4dSTGnvhVFQWuqaLGs_QofunPK0ZtapxV3INMobmwCrN2V5oNC9Lo7mp2msKbhtPHkeCpeQuuDy5zsQ-K2UnMTA9tAVhxKf-W-q-IMAIGnRcpTbh4jH_JtGtvzk_Du6-S20r6lqVtyLhNuroUslyCgpBLitNFxsEP5UbQXCmVTjQ3yFO98DDjqNV6OSvUNCpYxDpMIJA");'></div>
+<div class="absolute top-3 left-3 px-3 py-1 bg-primary/90 backdrop-blur-sm rounded-full text-[11px] font-bold text-white uppercase tracking-wider">待审批</div>
+</div>
+<div class="flex flex-col p-5 gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight group-hover:text-primary transition-colors">乐高机械组超级赛车</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="size-6 rounded-full bg-cover bg-center ring-1 ring-slate-700" data-alt="Student avatar Li Hua" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDqjo89GBddMK3JaeL3cvPdcwT1Hj7xXGx6D3NxNhPuPp83ViiY_x-3o3rMjinFTWUwF5UAuXv5u2_iVzHE7OPiwt5CObFEdTa2hGWAOAaJsA1vbOiFHTvasPXF_WN_9cSD5MPh_U12SGALZLpzk8mBaKFo2Q3TiCMR0lMFvO4pov-67o-XGFNHjs-RHzADKn0s0IsuZ6h_6qymCoBZ33ig-aFvzuHCmyO1fP7awPRywJ79JLBeB3QPEh70NiY-YR2_zXb4Gj7mlXM");'></div>
+<p class="text-slate-400 text-sm">申请人：李华</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-primary text-lg font-bold">1,200</span>
+<span class="text-slate-500 text-[10px] uppercase font-bold tracking-widest">积分点数</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-slate-500 text-xs border-t border-slate-700/50 pt-3">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span>2023-10-24 16:30 提交</span>
+</div>
+<div class="flex gap-3 pt-2">
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-bold transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>通过申请</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-slate-800 hover:bg-red-900/40 hover:text-red-400 text-slate-300 rounded-lg text-sm font-bold transition-all border border-slate-700 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+<span>拒绝</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Pending -->
+<div class="flex flex-col rounded-xl overflow-hidden shadow-lg bg-card-dark border border-slate-700/30 group hover:border-primary/50 transition-all duration-300">
+<div class="relative">
+<div class="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover" data-alt="Amusement park roller coaster at sunset" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA9EH-xLVgCQabBmB2OeDfsUmaAQdqcbLxHKE8kvTVLDGpfrkspD5FqLVAOw-8TUxD7Vhd51GssvXrMLv0NKe4Z5gjp7tEsSJdo_uDgwYHF2Wj8Kzkqzr4yKD6t-4hN4iL8cwf3gMvbgWblnrVwROUPIXYjuwsjAWK91xNQXkyFxyj7k-gTew_s6mLstwr79lq2glx-F3ZSdJO9F-DaIdhnzZLFBvihNwRoiddA58SafCxfNr09Dsk-av1-VmcMPjDcFrjaNpmlcz4");'></div>
+<div class="absolute top-3 left-3 px-3 py-1 bg-primary/90 backdrop-blur-sm rounded-full text-[11px] font-bold text-white uppercase tracking-wider">待审批</div>
+</div>
+<div class="flex flex-col p-5 gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight group-hover:text-primary transition-colors">周末迪士尼乐园门票</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="size-6 rounded-full bg-cover bg-center ring-1 ring-slate-700" data-alt="Student avatar Zhang Xiaoming" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCQVGsOCdkLrbdTewxajjYmdBc61XhIa2OBz5gLs_0-uZM4PJ5Ow9vZcTYb9yaWtrKvFSwd-zk-2a7SrftbA2A90XLxBlzTHDwom6XzNHbgoCXync5jjiPA2NcCbBhBs_mtQpuK1Gea1aagQ4IEpKhLPzlRdGGlmXjZBav7yFM8qdP-17bn1wXt-ij3HVkBJqgCA_06O5XzwR0EWE_FDnyPx3ja7mpb7bIKyr7QlRP_WjtsTzOxiEg5lG9pfhgcqT39Ldqih4WLtF8");'></div>
+<p class="text-slate-400 text-sm">申请人：张小明</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-primary text-lg font-bold">5,000</span>
+<span class="text-slate-500 text-[10px] uppercase font-bold tracking-widest">积分点数</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-slate-500 text-xs border-t border-slate-700/50 pt-3">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span>2023-10-24 14:15 提交</span>
+</div>
+<div class="flex gap-3 pt-2">
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-bold transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>通过申请</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-slate-800 hover:bg-red-900/40 hover:text-red-400 text-slate-300 rounded-lg text-sm font-bold transition-all border border-slate-700 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+<span>拒绝</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3: Pending -->
+<div class="flex flex-col rounded-xl overflow-hidden shadow-lg bg-card-dark border border-slate-700/30 group hover:border-primary/50 transition-all duration-300">
+<div class="relative">
+<div class="w-full bg-center bg-no-repeat aspect-[16/10] bg-cover" data-alt="Gourmet sushi platter" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCJy2NeuuFDhbox0SzlVtV3FFsdRKkp7X_yMef2v0rojpwCu0eHcMpy5m32TU3z1h8qzgqCTQSFODRy5l31aBRSn7S1yje8dwI9SeRKej23Vth7tC8ABl2CA-PbHySH2xaAeElGyuGdxKCx6dknHU2K1ERFnGdSegZxSFvt-kEwi6Sg2959oY5mS5Fr7U6GxAspncpBBQQSSyf9OGHcwoKiBzs_KtpKx2Mmu1oL8vRZVbUTvsk-_ZPHu2o0dzhuXvp1VP_fzIp6-74");'></div>
+<div class="absolute top-3 left-3 px-3 py-1 bg-primary/90 backdrop-blur-sm rounded-full text-[11px] font-bold text-white uppercase tracking-wider">待审批</div>
+</div>
+<div class="flex flex-col p-5 gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-white text-lg font-bold leading-tight group-hover:text-primary transition-colors">奖励一顿日料大餐</h3>
+<div class="flex items-center gap-2 mt-2">
+<div class="size-6 rounded-full bg-cover bg-center ring-1 ring-slate-700" data-alt="Student avatar Wang Xiaohong" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD9SdrFp1Qx8zn5W1BtW_EhMGOfjMgUAWst3m6sLH3wkivfz5vc3XDeReXJv_WUxiRhjEj8qDKp_Zm66aJfBpFakSu6foct2tkBC6raVi-e20ZFtLykYOi7b9KDVWbRNQSpPjP-TUstK4jv__klBFX3ElskHiAwCoRN-oBYUhcjPZtILp9OKTTMIB836sEUfh88fmvOJLNAkclfx5ea4wL6sXR175I3tqAPtMOR_LOxTibJQNi6X003HHyRkDImg5dP1oIVgHrOWeg");'></div>
+<p class="text-slate-400 text-sm">申请人：王小红</p>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-primary text-lg font-bold">800</span>
+<span class="text-slate-500 text-[10px] uppercase font-bold tracking-widest">积分点数</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-slate-500 text-xs border-t border-slate-700/50 pt-3">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span>2023-10-23 18:20 提交</span>
+</div>
+<div class="flex gap-3 pt-2">
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-bold transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>通过申请</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-slate-800 hover:bg-red-900/40 hover:text-red-400 text-slate-300 rounded-lg text-sm font-bold transition-all border border-slate-700 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+<span>拒绝</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination or Load More -->
+<div class="mt-12 flex justify-center">
+<button class="flex items-center gap-2 px-6 py-2 bg-border-dark hover:bg-slate-700 text-slate-300 rounded-full text-sm font-medium transition-colors border border-slate-700/50">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+<span>加载更多愿望</span>
+</button>
+</div>
+</main>
+<!-- Simple Bottom Status Bar -->
+<footer class="mt-20 border-t border-border-dark bg-background-dark/50 py-8">
+<div class="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="flex items-center gap-2 text-slate-500 text-sm">
+<span class="material-symbols-outlined text-[18px]">school</span>
+<span>智能提升训练平台 · 家长端</span>
+</div>
+<div class="flex gap-6 text-slate-500 text-sm">
+<a class="hover:text-white transition-colors" href="#">帮助中心</a>
+<a class="hover:text-white transition-colors" href="#">隐私政策</a>
+<a class="hover:text-white transition-colors" href="#">联系我们</a>
+</div>
+<p class="text-slate-600 text-xs">© 2023 Intelligent Training Platform. All rights reserved.</p>
+</div>
+</footer>
+</body></html>

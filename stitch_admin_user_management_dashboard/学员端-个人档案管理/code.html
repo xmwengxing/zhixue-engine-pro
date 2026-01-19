@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>学员端-个人档案管理</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2badee",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101c22",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">school</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">智能提优训练平台</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors" href="#">首页</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary font-medium transition-colors" href="#">课程中心</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">个人中心</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+</button>
+<div class="flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-slate-800">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold">王小明</p>
+<p class="text-xs text-slate-500">初中二年级</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-cover bg-center border-2 border-primary/20" data-alt="User profile avatar of a smiling student" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnVpRx3WC95bkiEBzFO6mAUxpBLOPCH85GrHjlsH4KlIFv3m0n1oQksQhnYrx37MxnQvLvM-y66pj0zHS6JsvoQ001-d8OB-flqerTeYjEdY3a_Jm_7txDxbx3Aoiy7hkknQTzaOrgMb6ampEdEGsu04-QQAcUj9HeLKLNjmhV8rpPHYYYGFZe8j23DTqJwsm-UWvzZiY7Ki1ZrhfuK3OZ2ISuCZaj4PzKfexMVQ6vcfr0E-z3v45qZqlqDdy4IO_0Xd0x2X9tePE");'></div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="flex flex-col lg:flex-row gap-8">
+<!-- Left Sidebar Navigation -->
+<aside class="w-full lg:w-64 flex flex-col gap-2">
+<div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 mb-4">
+<div class="flex flex-col items-center gap-3">
+<div class="relative group">
+<div class="w-24 h-24 rounded-full bg-cover bg-center border-4 border-white dark:border-slate-800 shadow-lg" data-alt="Large detailed profile avatar of Wang Xiaoming" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCrsRpSaKAbkfHvupqyUGNd0kydlDKOMslAKMuXMgRBvOO1RZWSihhiHSfUu36LBCMxNL2I8U71mfVRF0lJQ4nhPu3Hliux4AK8qve1xQe_RJI4vnw8ORIx5o8EDe1sk4cv46S7G7Lc8ctlGN0-aPr1XtkAdSWTQGsOOQTShBr1SSC9Q8cnxL_Car3WpwbqX8S9Hv_L5XTmVsBSoAmU_Ma4sz7RjtkuZ9s_oaaXbsYmAoGX10anb17L99qp7YBcrb5MopzPBsDcdbI");'></div>
+<button class="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow-md hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-sm">photo_camera</span>
+</button>
+</div>
+<div class="text-center mt-2">
+<h3 class="text-lg font-bold">王小明</h3>
+<p class="text-xs text-slate-500 font-mono">STU20230801</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 p-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary font-bold" href="#">
+<span class="material-symbols-outlined">person</span>
+<span>个人档案</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>学情分析</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span>错题本</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span>账号安全</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1">
+<!-- Page Heading -->
+<div class="mb-6">
+<h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">个人档案管理</h1>
+<p class="text-slate-500 mt-2">完善你的个人信息，让我们更好地为你提供个性化学习支持</p>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- Basic Information Section (Left) -->
+<section class="xl:col-span-5 bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-2 mb-8">
+<span class="material-symbols-outlined text-primary">contact_page</span>
+<h2 class="text-xl font-bold">基本信息</h2>
+</div>
+<form class="space-y-6">
+<!-- Avatar Upload -->
+<div class="flex items-center gap-5 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+<div class="w-16 h-16 rounded-full bg-slate-200 bg-cover" data-alt="Small preview of student profile photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuATrIIcOPRpqGWWCiU7jhbpGwRq9PGO1yZFv0Peh6YWR7RDUKeLHAgtejkIilQnOi1IhO44y1BwZUkhnh-UQQ4tM6Iu1_cZJgjzzXjDcOJ-hEITQ92_XNZURAjnKd3yfkuBUv700z8M4DJbkuf7xBctwPlorrnr6lf8sHx-lj1sPriser5OtvRaZQImSiOMOkNnIMKCy_svCR74gTgH7vOcvUoa97E27ejsQG7MlcR_6Kvg_kiBSnQWC70rDAZGskEB4JX-Hjscz8I");'></div>
+<div>
+<p class="text-sm font-bold mb-1">更换头像</p>
+<p class="text-xs text-slate-400 mb-2">支持 JPG, PNG (Max 2MB)</p>
+<button class="text-xs font-bold text-primary hover:underline" type="button">点击上传</button>
+</div>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">学号</label>
+<input class="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-slate-500 cursor-not-allowed font-mono" disabled="" type="text" value="STU20230801"/>
+<p class="text-[10px] text-slate-400 mt-1">学号由系统生成，不可修改</p>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">姓名</label>
+<input class="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="请输入你的姓名" type="text" value="王小明"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">性别</label>
+<div class="flex gap-4">
+<label class="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-primary bg-primary/5 cursor-pointer">
+<input checked="" class="hidden" name="gender" type="radio"/>
+<span class="material-symbols-outlined text-primary text-lg">male</span>
+<span class="text-sm font-bold text-primary">男生</span>
+</label>
+<label class="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<input class="hidden" name="gender" type="radio"/>
+<span class="material-symbols-outlined text-slate-400 text-lg">female</span>
+<span class="text-sm font-bold text-slate-500">女生</span>
+</label>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">手机号</label>
+<input class="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary outline-none" placeholder="请输入手机号" type="tel" value="138****8888"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">电子邮箱</label>
+<input class="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary outline-none" placeholder="请输入邮箱地址" type="email" value="xiaoming@example.com"/>
+</div>
+<div class="pt-2">
+<button class="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary/80 transition-colors" type="button">
+<span class="material-symbols-outlined text-lg">lock_reset</span>
+                                        修改登录密码
+                                    </button>
+</div>
+</div>
+</form>
+</section>
+<!-- Education & Interests Section (Right) -->
+<section class="xl:col-span-7 space-y-8">
+<!-- Education Card -->
+<div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-2 mb-8">
+<span class="material-symbols-outlined text-primary">school</span>
+<h2 class="text-xl font-bold">教育背景</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="md:col-span-2">
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">就读学校</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">location_city</span>
+<input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary outline-none" placeholder="输入学校名称" type="text" value="实验中学"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">当前年级</label>
+<select class="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary outline-none appearance-none">
+<option>初中一年级</option>
+<option selected="">初中二年级</option>
+<option>初中三年级</option>
+<option>高中一年级</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">教材版本</label>
+<select class="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary outline-none appearance-none">
+<option selected="">人教版 (PEP)</option>
+<option>苏教版</option>
+<option>北师大版</option>
+<option>鲁教版</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Interests Card -->
+<div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary">favorite</span>
+<h2 class="text-xl font-bold">兴趣爱好</h2>
+</div>
+<p class="text-sm text-slate-500 mb-6">选择或添加你的兴趣标签，我们将为你推荐更感兴趣的训练内容。</p>
+<div class="flex flex-wrap gap-2 mb-8">
+<!-- Tags -->
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+<span>奥数挑战</span>
+<button class="hover:text-primary/70"><span class="material-symbols-outlined text-base">close</span></button>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+<span>英文原著阅读</span>
+<button class="hover:text-primary/70"><span class="material-symbols-outlined text-base">close</span></button>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+<span>编程基础</span>
+<button class="hover:text-primary/70"><span class="material-symbols-outlined text-base">close</span></button>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+<span>物理实验</span>
+<button class="hover:text-primary/70"><span class="material-symbols-outlined text-base">close</span></button>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 rounded-full text-sm font-medium hover:border-primary hover:text-primary transition-all">
+<span class="material-symbols-outlined text-base">add</span>
+<span>添加兴趣</span>
+</button>
+</div>
+<div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">推荐标签</p>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">机器人</button>
+<button class="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">诗词鉴赏</button>
+<button class="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">天文地理</button>
+<button class="px-3 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">平面几何</button>
+</div>
+</div>
+</div>
+<!-- Form Actions -->
+<div class="flex items-center justify-end gap-4 pt-4">
+<button class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" type="button">取消</button>
+<button class="px-10 py-3 bg-primary text-white font-bold rounded-lg shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all transform active:scale-95" type="submit">保存修改</button>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-12 py-8 border-t border-slate-200 dark:border-slate-800">
+<div class="max-w-[1200px] mx-auto px-4 text-center">
+<p class="text-sm text-slate-400">© 2024 智能提优训练平台 - 为每一位学子量身定制成长路径</p>
+</div>
+</footer>
+</body></html>

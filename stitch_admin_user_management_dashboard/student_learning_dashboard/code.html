@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>学员学习仪表盘</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#1e293b",
+                        "card-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"],
+                        "sans": ["Noto Sans SC", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-sans antialiased overflow-hidden">
+<div class="flex h-screen w-full overflow-hidden">
+<aside class="hidden md:flex flex-col w-64 h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111722] flex-shrink-0 transition-all">
+<div class="p-6 flex items-center gap-3">
+<div class="size-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">school</span>
+</div>
+<div>
+<h1 class="text-base font-bold leading-none text-slate-900 dark:text-white">智学空间</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">学员仪表盘</p>
+</div>
+</div>
+<nav class="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg bg-primary text-white shadow-md shadow-primary/20 transition-all" href="#">
+<span class="material-symbols-outlined fill-1">dashboard</span>
+<span class="text-sm font-medium">仪表盘</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">book_2</span>
+<span class="text-sm font-medium">课程列表</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-[#fa6238] transition-colors">error_circle_rounded</span>
+<span class="text-sm font-medium">错题本</span>
+<span class="ml-auto bg-[#fa6238] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">12</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">calendar_month</span>
+<span class="text-sm font-medium">学习日程</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">系统设置</span>
+</a>
+</nav>
+<div class="p-4 mt-auto border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-slate-200 dark:border-slate-700" data-alt="Portrait of a young student" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAX0rhZCAepsVXMSGL-TBsojlKKZqruDNEZB4G5WigUg0eVMkNHMSzqgBhKc_C7uJucmp9AIo8xAZ5J4xhNU18_DydIFw8S7Xl3nRgSYC6qpiKFhBPSHR4vcSjXvoccd4M1HSMxRVfUPQBx7n3yoRwTtAGn-aW_UazDG-8do1BMpyYYRATGopF-wa1qRhkKsZW92xXraDgm5u9DNlPXbf5JsBWGiiV-f-pthdrrPoHKFzyqInyP0INwu3aNgkeN-9vSSN_xME9OnBg');"></div>
+<div class="flex flex-col overflow-hidden">
+<p class="text-sm font-semibold text-slate-900 dark:text-white truncate">林晓</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">高一年级</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 h-full overflow-y-auto bg-background-light dark:bg-background-dark relative">
+<div class="md:hidden flex items-center justify-between p-4 bg-white dark:bg-[#111722] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-lg">school</span>
+</div>
+<span class="font-bold">智学空间</span>
+</div>
+<button class="text-slate-500 dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<div class="p-6 lg:p-10 max-w-7xl mx-auto flex flex-col gap-8">
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-display">下午好，林晓！ 👋</h2>
+<p class="text-slate-500 dark:text-slate-400 text-lg">准备好开启今天的学习之旅了吗？</p>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-card-dark px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+<div class="flex flex-col items-end">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">连续打卡</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[#fa6238] text-lg">local_fire_department</span>
+<span class="font-bold text-xl text-slate-900 dark:text-white font-display">14 天</span>
+</div>
+</div>
+</div>
+</header>
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-card-dark p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-40 group hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-primary">
+<span class="material-symbols-outlined">monitoring</span>
+</div>
+<div class="flex items-center gap-1 text-[#0bda5e] bg-[#0bda5e]/10 px-2 py-1 rounded-md text-xs font-bold font-display">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                            2.4%
+                        </div>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">各科平均分</p>
+<h3 class="text-3xl font-bold text-slate-900 dark:text-white font-display">88分</h3>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-40 group hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-purple-500">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">训练时间表</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white">数学</h3>
+<span class="text-slate-500 dark:text-slate-400 font-medium text-sm">下午 4:00</span>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between h-40 group hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-[#fa6238]">
+<span class="material-symbols-outlined">assignment_late</span>
+</div>
+<div class="flex items-center gap-1 text-[#fa6238] bg-[#fa6238]/10 px-2 py-1 rounded-md text-xs font-bold font-display">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+                            5%
+                        </div>
+</div>
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">历史错题数</p>
+<h3 class="text-3xl font-bold text-slate-900 dark:text-white font-display">12 <span class="text-lg font-normal text-slate-400">待订正</span></h3>
+</div>
+</div>
+</section>
+<section>
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">assignment_turned_in</span>
+                        任务中心
+                    </h2>
+<button class="text-sm font-medium text-primary hover:text-blue-400 transition-colors">查看全部任务</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-full hover:shadow-lg transition-all hover:-translate-y-1">
+<div class="h-40 bg-cover bg-center relative" data-alt="Geometric shapes on a dark background representing mathematics" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDnwPnYqXRHo4UnTtZOpb74Nv5M5i9JBuJKm68py1vnKzK-QsLmZv9R7cbFWa7C3LKy4KNMQuDc79ynVHfY8sV1L3nbsXRWyMErCUsOTcny3wds9_tAuTiKSXdUrpjz71CvaWl505X4ws5GEfo1IlFFkeio4yqiB2cczePAq6JfYAE3m1-1qPrBl6eUSE8Q_hm7elfOOl6wDDXQoTdRSF8EF6Q-cVjpOyEAEBT1LQg2S15WxcmGCSPLhtURmhfHt7aBuRMOgRw_CC4');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">数学</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1 gap-4">
+<div>
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">几何专项练习</h3>
+<span class="text-xs font-medium text-[#fa6238] bg-[#fa6238]/10 px-2 py-1 rounded">今天截止</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">掌握复杂图形和立体的面积与周长计算。</p>
+</div>
+<div class="mt-auto flex flex-col gap-2">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>学习进度</span>
+<span>40%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 40%"></div>
+</div>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors group">
+<span>进入训练舱</span>
+<span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-full hover:shadow-lg transition-all hover:-translate-y-1">
+<div class="h-40 bg-cover bg-center relative" data-alt="Open book with letters floating representing language learning" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAoUGiPJbe-2d4DNRadFSNxhUfZxjOWegPsoHGc45lLaof616tg2fGWzFZpAfwGW_hkxWsinp5fOkWm8K-LZEWPdrruRAwP42q89SAyyW7287MCuD6CvXVmhT2h6NFw_VNEDG8db9NonWnqDwhr-Yk9dFbpV12I6U5Uc0r4c_WLRZ3SUXL-ru9mHDcTVP2BkH0ohk9X2esS0JQ2M9qZyCVbMdyUyXzYtlRst-bXE4XhCdBcbKoRPU1YtceChnlRQNlBHFeo1gxt_R4');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">英语</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1 gap-4">
+<div>
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">词汇量提升</h3>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">明天截止</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">学习 20 个描述日常物品的高级同义词。</p>
+</div>
+<div class="mt-auto flex flex-col gap-2">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>学习进度</span>
+<span>10%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-purple-500 rounded-full" style="width: 10%"></div>
+</div>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors group">
+<span>进入训练舱</span>
+<span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-full hover:shadow-lg transition-all hover:-translate-y-1">
+<div class="h-40 bg-cover bg-center relative" data-alt="Abstract atom structure representing physics science" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC5pQJ_cEijbUaSLe6l67rKA-868b0djMLK8FOw0FjsZI6U1mZxMJK9MeR2pyY3jN5zwn0BxfPNOpenDzi60hF5vrvhkwWAzqYmI-ukl4RETv-dR8AS41Cpi029RwlRU-IgaGWfOwNBv1Vwy3ReULDMcOL5yQjxCq58gEwFazjj4FzfouQPkNz6rpApsVgL66aLGL-0fEvNQSpXmFu1qyccCxAtCCKf6j4GznihWdWt_az6KfX9GLjuN9SWgiRaysCQgn5zt891PYw');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="bg-teal-600 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">物理</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1 gap-4">
+<div>
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">力学基础测验</h3>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">周五截止</span>
+</div>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">测试你对牛顿三大运动定律的掌握程度。</p>
+</div>
+<div class="mt-auto flex flex-col gap-2">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>学习进度</span>
+<span>0%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-teal-500 rounded-full" style="width: 0%"></div>
+</div>
+</div>
+<button class="mt-2 w-full flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors group">
+<span>进入训练舱</span>
+<span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<div class="h-8"></div>
+</div>
+</main>
+</div>
+
+</body></html>

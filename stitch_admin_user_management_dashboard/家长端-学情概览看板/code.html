@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>家长端-学情概览看板</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#306ee8",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "card-dark": "#1e2433",
+                        "accent-green": "#0bda5e",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="bg-primary p-1.5 rounded-lg">
+<svg class="w-6 h-6 text-white" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h1 class="text-xl font-bold tracking-tight">学情概览看板</h1>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-primary font-semibold text-sm" href="#">首页</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors text-sm" href="#">学情分析</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors text-sm" href="#">训练任务</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors text-sm" href="#">错题本</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-primary/20">
+<img alt="User Profile" data-alt="Cartoon avatar of the parent user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTUNYqlm5KNauFGjiMwCTufks9LZ4BTfwGcXUh6jKm7lBhchWTgO7MFEi2T-r_tKIeuHV0nrR_ZMT0wVILdOL4abWSpWnEIfycCwLxUDRIRzZoMiF1JiiWUu5xMaCsrTQm_jakycJ1B8HhNQk3VWPnb9D56c8BfU-X-6tXMk3yrlg5GZCCwBz6v3ooUWyZlqKikg0mcLeGwK3x1aBuoGXKutcm6C6Wv7v9IneR0R3EjMB_07RBS5NQ7-ytyUhURAgqPLlfqkjPQdI"/>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- Profile Header & Stats Container -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+<!-- Student Profile -->
+<div class="lg:col-span-5 xl:col-span-4 bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-6">
+<div class="relative">
+<div class="size-24 rounded-full border-4 border-primary/20 overflow-hidden bg-slate-100 dark:bg-slate-800">
+<img alt="Student Portrait" data-alt="Friendly illustration of a young student" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBrWQtU1dasaelg6KZQqGae0jg-TxbCbefnNNfg2-uJJCDybUy5DH_nMmHtOIRb-PH8gCUtxh4iXTNJbAjEGke1MLvK6uhXG_JIz2r8zcV3gVtA2D3mGCwLwb3sCLYoqGkWywTVKhWcT3wvhF5iD0Vkzkhli9iRHAris4RGS9rdCxDpG3rfgKzMakwS0wy2tTUyTGYMm8R-_Z4yWvZq_A6MoiIn4SQhoWMwex9nPwx1-dnZgCWIcVYgU4zQcLxxReYHGs70lS8qIA"/>
+</div>
+<span class="absolute bottom-1 right-1 size-5 bg-accent-green border-2 border-white dark:border-card-dark rounded-full"></span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<h2 class="text-2xl font-bold">张小明</h2>
+<button class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md hover:bg-primary hover:text-white transition-all">切换</button>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm mb-1">初中一年级 | 重点班</p>
+<div class="flex items-center gap-1.5 text-accent-green text-sm font-medium">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+                        学习中
+                    </div>
+</div>
+</div>
+<!-- Fast Stats Cards -->
+<div class="lg:col-span-7 xl:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-orange-500 text-lg">local_fire_department</span>
+                        连续学习天数
+                    </p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold">15</span>
+<span class="text-xs font-bold text-accent-green">+2 天</span>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-yellow-500 text-lg">monetization_on</span>
+                        累计获得积分
+                    </p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold">1,280</span>
+<span class="text-xs font-bold text-accent-green">+120</span>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">task_alt</span>
+                        已完成任务数
+                    </p>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold">86</span>
+<span class="text-xs font-bold text-accent-green">+5</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Middle Section: Visual Analytics -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+<!-- Radar Chart Container -->
+<div class="lg:col-span-8 bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-lg font-bold">能力评估模型</h3>
+<div class="flex gap-2">
+<span class="flex items-center gap-1 text-xs text-slate-400">
+<span class="size-2 rounded-full bg-primary"></span> 当前水平
+                        </span>
+<span class="flex items-center gap-1 text-xs text-slate-400">
+<span class="size-2 rounded-full bg-slate-300 dark:bg-slate-700"></span> 同级平均
+                        </span>
+</div>
+</div>
+<div class="flex flex-col md:flex-row items-center gap-10">
+<div class="relative w-full max-w-[340px] aspect-square flex items-center justify-center">
+<!-- Radar Visualization Mockup -->
+<svg class="w-full h-full transform -rotate-18" viewbox="0 0 200 200">
+<!-- Background Circles -->
+<circle class="fill-none stroke-slate-100 dark:stroke-slate-800" cx="100" cy="100" r="80" stroke-width="1"></circle>
+<circle class="fill-none stroke-slate-100 dark:stroke-slate-800" cx="100" cy="100" r="60" stroke-width="1"></circle>
+<circle class="fill-none stroke-slate-100 dark:stroke-slate-800" cx="100" cy="100" r="40" stroke-width="1"></circle>
+<circle class="fill-none stroke-slate-100 dark:stroke-slate-800" cx="100" cy="100" r="20" stroke-width="1"></circle>
+<!-- Spoke Lines -->
+<line class="stroke-slate-100 dark:stroke-slate-800" stroke-width="1" x1="100" x2="100" y1="20" y2="180"></line>
+<line class="stroke-slate-100 dark:stroke-slate-800" stroke-width="1" x1="24.7" x2="175.3" y1="74" y2="126"></line>
+<line class="stroke-slate-100 dark:stroke-slate-800" stroke-width="1" x1="24.7" x2="175.3" y1="126" y2="74"></line>
+<!-- Average Data Polygon -->
+<polygon class="fill-slate-300/10 dark:fill-slate-700/20 stroke-slate-300 dark:stroke-slate-700" points="100,50 143,80 143,120 100,150 57,120 57,80" stroke-dasharray="2,2" stroke-width="1"></polygon>
+<!-- Student Data Polygon -->
+<polygon class="fill-primary/20 stroke-primary" points="100,35 152,70 140,135 100,165 48,135 55,70" stroke-linejoin="round" stroke-width="2.5"></polygon>
+<!-- Data Points -->
+<circle class="fill-primary" cx="100" cy="35" r="3"></circle>
+<circle class="fill-primary" cx="152" cy="70" r="3"></circle>
+<circle class="fill-primary" cx="140" cy="135" r="3"></circle>
+<circle class="fill-primary" cx="100" cy="165" r="3"></circle>
+<circle class="fill-primary" cx="48" cy="135" r="3"></circle>
+<circle class="fill-primary" cx="55" cy="70" r="3"></circle>
+</svg>
+<!-- Labels Overlay -->
+<div class="absolute inset-0 pointer-events-none text-[11px] font-bold text-slate-500 dark:text-slate-400">
+<span class="absolute top-0 left-1/2 -translate-x-1/2">逻辑思维</span>
+<span class="absolute top-[30%] right-0">记忆力</span>
+<span class="absolute bottom-[20%] right-[10%]">计算能力</span>
+<span class="absolute bottom-0 left-1/2 -translate-x-1/2">注意力</span>
+<span class="absolute bottom-[20%] left-[10%]">反应速度</span>
+<span class="absolute top-[30%] left-0">语言表达</span>
+</div>
+</div>
+<div class="flex-1 space-y-4 w-full">
+<div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
+<p class="text-xs text-slate-500 mb-1 uppercase tracking-wider">综合评分</p>
+<div class="flex items-center gap-3">
+<span class="text-4xl font-bold text-primary">88</span>
+<div class="px-2 py-0.5 bg-accent-green/10 text-accent-green text-xs font-bold rounded-full flex items-center">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 5%
+                                </div>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                            张小明的<span class="text-primary font-bold">逻辑思维</span>与<span class="text-primary font-bold">记忆力</span>表现优异，已经超过了90%的同龄人。建议加强计算速度的针对性练习。
+                        </p>
+</div>
+</div>
+</div>
+<!-- Error Correction Progress Card -->
+<div class="lg:col-span-4 bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+<h3 class="text-lg font-bold mb-6">错题攻克进度</h3>
+<div class="flex-1 flex flex-col items-center justify-center">
+<div class="relative size-48">
+<!-- Progress Ring -->
+<svg class="size-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="stroke-slate-100 dark:stroke-slate-800 fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-width="3"></path>
+<path class="stroke-primary fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="72, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-4xl font-bold">72%</span>
+<span class="text-[11px] text-slate-500 font-medium">累计攻克</span>
+</div>
+</div>
+<div class="w-full mt-8 grid grid-cols-2 gap-4">
+<div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+<p class="text-2xl font-bold text-primary">145</p>
+<p class="text-xs text-slate-500">已攻克</p>
+</div>
+<div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+<p class="text-2xl font-bold text-slate-400">56</p>
+<p class="text-xs text-slate-500">待处理</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Training Tasks List -->
+<div class="mb-8">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                    训练任务报告列表
+                </h3>
+<button class="text-sm font-medium text-primary hover:underline">查看全部任务</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Task Card 1 -->
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/50 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full w-max">每日口算练习</span>
+<h4 class="font-bold text-lg">整数加减法进阶</h4>
+</div>
+<div class="text-right">
+<p class="text-2xl font-bold text-accent-green">95<span class="text-sm font-normal text-slate-400">分</span></p>
+</div>
+</div>
+<div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-5">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span> 2023-10-25
+                        </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">timer</span> 12分钟
+                        </span>
+</div>
+<button class="w-full bg-slate-100 dark:bg-slate-800 group-hover:bg-primary group-hover:text-white py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        查看详细报告
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Task Card 2 -->
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/50 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-xs font-bold text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full w-max">逻辑思维特训</span>
+<h4 class="font-bold text-lg">图形规律推导(中级)</h4>
+</div>
+<div class="text-right">
+<p class="text-2xl font-bold text-accent-green">88<span class="text-sm font-normal text-slate-400">分</span></p>
+</div>
+</div>
+<div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-5">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span> 2023-10-24
+                        </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">timer</span> 25分钟
+                        </span>
+</div>
+<button class="w-full bg-slate-100 dark:bg-slate-800 group-hover:bg-primary group-hover:text-white py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        查看详细报告
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Task Card 3 -->
+<div class="bg-white dark:bg-card-dark p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/50 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-xs font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full w-max">记忆挑战</span>
+<h4 class="font-bold text-lg">词汇联想记忆(A组)</h4>
+</div>
+<div class="text-right">
+<p class="text-2xl font-bold text-accent-green">92<span class="text-sm font-normal text-slate-400">分</span></p>
+</div>
+</div>
+<div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-5">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span> 2023-10-22
+                        </span>
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">timer</span> 15分钟
+                        </span>
+</div>
+<button class="w-full bg-slate-100 dark:bg-slate-800 group-hover:bg-primary group-hover:text-white py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        查看详细报告
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-12 border-t border-slate-200 dark:border-slate-800 py-8 bg-white dark:bg-background-dark">
+<div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+<div class="size-6 bg-slate-200 dark:bg-slate-800 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">school</span>
+</div>
+<span>智能进阶训练平台 © 2023 </span>
+</div>
+<div class="flex gap-6 text-sm text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">使用条款</a>
+<a class="hover:text-primary transition-colors" href="#">隐私政策</a>
+<a class="hover:text-primary transition-colors" href="#">帮助中心</a>
+</div>
+</div>
+</footer>
+</body></html>

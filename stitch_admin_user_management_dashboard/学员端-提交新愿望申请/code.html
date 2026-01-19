@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>学员端 - 提交新愿望申请</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', 'Noto Sans SC', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen">
+<!-- Main Layout Container -->
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-[#232f48] px-6 md:px-10 py-3 bg-white dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">智能提升训练平台</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="hidden md:flex items-center gap-9">
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">学习中心</a>
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">错题本</a>
+<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary" href="#">我的愿望</a>
+<a class="text-slate-600 dark:text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">积分商城</a>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="Student user profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDaBuhwBmbgDmjOUCqJ80esIov8QE7grsgrdMEg5HPPWla8sKb7etL0TMI3QSCGNSHRMjZ0MlT7Oiae1HwWcoP7hRcwg4iemDzVymVNsNZNFmtuwIoKMFnrLEOIaJlLIs_iSfvJIL-Z1eu6QMXRtuVbZWcyRw0YiM6MWA2kxHSSX8uxeKeJ-2upKBoYPM-qLCQiJbz7fehfAu2Knv9Ncxma4nGyCRmgcGMbpUYZnnHFIzVMeEsW76Lych6T1Eg0tTKrUDTZRFL8cyo");'></div>
+</div>
+</header>
+<div class="flex flex-1 flex-col md:flex-row">
+<!-- Sidebar Navigation -->
+<aside class="w-full md:w-64 border-r border-slate-200 dark:border-[#232f48] p-4 flex flex-col gap-4 bg-white dark:bg-background-dark">
+<div class="flex flex-col mb-4">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-normal">学员中心</h1>
+<p class="text-slate-500 dark:text-[#92a4c9] text-xs font-normal leading-normal">积跬步以至千里</p>
+</div>
+<nav class="flex flex-col gap-2">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#192233] cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-slate-500 dark:text-white">house</span>
+<p class="text-slate-700 dark:text-white text-sm font-medium">学习主页</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#192233] cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-slate-500 dark:text-white">list_alt</span>
+<p class="text-slate-700 dark:text-white text-sm font-medium">任务列表</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-[#232f48] border-l-4 border-primary">
+<span class="material-symbols-outlined text-primary filled-icon">star</span>
+<p class="text-primary dark:text-white text-sm font-bold">愿望清单</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#192233] cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-slate-500 dark:text-white">person</span>
+<p class="text-slate-700 dark:text-white text-sm font-medium">个人中心</p>
+</div>
+</nav>
+</aside>
+<!-- Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto bg-slate-50 dark:bg-background-dark/50">
+<!-- Page Header -->
+<div class="flex flex-wrap justify-between items-center gap-3 p-6 md:p-10">
+<div class="flex flex-col gap-1">
+<p class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">提交新愿望申请</p>
+<p class="text-slate-500 dark:text-[#92a4c9] text-base font-normal">提交你的心愿，用积分兑换梦想</p>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-[#232f48] border border-slate-200 dark:border-[#324467] text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-[#2c3b5a] transition-colors">
+<span class="material-symbols-outlined text-sm">info</span>
+<span>查看积分规则</span>
+</button>
+</div>
+<!-- Modal Backdrop / Container -->
+<div class="flex-1 px-4 pb-10 flex justify-center items-start">
+<div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+<!-- Main Form Column (2/3) -->
+<div class="lg:col-span-2 bg-white dark:bg-[#192233] rounded-xl shadow-xl border border-slate-200 dark:border-[#232f48] overflow-hidden">
+<div class="p-6 border-b border-slate-100 dark:border-[#232f48] flex items-center gap-3">
+<div class="bg-primary/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary">edit_square</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-xl font-bold">填写愿望详情</h2>
+</div>
+<div class="p-8 space-y-6">
+<!-- Wish Name -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-semibold">愿望名称</label>
+<input class="w-full rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-50 dark:bg-[#111722] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary px-4 py-3 outline-none transition-all" placeholder="例如：买一个新书包" type="text"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Wish Type -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-semibold">愿望类型</label>
+<select class="w-full rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-50 dark:bg-[#111722] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary px-4 py-3 outline-none transition-all appearance-none">
+<option value="item">实物 (图书、文具等)</option>
+<option value="activity">活动 (游乐园、电影等)</option>
+<option value="other">其他</option>
+</select>
+</div>
+<!-- Points Needed -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-semibold">所需积分</label>
+<div class="relative">
+<input class="w-full rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-50 dark:bg-[#111722] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary px-4 py-3 pl-11 outline-none transition-all" placeholder="输入积分数值" type="number"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-amber-500 filled-icon">monetization_on</span>
+</div>
+</div>
+</div>
+<!-- Wish Description -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-semibold">愿望描述</label>
+<textarea class="w-full rounded-lg border border-slate-200 dark:border-[#324467] bg-slate-50 dark:bg-[#111722] text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary px-4 py-3 outline-none transition-all resize-none" placeholder="请详细描述你的愿望，为什么想要这个愿望呢？" rows="4"></textarea>
+</div>
+<!-- Image Upload -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-white text-sm font-semibold">上传愿望图片</label>
+<div class="border-2 border-dashed border-slate-200 dark:border-[#324467] rounded-xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/50 dark:bg-[#111722]/50 hover:border-primary/50 cursor-pointer transition-all group">
+<div class="size-12 rounded-full bg-slate-100 dark:bg-[#232f48] flex items-center justify-center text-slate-400 dark:text-[#92a4c9] group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-3xl">add_photo_alternate</span>
+</div>
+<div class="text-center">
+<p class="text-slate-600 dark:text-white text-sm font-medium">点击或拖拽图片到此处上传</p>
+<p class="text-slate-400 dark:text-[#92a4c9] text-xs">支持 JPG, PNG, GIF (最大 5MB)</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Form Actions -->
+<div class="p-6 bg-slate-50 dark:bg-[#1c263a] flex items-center justify-end gap-4 border-t border-slate-100 dark:border-[#232f48]">
+<button class="px-6 py-2.5 rounded-lg text-slate-600 dark:text-[#92a4c9] text-sm font-bold hover:bg-slate-200 dark:hover:bg-[#2c3b5a] transition-colors">
+                                        取消
+                                    </button>
+<button class="px-8 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+<span>提交申请</span>
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+<!-- Sidebar Incentive Column (1/3) -->
+<div class="flex flex-col gap-6">
+<!-- Points Secret Card -->
+<div class="bg-gradient-to-br from-primary to-blue-700 rounded-xl p-6 text-white shadow-xl relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-[120px]">rocket_launch</span>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined filled-icon">auto_awesome</span>
+<h3 class="text-lg font-bold">积分获取秘籍</h3>
+</div>
+<p class="text-blue-100 text-sm mb-6 leading-relaxed">想要更快实现愿望？试试这些方法获取更多积分吧！</p>
+<div class="space-y-4">
+<div class="flex items-center gap-4 bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/10">
+<div class="size-10 bg-white rounded-lg flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary font-bold">done_all</span>
+</div>
+<div>
+<p class="text-sm font-bold">答对题目</p>
+<p class="text-xs text-blue-100">每对一题最高奖励 10 分</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/10">
+<div class="size-10 bg-white rounded-lg flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary font-bold">task_alt</span>
+</div>
+<div>
+<p class="text-sm font-bold">完成任务</p>
+<p class="text-xs text-blue-100">完成每日学习目标额外领分</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/10">
+<div class="size-10 bg-white rounded-lg flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary font-bold">psychology</span>
+</div>
+<div>
+<p class="text-sm font-bold">攻克错题</p>
+<p class="text-xs text-blue-100">举一反三，消灭错题赢大奖</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Current Points Card -->
+<div class="bg-white dark:bg-[#192233] border border-slate-200 dark:border-[#232f48] rounded-xl p-6">
+<p class="text-slate-500 dark:text-[#92a4c9] text-sm font-medium mb-1">我的当前积分</p>
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">1,240</span>
+<span class="text-amber-500 text-sm font-bold">PTS</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-[#111722] h-2 rounded-full overflow-hidden mb-2">
+<div class="bg-amber-500 h-full w-[65%] rounded-full"></div>
+</div>
+<p class="text-xs text-slate-400 dark:text-[#92a4c9]">距离下一个目标还差 760 积分</p>
+</div>
+<!-- Quick Tip -->
+<div class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex gap-3">
+<span class="material-symbols-outlined text-amber-500 shrink-0">tips_and_updates</span>
+<p class="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+<strong>提示：</strong> 上传真实且精美的图片，可以让家长或老师更快看到你的决心哦！
+                                    </p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,41 @@
+// Prisma Schema - 智能提分训练平台数据库模型
+// 这是初始化版本，后续任务会逐步完善
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         Role
+  email        String?
+  phone        String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  @@map("users")
+}
+
+// 用户角色枚举
+enum Role {
+  ADMIN
+  PARENT
+  STUDENT
+}
+
+// 用户状态枚举
+enum UserStatus {
+  ACTIVE
+  LOCKED
+  DELETED
+}
