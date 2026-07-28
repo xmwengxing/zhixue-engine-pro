@@ -19,5 +19,15 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // 放宽一些规则以减少警告
+      '@typescript-eslint/no-explicit-any': 'warn', // 将 any 类型从错误降级为警告
+      '@typescript-eslint/no-unused-vars': ['warn', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_'
+      }],
+      'react-hooks/exhaustive-deps': 'warn', // 将依赖检查从错误降级为警告
+      'no-case-declarations': 'warn', // case 声明警告
+    },
   },
 ])

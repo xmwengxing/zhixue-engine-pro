@@ -1,0 +1,155 @@
+# ==========================================
+# 生产环境 Docker Compose 配置
+# ==========================================
+# 使用方式: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # PostgreSQL 数据库 - 生产配置
+  # ==========================================
+  postgres:
+    environment:
+      # 生产环境应使用强密码
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # 不暴露端口到主机（仅容器间访问）
+    ports: []
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================
+  # Redis 缓存 - 生产配置
+  # ==========================================
+  redis:
+    # 启用密码保护
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    # 不暴露端口到主机
+    ports: []
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================
+  # 后端 API 服务 - 生产配置
+  # ==========================================
+  backend:
+    environment:
+      NODE_ENV: production
+      
+      # 数据库配置（使用强密码）
+      DATABASE_URL: postgresql://${POSTGRES_USER:-training_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-training_platform}?schema=public
+      
+      # Redis 配置（使用密码）
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      
+      # 日志级别
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+      # Sentry 监控
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: production
+    # 不暴露端口到主机（通过 Nginx 访问）
+    ports: []
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+      # 重启策略
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ==========================================
+  # 前端应用 - 生产配置
+  # ==========================================
+  frontend:
+    build:
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+        - VITE_APP_ENV=production
+        - VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+    # 不直接暴露端口（通过 Nginx 访问）
+    ports: []
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ==========================================
+  # Nginx 反向代理 - 生产配置
+  # ==========================================
+  nginx:
+    # 暴露 80 和 443 端口
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # SSL 证书（如果使用 HTTPS）
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

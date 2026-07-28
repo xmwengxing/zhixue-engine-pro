@@ -1,264 +1,218 @@
-# 需求文档
+# 需求文档：智能训练平台 - 档案提取模式
 
 ## 简介
 
-智能提分训练平台是一个面向中小学生的全栈 Web 应用，通过 AI 驱动的个性化学习、错题管理和激励系统，帮助学生提升学习成绩。平台包含管理员端、家长端和学员端三个角色视角，实现从教材配置、任务发布、智能训练到学习反馈的完整闭环。
+本系统实现基于学员档案的 AI 智能训练平台，核心理念类似 Kiro 的 Spec 模式：不是简单出几道题，而是通过诊断测试了解学员水平，生成详细的学习计划，进行系统化的引导式训练，最后通过大型综合考试验收学习成果。
 
 ## 术语表
 
-- **System**: 智能提分训练平台系统
-- **Admin_Portal**: 管理员端门户
-- **Parent_Portal**: 家长端门户
-- **Student_Portal**: 学员端门户
-- **Training_Cabin**: 训练舱（核心学习交互模块）
-- **AI_Agent**: AI 教学助手
-- **Authorization_Code**: 授权码（用于账户激活）
-- **Student_ID**: 学号
-- **Wish_System**: 愿望激励系统
-- **Error_Book**: 错题本
-- **Task**: 学习任务
-- **Report**: AI 生成的学习报告
-- **Material_System**: 教材体系
-- **Points**: 积分
+- **训练舱（Training_Cabin）**：学员进行训练的主界面
+- **训练会话（Training_Session）**：一次完整的训练过程实例
+- **档案提取模式（Profile_Based_Mode）**：基于学员档案信息，由 AI 动态生成所有内容的训练模式
+- **诊断测试（Diagnostic_Test）**：训练开始前的评估测试，用于了解学员当前水平
+- **训练计划（Training_Plan）**：AI 根据诊断结果生成的详细学习计划文档
+- **引导式训练（Guided_Training）**：按照训练计划进行的系统化训练过程
+- **综合考试（Final_Exam）**：训练结束时的大型验收考试，类似期末考试
+- **AI_服务管理器（AI_Service_Manager）**：管理多个 AI 服务提供商的服务
+- **学员档案（Student_Profile）**：包含学员年级、教材版本、学习基础等信息
 
 ## 需求
 
-### 需求 1: 用户认证与角色管理
+### 需求 1：家长创建档案提取模式任务
 
-**用户故事:** 作为系统管理员，我希望能够管理不同角色的用户账户，以便控制平台访问权限和用户数据。
-
-#### 验收标准
-
-1. THE System SHALL 支持三种用户角色：管理员、家长、学员
-2. WHEN 用户登录时，THE System SHALL 验证用户凭证并返回对应角色的访问令牌
-3. WHEN 管理员创建新账户时，THE System SHALL 生成唯一的用户标识符并分配初始权限
-4. WHEN 用户会话过期时，THE System SHALL 要求重新认证
-5. THE System SHALL 记录所有用户登录和关键操作的审计日志
-
-### 需求 2: 管理员端 - 学号与授权码管理
-
-**用户故事:** 作为管理员，我希望能够批量生成和管理学号及授权码，以便高效地进行用户账户分配。
+**用户故事**：作为家长，我想要创建基于学员档案的训练任务，以便 AI 能够根据学员的实际情况生成个性化的训练内容。
 
 #### 验收标准
 
-1. WHEN 管理员请求批量生成授权码时，THE System SHALL 创建指定数量的唯一授权码并记录生成时间
-2. THE Admin_Portal SHALL 显示授权码列表，包含状态（未激活/已激活/已过期）和关联学号
-3. WHEN 管理员查看学号管理中心时，THE System SHALL 展示所有学号的分配状态和使用统计
-4. WHEN 管理员锁定或解绑学号时，THE System SHALL 更新学号状态并通知相关用户
-5. THE System SHALL 支持导出未激活授权码列表为 CSV 格式
+1. WHEN 家长选择"档案提取模式"，THEN THE 系统 SHALL 自动提取选中学员的完整档案信息
+2. WHEN 家长填写训练目标，THEN THE 系统 SHALL 验证训练目标不为空且长度在 10-500 字符之间
+3. WHEN 家长设置诊断测试题目数量，THEN THE 系统 SHALL 限制范围在 5-20 题之间，默认值为 10 题
+4. WHEN 家长提交任务创建，THEN THE 系统 SHALL 创建任务记录并关联学员档案信息
+5. THE 系统 SHALL 在任务配置中保存训练目标、诊断题目数量和档案提取模式标识
 
-### 需求 3: 管理员端 - 教材体系管理
+### 需求 2：学员启动训练会话
 
-**用户故事:** 作为管理员，我希望能够导入和维护各版本教材的结构，以便为学习任务提供标准化的知识体系。
-
-#### 验收标准
-
-1. WHEN 管理员导入教材数据时，THE System SHALL 解析并存储年级、科目、单元的树状结构
-2. THE Admin_Portal SHALL 以可展开的树形视图显示教材体系
-3. WHEN 管理员编辑教材节点时，THE System SHALL 验证数据完整性并更新相关联的学习任务
-4. THE System SHALL 支持多个教材版本（如人教版、苏教版）的并存管理
-5. WHEN 删除教材节点时，IF 该节点被任务引用，THEN THE System SHALL 阻止删除并提示依赖关系
-
-### 需求 4: 管理员端 - AI 服务配置
-
-**用户故事:** 作为管理员，我希望能够配置多个 AI 服务商和科目教学指令，以便系统能够提供智能化的教学服务。
+**用户故事**：作为学员，我想要进入训练舱开始训练，以便系统能够为我创建训练会话并开始诊断测试。
 
 #### 验收标准
 
-1. THE Admin_Portal SHALL 支持配置多个 AI 服务商（OpenAI、Claude 等）的 API 密钥和端点
-2. WHEN 主 AI 服务不可用时，THE System SHALL 自动切换到备用服务商
-3. WHEN 管理员配置科目教学指令时，THE System SHALL 保存每个科目的 System Prompt 模板
-4. THE Admin_Portal SHALL 实时显示 API 监控数据，包括 Token 消耗、响应时长和错误率
-5. WHEN API 错误率超过阈值时，THE System SHALL 发送告警通知给管理员
+1. WHEN 学员点击进入训练舱，THEN THE 系统 SHALL 检测任务是否为档案提取模式
+2. WHEN 任务为档案提取模式，THEN THE 系统 SHALL 创建训练会话且不依赖题库数据
+3. WHEN 创建训练会话，THEN THE 系统 SHALL 设置初始阶段为 DIAGNOSTIC_TEST
+4. WHEN 创建训练会话，THEN THE 系统 SHALL 初始化空的题目列表和答题记录
+5. THE 系统 SHALL 将诊断测试题目数量设置为任务配置中的值
 
-### 需求 5: 家长端 - 亲子关系管理
+### 需求 3：AI 生成诊断测试题目
 
-**用户故事:** 作为家长，我希望能够绑定和管理我的子女账户，以便查看他们的学习情况。
-
-#### 验收标准
-
-1. WHEN 家长添加学员时，THE System SHALL 通过授权码或学号验证并建立亲子绑定关系
-2. THE Parent_Portal SHALL 支持一个家长账户绑定多个学员账户
-3. WHEN 家长查看学情概览时，THE System SHALL 提供学员切换功能并显示选中学员的数据
-4. WHEN 家长请求解绑学员时，THE System SHALL 要求二次确认并保留历史数据
-5. THE System SHALL 在学员档案中记录绑定的家长信息
-
-### 需求 6: 家长端 - 学情概览看板
-
-**用户故事:** 作为家长，我希望能够直观地查看子女的学习数据，以便了解他们的学习进展和薄弱环节。
+**用户故事**：作为学员，我想要 AI 根据我的档案信息逐题生成诊断测试题目，以便系统能够全面评估我的当前水平。
 
 #### 验收标准
 
-1. THE Parent_Portal SHALL 在首页显示能力雷达图，展示各科目的掌握程度
-2. THE Parent_Portal SHALL 显示错题攻克环形图，标注未掌握、攻克中、已掌握的错题数量
-3. THE Parent_Portal SHALL 显示连续学习天数统计和本周学习时长
-4. WHEN 家长点击数据卡片时，THE System SHALL 跳转到对应的详细报告页面
-5. THE System SHALL 每日更新学情数据并在家长登录时展示最新信息
+1. WHEN 训练会话处于 DIAGNOSTIC_TEST 阶段，THEN THE AI_服务管理器 SHALL 根据学员档案生成诊断题目
+2. WHEN 生成诊断题目，THEN THE AI_服务管理器 SHALL 包含学员的年级、教材版本、学习基础和训练目标信息
+3. WHEN 生成诊断题目，THEN THE 系统 SHALL 返回包含题干、选项、题型的题目对象
+4. WHEN 生成诊断题目，THEN THE 题目 SHALL 覆盖训练目标相关的不同知识点
+5. WHEN 生成诊断题目，THEN THE 题目难度 SHALL 从易到难分布，全面评估学员水平
+6. WHEN AI 服务调用失败，THEN THE 系统 SHALL 返回友好的错误提示并允许重试
+7. THE 系统 SHALL 在 10 秒内完成单道题目的生成
 
-### 需求 7: 家长端 - 任务配置与发布
+### 需求 4：学员完成诊断测试
 
-**用户故事:** 作为家长，我希望能够为子女创建学习任务，以便引导他们进行针对性的学习。
-
-#### 验收标准
-
-1. THE Parent_Portal SHALL 提供两种任务发布模式：档案提取模式和自定义配置模式
-2. WHEN 家长选择档案提取模式时，THE System SHALL 基于学员档案自动生成推荐任务目标
-3. WHEN 家长选择自定义配置模式时，THE System SHALL 允许跨版本、跨单元选择学习内容
-4. WHEN 家长发布任务时，THE System SHALL 验证任务配置的完整性并通知学员
-5. THE System SHALL 保存任务配置历史并支持复用已有配置
-
-### 需求 8: 家长端 - 任务报告中心
-
-**用户故事:** 作为家长，我希望能够查看子女完成任务后的 AI 分析报告，以便了解学习效果和改进方向。
+**用户故事**：作为学员，我想要作答诊断测试题目并获得即时反馈，以便了解自己的答题情况。
 
 #### 验收标准
 
-1. THE Parent_Portal SHALL 以时间线形式展示所有已完成任务的报告列表
-2. WHEN 家长点击报告时，THE System SHALL 显示 AI 生成的深度分析，包括知识点掌握度、错题分析和学习建议
-3. THE Report SHALL 包含可视化图表，展示正确率、用时分布和能力变化趋势
-4. THE System SHALL 支持报告导出为 PDF 格式
-5. WHEN 任务完成时，THE System SHALL 自动生成报告并通知家长查看
+1. WHEN 学员提交诊断测试答案，THEN THE AI_服务管理器 SHALL 判断答案正确性
+2. WHEN AI 判断答案，THEN THE 系统 SHALL 返回正确答案、详细解析和反馈
+3. WHEN 学员完成一道诊断题，THEN THE 系统 SHALL 记录答题情况、用时和错误类型
+4. WHEN 学员点击"下一题"，THEN THE 系统 SHALL 生成下一道诊断题目
+5. WHEN 完成所有诊断题目，THEN THE 系统 SHALL 自动进入 PLANNING 阶段
+6. THE 系统 SHALL 在 5 秒内完成答案判断和反馈生成
 
-### 需求 9: 家长端 - 愿望审批系统
+### 需求 5：AI 分析诊断结果并生成训练计划
 
-**用户故事:** 作为家长，我希望能够审批子女提交的愿望申请，以便通过激励机制促进学习积极性。
-
-#### 验收标准
-
-1. THE Parent_Portal SHALL 显示学员提交的愿望列表，包含愿望描述、所需积分和提交时间
-2. WHEN 家长审批愿望时，THE System SHALL 提供同意、拒绝和附加理由反馈三个操作选项
-3. WHEN 家长同意愿望时，THE System SHALL 扣除学员对应积分并更新愿望状态为"待兑现"
-4. WHEN 家长拒绝愿望时，THE System SHALL 保留学员积分并通知学员拒绝理由
-5. THE System SHALL 记录所有审批操作的时间戳和操作人
-
-### 需求 10: 学员端 - 个人档案管理
-
-**用户故事:** 作为学员，我希望能够维护我的个人学习档案，以便系统能够提供个性化的学习内容。
+**用户故事**：作为学员，我想要 AI 深度分析我的诊断测试结果并生成详细的训练计划，以便我能够进行系统化的学习。
 
 #### 验收标准
 
-1. THE Student_Portal SHALL 允许学员填写基础信息，包括年级、使用教材版本和各科目基础水平
-2. WHEN 学员进行学习基础自评时，THE System SHALL 提供各科目的能力等级选择（薄弱/一般/良好/优秀）
-3. THE System SHALL 基于档案信息调整训练舱的初始难度和内容推荐
-4. WHEN 学员更新档案时，THE System SHALL 保存修改历史并重新计算学习路径
-5. THE Student_Portal SHALL 显示档案完整度进度条，提示学员补充缺失信息
+1. WHEN 诊断测试完成，THEN THE AI_服务管理器 SHALL 分析所有诊断测试答题数据
+2. WHEN AI 分析诊断结果，THEN THE 系统 SHALL 统计正确率、错题分布和薄弱知识点
+3. WHEN AI 分析诊断结果，THEN THE 系统 SHALL 结合学员档案信息评估学习风格
+4. WHEN AI 生成训练计划，THEN THE 训练计划 SHALL 包含学习目标分解（至少 3-5 个子目标）
+5. WHEN AI 生成训练计划，THEN THE 训练计划 SHALL 包含完整的知识点清单（至少 5-10 个知识点）
+6. WHEN AI 生成训练计划，THEN THE 训练计划 SHALL 包含至少 3 个训练阶段：基础巩固、能力提升、综合应用
+7. WHEN AI 生成训练计划，THEN THE 每个训练阶段 SHALL 包含学习重点、练习题数量、预计用时和验收标准
+8. WHEN AI 生成训练计划，THEN THE 训练计划 SHALL 包含综合考试规划（考试范围、题目数量 20-50 题、难度分布、及格标准）
+9. WHEN 训练计划生成完成，THEN THE 系统 SHALL 显示完整的训练计划给学员确认
+10. THE 系统 SHALL 在 30 秒内完成训练计划的生成
 
-### 需求 11: 学员端 - 训练舱核心功能
+### 需求 6：学员进行基础巩固阶段训练
 
-**用户故事:** 作为学员，我希望能够在训练舱中进行智能化的学习训练，以便高效提升成绩。
-
-#### 验收标准
-
-1. THE Training_Cabin SHALL 实现三栏布局：左侧进度导航、中间题目交互区、右侧 AI 对话框
-2. WHEN 学员开始训练时，THE System SHALL 依次执行训前测试、动态训练步骤和综合考试流程
-3. THE Training_Cabin SHALL 实时保存学员的答题记录和进度状态
-4. WHEN 学员答题时，THE AI_Agent SHALL 根据答题情况提供启发式引导而非直接答案
-5. THE Training_Cabin SHALL 显示当前进度百分比和已完成题目数量
-
-### 需求 12: 学员端 - AI 启发式教学
-
-**用户故事:** 作为学员，我希望 AI 助手能够在我遇到困难时提供启发式引导，以便培养独立思考能力。
+**用户故事**：作为学员，我想要按照训练计划进行基础巩固训练，以便加强我的薄弱知识点。
 
 #### 验收标准
 
-1. WHEN 学员答错题目时，THE AI_Agent SHALL 分析错误原因并提供分步骤的思路引导
-2. THE AI_Agent SHALL 避免直接给出答案，而是通过提问方式引导学员思考
-3. WHEN 学员请求帮助时，THE AI_Agent SHALL 根据科目教学指令生成个性化的启发式对话
-4. THE Training_Cabin SHALL 在右侧对话框显示 AI 对话历史，支持滚动查看
-5. THE System SHALL 记录 AI 对话内容用于生成学习报告
+1. WHEN 学员点击"开始训练"，THEN THE 系统 SHALL 进入 GUIDED_TRAINING 阶段
+2. WHEN 进入基础巩固阶段，THEN THE AI_服务管理器 SHALL 针对薄弱知识点生成练习题
+3. WHEN 生成基础巩固题目，THEN THE 题目 SHALL 包含详细的知识点讲解
+4. WHEN 学员答错题目，THEN THE AI_服务管理器 SHALL 提供引导式思考提示
+5. WHEN 学员答错题目，THEN THE 系统 SHALL 允许学员重做该题
+6. WHEN 完成基础巩固阶段，THEN THE AI_服务管理器 SHALL 生成阶段小结报告
+7. THE 基础巩固阶段 SHALL 包含至少 10-20 道练习题
 
-### 需求 13: 学员端 - 错题本管理
+### 需求 7：学员进行能力提升阶段训练
 
-**用户故事:** 作为学员，我希望能够系统化地管理和复习错题，以便攻克薄弱知识点。
-
-#### 验收标准
-
-1. THE Student_Portal SHALL 自动收集训练舱中的所有错题并分类存储
-2. THE Error_Book SHALL 按科目和掌握度（未掌握/攻克中/已掌握）分类展示错题
-3. WHEN 学员进入错题重做模式时，THE System SHALL 提供 AI 引导的二次挑战
-4. WHEN 学员正确完成错题重做时，THE System SHALL 更新错题掌握度并奖励积分
-5. THE Error_Book SHALL 显示每道错题的原始答案、正确答案和 AI 解析
-
-### 需求 14: 学员端 - 积分与愿望系统
-
-**用户故事:** 作为学员，我希望能够通过学习获得积分并兑换愿望，以便获得学习动力。
+**用户故事**：作为学员，我想要进行能力提升训练，以便提高我的综合解题能力。
 
 #### 验收标准
 
-1. THE Student_Portal SHALL 显示当前可用积分、累计积分和积分获取历史
-2. WHEN 学员完成任务或攻克错题时，THE System SHALL 根据难度和表现计算并发放积分
-3. THE Student_Portal SHALL 提供愿望提交功能，允许学员自定义愿望描述、设定所需积分和上传参考图片
-4. WHEN 学员提交愿望时，IF 所需积分超过当前可用积分，THEN THE System SHALL 显示积分差距提示
-5. THE Student_Portal SHALL 显示愿望审核状态（待审核/已同意/已拒绝/已兑现）
+1. WHEN 进入能力提升阶段，THEN THE AI_服务管理器 SHALL 生成难度逐步提升的题目
+2. WHEN 生成能力提升题目，THEN THE 题目 SHALL 包含综合性和跨知识点内容
+3. WHEN 学员遇到困难，THEN THE AI_服务管理器 SHALL 提供解题思路指导
+4. WHEN 完成能力提升阶段，THEN THE AI_服务管理器 SHALL 生成阶段小结报告
+5. THE 能力提升阶段 SHALL 包含至少 15-25 道练习题
 
-### 需求 15: 响应式设计与移动端适配
+### 需求 8：学员进行综合应用阶段训练
 
-**用户故事:** 作为用户，我希望能够在不同设备上流畅使用平台，以便随时随地进行学习和管理。
-
-#### 验收标准
-
-1. WHEN 用户在桌面端访问时，THE System SHALL 保持完整的三栏布局显示
-2. WHEN 用户在移动端访问训练舱时，THE System SHALL 自动隐藏左侧导航栏并提供汉堡菜单切换
-3. WHEN 用户在移动端访问训练舱时，THE System SHALL 将 AI 对话框改为底部浮动图标弹出式设计
-4. THE System SHALL 在不同屏幕尺寸下保持布局合理性和可读性
-5. THE System SHALL 支持触摸手势操作，如滑动切换题目和双指缩放图片
-
-### 需求 16: UI 设计还原与视觉一致性
-
-**用户故事:** 作为产品设计师，我希望开发能够严格还原设计稿，以便保持品牌视觉一致性和用户体验。
+**用户故事**：作为学员，我想要进行综合应用训练，以便培养解决实际问题的能力。
 
 #### 验收标准
 
-1. THE System SHALL 使用设计稿中指定的蓝白色调配色方案
-2. THE System SHALL 严格还原设计稿中的布局、字体大小、间距和组件样式
-3. THE System SHALL 使用统一的组件库确保各页面视觉一致性
-4. WHEN 用户交互时，THE System SHALL 提供符合设计规范的动画和过渡效果
-5. THE System SHALL 在所有页面保持统一的导航结构和品牌元素
+1. WHEN 进入综合应用阶段，THEN THE AI_服务管理器 SHALL 生成实际应用场景题目
+2. WHEN 生成综合应用题目，THEN THE 题目 SHALL 包含跨知识点综合题
+3. WHEN 学员作答，THEN THE AI_服务管理器 SHALL 评估学员的综合应用能力
+4. WHEN 完成综合应用阶段，THEN THE AI_服务管理器 SHALL 生成阶段小结报告
+5. THE 综合应用阶段 SHALL 包含至少 10-15 道练习题
 
-### 需求 17: 数据持久化与状态管理
+### 需求 9：学员参加综合考试
 
-**用户故事:** 作为开发者，我希望系统能够可靠地存储和管理用户数据，以便保证数据安全和系统稳定性。
-
-#### 验收标准
-
-1. THE System SHALL 将用户数据、学习记录和配置信息持久化存储到数据库
-2. WHEN 用户进行操作时，THE System SHALL 实时更新前端状态并与后端同步
-3. THE System SHALL 在网络中断时缓存用户操作，并在恢复连接后自动同步
-4. THE System SHALL 定期备份关键数据并支持数据恢复
-5. THE System SHALL 使用事务机制确保数据一致性，特别是在积分扣除和任务状态更新时
-
-### 需求 18: AI 报告生成
-
-**用户故事:** 作为学员和家长，我希望系统能够自动生成详细的学习分析报告，以便了解学习效果和改进方向。
+**用户故事**：作为学员，我想要参加综合考试验收学习成果，以便全面检验我的学习效果。
 
 #### 验收标准
 
-1. WHEN 学员完成训练任务时，THE System SHALL 调用 AI 服务生成深度学习报告
-2. THE Report SHALL 包含知识点掌握度分析、错题统计、能力雷达图和个性化学习建议
-3. THE System SHALL 在报告生成过程中显示进度提示（如"AI 报告生成中"）
-4. WHEN 报告生成完成时，THE System SHALL 通知学员和家长查看
-5. THE System SHALL 保存报告历史并支持对比不同时期的学习数据
+1. WHEN 所有训练阶段完成，THEN THE 系统 SHALL 进入 FINAL_EXAM 阶段
+2. WHEN 进入综合考试，THEN THE AI_服务管理器 SHALL 生成 20-50 道考试题目
+3. WHEN 生成考试题目，THEN THE 题目 SHALL 包含多种题型（选择题、填空题、解答题）
+4. WHEN 生成考试题目，THEN THE 题目难度分布 SHALL 为：基础题 40%、中等题 40%、难题 20%
+5. WHEN 生成考试题目，THEN THE 题目 SHALL 涵盖所有训练过的知识点
+6. WHEN 学员参加考试，THEN THE 系统 SHALL 设置合理的时间限制
+7. WHEN 学员参加考试，THEN THE 系统 SHALL 禁用 AI 助手功能（模拟真实考试）
+8. WHEN 学员提交考试，THEN THE 系统 SHALL 进入 COMPLETED 阶段
+9. THE 综合考试题目数量 SHALL 根据训练目标复杂度在 20-50 题之间
 
-### 需求 19: 系统性能与可扩展性
+### 需求 10：AI 生成完整训练报告
 
-**用户故事:** 作为系统架构师，我希望系统能够支持大规模用户并发访问，以便满足业务增长需求。
-
-#### 验收标准
-
-1. THE System SHALL 支持至少 1000 个并发用户同时在线学习
-2. WHEN 用户请求页面时，THE System SHALL 在 2 秒内完成页面加载
-3. WHEN AI 服务调用时，THE System SHALL 实现请求队列和限流机制防止过载
-4. THE System SHALL 使用缓存机制减少数据库查询压力
-5. THE System SHALL 支持水平扩展，通过增加服务器节点提升处理能力
-
-### 需求 20: 代码质量与可维护性
-
-**用户故事:** 作为开发团队成员，我希望代码具有良好的结构和文档，以便团队协作和长期维护。
+**用户故事**：作为学员，我想要查看完整的训练报告，以便了解我的学习成果和后续改进方向。
 
 #### 验收标准
 
-1. THE System SHALL 采用模块化架构，前后端分离，组件职责清晰
-2. THE System SHALL 在关键代码处添加中文注释说明业务逻辑
-3. THE System SHALL 遵循统一的代码风格规范（如 ESLint、Prettier 配置）
-4. THE System SHALL 为核心功能模块编写单元测试，测试覆盖率不低于 60%
-5. THE System SHALL 提供 API 文档和部署文档，便于新成员快速上手
+1. WHEN 综合考试完成，THEN THE AI_服务管理器 SHALL 生成完整的训练报告
+2. WHEN 生成训练报告，THEN THE 报告 SHALL 包含诊断测试分析（初始水平评估）
+3. WHEN 生成训练报告，THEN THE 报告 SHALL 包含训练过程回顾（各阶段表现）
+4. WHEN 生成训练报告，THEN THE 报告 SHALL 包含综合考试成绩（总分、正确率、各知识点得分）
+5. WHEN 生成训练报告，THEN THE 报告 SHALL 包含进步情况对比（诊断测试 vs 综合考试）
+6. WHEN 生成训练报告，THEN THE 报告 SHALL 包含薄弱点分析（仍需加强的内容）
+7. WHEN 生成训练报告，THEN THE 报告 SHALL 包含学习建议（后续学习方向）
+8. WHEN 生成训练报告，THEN THE 系统 SHALL 根据表现计算并发放积分奖励
+9. WHEN 报告生成完成，THEN THE 系统 SHALL 更新任务状态为 COMPLETED
+10. THE 系统 SHALL 在 30 秒内完成训练报告的生成
+
+### 需求 11：训练过程中的 AI 助手支持
+
+**用户故事**：作为学员，我想要在训练过程中随时向 AI 助手求助，以便获得学习指导和答疑。
+
+#### 验收标准
+
+1. WHEN 学员在训练过程中，THEN THE 系统 SHALL 提供 AI 助手对话功能
+2. WHEN 学员向 AI 助手提问，THEN THE AI_服务管理器 SHALL 提供启发式引导而非直接答案
+3. WHEN 学员答错题目，THEN THE AI 助手 SHALL 主动提供思路引导
+4. WHEN 学员在综合考试阶段，THEN THE 系统 SHALL 禁用 AI 助手功能
+5. THE AI 助手 SHALL 在 5 秒内响应学员的提问
+
+### 需求 12：训练进度管理和状态追踪
+
+**用户故事**：作为学员，我想要清楚地看到训练进度和当前状态，以便了解我的学习进展。
+
+#### 验收标准
+
+1. WHEN 学员在训练舱中，THEN THE 系统 SHALL 显示当前训练阶段
+2. WHEN 学员在训练舱中，THEN THE 系统 SHALL 显示当前阶段的进度（如 5/20 题）
+3. WHEN 学员在训练舱中，THEN THE 系统 SHALL 显示已完成的训练阶段列表
+4. WHEN 学员在训练舱中，THEN THE 系统 SHALL 显示预计剩余时间
+5. THE 系统 SHALL 实时更新训练进度信息
+
+### 需求 13：错误处理和降级方案
+
+**用户故事**：作为系统管理员，我想要系统能够优雅地处理 AI 服务故障，以便保证用户体验。
+
+#### 验收标准
+
+1. WHEN AI 服务调用超时（>30 秒），THEN THE 系统 SHALL 显示友好的错误提示
+2. WHEN AI 服务调用失败，THEN THE 系统 SHALL 提供重试选项
+3. WHEN AI 服务连续失败 3 次，THEN THE 系统 SHALL 建议学员稍后再试
+4. WHEN AI 生成内容质量异常，THEN THE 系统 SHALL 记录日志并重新生成
+5. THE 系统 SHALL 在所有 AI 调用中实现超时控制和错误处理
+
+### 需求 14：家长查看训练报告
+
+**用户故事**：作为家长，我想要查看学员的训练报告，以便了解学员的学习情况和进步。
+
+#### 验收标准
+
+1. WHEN 训练完成，THEN THE 系统 SHALL 在家长端显示训练报告
+2. WHEN 家长查看报告，THEN THE 系统 SHALL 显示完整的训练数据和分析
+3. WHEN 家长查看报告，THEN THE 系统 SHALL 显示学员的进步曲线图
+4. WHEN 家长查看报告，THEN THE 系统 SHALL 显示 AI 生成的学习建议
+5. THE 家长端 SHALL 支持导出训练报告为 PDF 格式
+
+### 需求 15：训练计划的可视化展示
+
+**用户故事**：作为学员，我想要以可视化的方式查看训练计划，以便更好地理解学习路径。
+
+#### 验收标准
+
+1. WHEN 训练计划生成完成，THEN THE 系统 SHALL 以结构化方式展示训练计划
+2. WHEN 展示训练计划，THEN THE 系统 SHALL 显示各阶段的关系和顺序
+3. WHEN 展示训练计划，THEN THE 系统 SHALL 高亮显示当前进行的阶段
+4. WHEN 展示训练计划，THEN THE 系统 SHALL 显示各阶段的完成状态
+5. THE 训练计划展示 SHALL 支持折叠和展开详细内容

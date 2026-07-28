@@ -1,1504 +1,1357 @@
-# 设计文档
+# 设计文档：智能训练平台 - 档案提取模式
 
 ## 概述
 
-智能提分训练平台是一个基于 React + TypeScript + Node.js 的全栈 Web 应用，采用前后端分离架构。系统通过 AI 驱动的个性化学习引擎，为中小学生提供智能化的学习训练、错题管理和激励系统。
+本设计实现基于学员档案的 AI 智能训练平台。系统采用"诊断-规划-训练-考试"四阶段模型，通过 AI 动态生成所有训练内容，实现个性化的学习体验。
 
-### 核心设计目标
+### 核心设计理念
 
-1. **高还原度 UI**：严格还原设计稿的蓝白色调、布局和组件样式
-2. **响应式三栏布局**：训练舱实现桌面端三栏、移动端自适应的布局方案
-3. **AI 驱动智能化**：集成多 AI 服务商，提供启发式教学和报告生成
-4. **模块化架构**：清晰的代码结构，便于团队协作和长期维护
-5. **性能与可扩展性**：支持大规模并发，快速响应用户操作
+**类似 Kiro Spec 模式的训练流程**：
+1. **诊断阶段**：通过测试了解学员当前水平（类似需求分析）
+2. **规划阶段**：AI 生成详细的学习计划（类似设计文档）
+3. **训练阶段**：按计划系统化训练（类似任务执行）
+4. **考试阶段**：综合验收学习成果（类似验收测试）
 
-### 技术栈选型
+### 技术栈
 
-**前端：**
-- React 18 + TypeScript
-- Vite（构建工具）
-- Tailwind CSS（样式框架）
-- Zustand（状态管理）
-- React Router（路由）
-- Axios（HTTP 客户端）
-- fast-check（属性测试库）
-
-**后端：**
-- Node.js + Express + TypeScript
-- PostgreSQL（关系型数据库）
-- Prisma（ORM）
-- JWT（身份认证）
-- OpenAI/Claude SDK（AI 服务集成）
-
-**部署：**
-- Docker + Docker Compose
-- Nginx（反向代理）
+- **后端**：Node.js + TypeScript + Express + Prisma
+- **前端**：React + TypeScript + Zustand
+- **AI 服务**：多提供商支持（OpenAI/Claude/DeepSeek等）
+- **数据库**：PostgreSQL
 
 ## 架构
 
 ### 系统架构图
 
-```mermaid
-graph TB
-    subgraph "客户端层"
-        A[浏览器/移动浏览器]
-    end
-    
-    subgraph "前端应用层"
-        B[React SPA]
-        B1[管理员端]
-        B2[家长端]
-        B3[学员端]
-    end
-
-    
-    subgraph "API 网关层"
-        C[Express API Server]
-        C1[认证中间件]
-        C2[路由控制器]
-        C3[错误处理]
-    end
-    
-    subgraph "业务逻辑层"
-        D[服务层]
-        D1[用户服务]
-        D2[任务服务]
-        D3[训练舱服务]
-        D4[报告服务]
-        D5[积分服务]
-    end
-    
-    subgraph "AI 服务层"
-        E[AI 服务管理器]
-        E1[OpenAI 适配器]
-        E2[Claude 适配器]
-        E3[提示词模板引擎]
-    end
-    
-    subgraph "数据持久层"
-        F[(PostgreSQL)]
-        G[Redis 缓存]
-    end
-    
-    A --> B
-    B --> B1
-    B --> B2
-    B --> B3
-    B --> C
-    C --> C1
-    C --> C2
-    C --> C3
-    C2 --> D
-    D --> D1
-    D --> D2
-    D --> D3
-    D --> D4
-    D --> D5
-    D --> E
-    D --> F
-    D --> G
-    E --> E1
-    E --> E2
-    E --> E3
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         前端层                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ 家长任务配置  │  │  训练舱界面   │  │  报告查看     │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                         API 层                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ 任务管理API   │  │  训练会话API  │  │  报告API      │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                        服务层                                │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │           AI 题目生成服务                         │       │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │       │
+│  │  │ 诊断测试   │  │ 训练计划   │  │ 题目生成   │ │       │
+│  │  │ 生成器     │  │ 生成器     │  │ 引擎       │ │       │
+│  │  └────────────┘  └────────────┘  └────────────┘ │       │
+│  └──────────────────────────────────────────────────┘       │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │           训练会话管理服务                        │       │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │       │
+│  │  │ 状态机     │  │ 进度追踪   │  │ 答题记录   │ │       │
+│  │  └────────────┘  └────────────┘  └────────────┘ │       │
+│  └──────────────────────────────────────────────────┘       │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │           AI 服务管理器                           │       │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │       │
+│  │  │ 提供商管理 │  │ 负载均衡   │  │ 错误处理   │ │       │
+│  │  └────────────┘  └────────────┘  └────────────┘ │       │
+│  └──────────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                        数据层                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ 任务配置     │  │  训练会话     │  │  答题记录     │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ 学员档案     │  │  训练计划     │  │  训练报告     │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 架构分层说明
+### 训练流程状态机
 
-**客户端层：**
-- 支持桌面浏览器和移动浏览器
-- 响应式设计自动适配不同屏幕尺寸
+```
+┌─────────────┐
+│   CREATED   │ 任务创建
+└──────┬──────┘
+       │
+       ↓
+┌─────────────────┐
+│ DIAGNOSTIC_TEST │ 诊断测试阶段
+└──────┬──────────┘
+       │ 完成所有诊断题
+       ↓
+┌─────────────┐
+│  PLANNING   │ AI 生成训练计划
+└──────┬──────┘
+       │ 学员确认计划
+       ↓
+┌──────────────────┐
+│ GUIDED_TRAINING  │ 引导式训练阶段
+│                  │
+│ ┌──────────────┐ │
+│ │ 基础巩固     │ │
+│ └──────┬───────┘ │
+│        ↓         │
+│ ┌──────────────┐ │
+│ │ 能力提升     │ │
+│ └──────┬───────┘ │
+│        ↓         │
+│ ┌──────────────┐ │
+│ │ 综合应用     │ │
+│ └──────────────┘ │
+└──────┬───────────┘
+       │ 完成所有训练
+       ↓
+┌─────────────┐
+│ FINAL_EXAM  │ 综合考试阶段
+└──────┬──────┘
+       │ 提交考试
+       ↓
+┌─────────────┐
+│  COMPLETED  │ 生成报告，任务完成
+└─────────────┘
+```
 
-**前端应用层：**
-- 单页应用（SPA）架构
-- 按角色划分三个主要模块：管理员端、家长端、学员端
-- 共享通用组件库和工具函数
+## 组件和接口
 
-**API 网关层：**
-- 统一的 RESTful API 入口
-- JWT 认证中间件验证用户身份
-- 路由控制器分发请求到对应服务
-- 全局错误处理和日志记录
+### 1. AI 题目生成服务 (AIQuestionGeneratorService)
 
-**业务逻辑层：**
-- 服务层封装核心业务逻辑
-- 每个服务负责特定领域功能
-- 服务间通过依赖注入实现解耦
+负责所有 AI 内容生成，包括诊断题目、训练题目、训练计划和训练报告。
 
-**AI 服务层：**
-- 抽象 AI 服务接口，支持多服务商切换
-- 适配器模式封装不同 AI 服务商的 API
-- 提示词模板引擎管理各科目的教学指令
-
-**数据持久层：**
-- PostgreSQL 存储结构化数据
-- Redis 缓存热点数据和会话信息
-
-## 组件与接口
-
-### 前端组件架构
-
-#### 通用组件库（Shared Components）
+#### 接口
 
 ```typescript
-// 布局组件
-- Layout: 页面整体布局容器
-- Sidebar: 侧边栏导航
-- Header: 顶部导航栏
-- Footer: 页脚
+interface AIQuestionGeneratorService {
+  // 生成诊断测试题目
+  generateDiagnosticQuestion(
+    context: DiagnosticContext,
+    questionNumber: number
+  ): Promise<Question>;
 
-// 表单组件
-- Input: 输入框
-- Select: 下拉选择
-- Button: 按钮
-- Form: 表单容器
-- DatePicker: 日期选择器
+  // 判断答案并生成反馈
+  evaluateAnswer(
+    question: Question,
+    studentAnswer: string,
+    context: EvaluationContext
+  ): Promise<AnswerEvaluation>;
 
-// 数据展示组件
-- Table: 数据表格
-- Card: 卡片容器
-- Chart: 图表（雷达图、环形图、折线图）
-- Badge: 徽章标签
-- Progress: 进度条
+  // 分析诊断结果并生成训练计划
+  generateTrainingPlan(
+    diagnosticResults: DiagnosticResults,
+    studentProfile: StudentProfile,
+    trainingGoal: string
+  ): Promise<TrainingPlan>;
 
-// 反馈组件
-- Modal: 模态对话框
-- Toast: 消息提示
-- Loading: 加载指示器
-- Empty: 空状态占位
+  // 生成训练阶段题目
+  generateTrainingQuestion(
+    stage: TrainingStage,
+    context: TrainingContext,
+    questionNumber: number
+  ): Promise<Question>;
+
+  // 生成综合考试题目
+  generateExamQuestions(
+    trainingPlan: TrainingPlan,
+    trainingHistory: TrainingHistory
+  ): Promise<Question[]>;
+
+  // 生成训练报告
+  generateTrainingReport(
+    session: TrainingSession,
+    examResults: ExamResults
+  ): Promise<TrainingReport>;
+
+  // AI 助手对话
+  chatWithAssistant(
+    message: string,
+    context: ChatContext
+  ): Promise<string>;
+}
 ```
 
+#### Prompt 设计策略
 
-#### 管理员端组件（Admin Portal）
+**诊断测试题目生成 Prompt**：
+```
+你是一位经验丰富的教师，需要为学员生成诊断测试题目。
+
+学员信息：
+- 年级：{grade}
+- 教材版本：{materialVersion}
+- 学习基础：{learningFoundation}
+- 训练目标：{trainingGoal}
+
+当前进度：第 {questionNumber}/{totalQuestions} 题
+
+要求：
+1. 题目应覆盖训练目标相关的不同知识点
+2. 难度从易到难，全面评估学员水平
+3. 题目类型：单选题
+4. 返回 JSON 格式：
+{
+  "stem": "题干内容",
+  "options": ["A选项", "B选项", "C选项", "D选项"],
+  "correctAnswer": "A",
+  "knowledgePoint": "知识点名称",
+  "difficulty": "easy|medium|hard",
+  "explanation": "详细解析"
+}
+```
+
+**训练计划生成 Prompt**：
+```
+你是一位资深教育专家，需要根据诊断测试结果为学员制定详细的训练计划。
+
+学员信息：
+- 年级：{grade}
+- 教材版本：{materialVersion}
+- 学习基础：{learningFoundation}
+- 训练目标：{trainingGoal}
+
+诊断测试结果：
+- 总题数：{totalQuestions}
+- 正确率：{accuracy}%
+- 错题分布：{errorDistribution}
+- 薄弱知识点：{weakPoints}
+
+要求生成一份类似 Kiro Spec 的详细训练计划，包括：
+
+1. 学习目标分解（3-5个子目标）
+2. 知识点清单（5-10个知识点，标注掌握程度）
+3. 训练阶段规划：
+   - 基础巩固阶段：针对薄弱点，10-20题
+   - 能力提升阶段：进阶训练，15-25题
+   - 综合应用阶段：实战演练，10-15题
+4. 每个阶段的详细内容：
+   - 学习重点
+   - 练习题数量和类型
+   - 预计用时
+   - 验收标准
+5. 综合考试规划：
+   - 考试范围
+   - 题目数量（20-50题）
+   - 难度分布（基础40%、中等40%、难题20%）
+   - 及格标准（70分）
+
+返回 JSON 格式的训练计划。
+```
+
+**训练题目生成 Prompt**：
+```
+你是一位教师，正在为学员生成训练题目。
+
+学员信息：
+- 年级：{grade}
+- 教材版本：{materialVersion}
+- 训练目标：{trainingGoal}
+
+当前训练阶段：{stage}（基础巩固/能力提升/综合应用）
+阶段目标：{stageGoal}
+当前进度：第 {questionNumber}/{totalQuestions} 题
+
+已掌握知识点：{masteredPoints}
+薄弱知识点：{weakPoints}
+
+要求：
+1. 根据训练阶段生成相应难度的题目
+2. 基础巩固：针对薄弱点，包含详细讲解
+3. 能力提升：综合性题目，难度递增
+4. 综合应用：实际场景题目，跨知识点
+5. 返回 JSON 格式的题目对象
+```
+
+**综合考试题目生成 Prompt**：
+```
+你是一位出题专家，需要为学员生成期末考试级别的综合考试。
+
+学员信息：
+- 年级：{grade}
+- 教材版本：{materialVersion}
+- 训练目标：{trainingGoal}
+
+训练计划：
+- 训练过的知识点：{trainedPoints}
+- 训练题目总数：{totalTrainingQuestions}
+- 训练表现：{trainingPerformance}
+
+考试要求：
+1. 题目数量：{examQuestionCount}（20-50题）
+2. 题型分布：
+   - 单选题：60%
+   - 填空题：20%
+   - 解答题：20%
+3. 难度分布：
+   - 基础题：40%（巩固基础）
+   - 中等题：40%（能力检验）
+   - 难题：20%（拔高挑战）
+4. 知识点覆盖：涵盖所有训练过的知识点
+5. 时间限制：{timeLimit}分钟
+
+一次性生成所有考试题目，返回 JSON 数组。
+```
+
+**训练报告生成 Prompt**：
+```
+你是一位教育分析专家，需要为学员生成详细的训练报告。
+
+诊断测试数据：
+- 正确率：{diagnosticAccuracy}%
+- 薄弱知识点：{diagnosticWeakPoints}
+
+训练过程数据：
+- 基础巩固阶段：{foundationStageData}
+- 能力提升阶段：{improvementStageData}
+- 综合应用阶段：{applicationStageData}
+
+综合考试数据：
+- 总分：{examScore}
+- 正确率：{examAccuracy}%
+- 各知识点得分：{knowledgePointScores}
+
+要求生成包含以下内容的训练报告：
+1. 诊断测试分析：初始水平评估
+2. 训练过程回顾：各阶段表现和进步
+3. 综合考试成绩：详细的成绩分析
+4. 进步情况对比：诊断测试 vs 综合考试
+5. 薄弱点分析：仍需加强的内容
+6. 学习建议：后续学习方向和具体建议
+7. 积分奖励：根据表现计算积分
+
+返回 Markdown 格式的报告。
+```
+
+### 2. 训练会话管理服务 (StudentTrainingService)
+
+管理训练会话的生命周期和状态转换。
+
+#### 接口
 
 ```typescript
-// 页面组件
-- AdminDashboard: 管理员仪表盘
-- UserManagement: 用户管理列表
-- StudentIDManagement: 学号管理中心
-- AuthCodeManagement: 授权码管理
-- MaterialSystemManagement: 教材体系管理
-- AIServiceConfig: AI 服务商配置
-- SubjectInstructionConfig: 科目教学指令配置
-- APIMonitoring: API 监控看板
+interface StudentTrainingService {
+  // 创建训练会话
+  createSession(
+    taskId: string,
+    studentId: string
+  ): Promise<TrainingSession>;
 
-// 业务组件
-- UserTable: 用户列表表格
-- StudentIDDetail: 学号详情弹窗
-- AuthCodeGenerator: 授权码批量生成器
-- MaterialTree: 教材树形结构编辑器
-- AIProviderForm: AI 服务商配置表单
-- APIMetricsChart: API 指标图表
+  // 获取当前会话状态
+  getSession(sessionId: string): Promise<TrainingSession>;
+
+  // 获取下一道题目
+  getNextQuestion(sessionId: string): Promise<QuestionResponse>;
+
+  // 提交答案
+  submitAnswer(
+    sessionId: string,
+    answer: SubmitAnswerRequest
+  ): Promise<AnswerResponse>;
+
+  // 确认训练计划，开始训练
+  confirmTrainingPlan(sessionId: string): Promise<void>;
+
+  // 完成当前阶段
+  completeStage(sessionId: string): Promise<StageCompletionReport>;
+
+  // 开始综合考试
+  startFinalExam(sessionId: string): Promise<ExamQuestions>;
+
+  // 提交综合考试
+  submitFinalExam(
+    sessionId: string,
+    answers: ExamAnswers
+  ): Promise<ExamResults>;
+
+  // 获取训练报告
+  getTrainingReport(sessionId: string): Promise<TrainingReport>;
+
+  // 更新会话状态
+  updateSessionPhase(
+    sessionId: string,
+    phase: TrainingPhase
+  ): Promise<void>;
+}
 ```
 
-#### 家长端组件（Parent Portal）
+### 3. AI 服务管理器 (AIServiceManager)
+
+管理多个 AI 服务提供商，实现负载均衡和错误处理。
+
+#### 接口
 
 ```typescript
-// 页面组件
-- ParentDashboard: 家长仪表盘
-- StudentOverview: 学情概览看板
-- TaskConfigCenter: 任务配置中心
-- TaskReportCenter: 任务报告中心
-- WishApprovalList: 愿望审批列表
-- ChildManagement: 亲子关系管理
+interface AIServiceManager {
+  // 调用 AI 服务
+  callAI(
+    prompt: string,
+    options: AICallOptions
+  ): Promise<string>;
 
-// 业务组件
-- StudentSwitcher: 学员切换器
-- AbilityRadarChart: 能力雷达图
-- ErrorRingChart: 错题攻克环形图
-- LearningStreakCard: 连续学习统计卡片
-- TaskPublisher: 任务发布器（档案模式/自定义模式）
-- ReportViewer: 报告查看器
-- WishApprovalCard: 愿望审批卡片
+  // 获取可用的 AI 提供商
+  getAvailableProviders(): Promise<AIProvider[]>;
+
+  // 健康检查
+  healthCheck(providerId: string): Promise<boolean>;
+
+  // 错误处理和重试
+  retryWithFallback(
+    operation: () => Promise<string>,
+    maxRetries: number
+  ): Promise<string>;
+}
 ```
 
-#### 学员端组件（Student Portal）
+### 4. 前端训练舱组件 (TrainingCabin)
+
+学员训练的主界面，采用三栏布局。
+
+#### 组件结构
 
 ```typescript
-// 页面组件
-- StudentDashboard: 学员仪表盘
-- TrainingCabin: 训练舱（核心功能）
-- ErrorBook: 错题本中心
-- ErrorRetry: 错题重做练习区
-- PointsWishMall: 积分愿望商城
-- ProfileManagement: 个人档案管理
+interface TrainingCabinProps {
+  taskId: string;
+  studentId: string;
+}
 
-// 训练舱子组件
-- TrainingNavigation: 左侧进度导航栏
-- QuestionArea: 中间题目交互区
-- AIAssistant: 右侧 AI 对话框
-- ProgressIndicator: 进度指示器
-- QuestionRenderer: 题目渲染器
-- AnswerInput: 答题输入组件
-- ChatMessage: 聊天消息组件
-- FloatingAIButton: 移动端浮动 AI 按钮
+interface TrainingCabinState {
+  session: TrainingSession | null;
+  currentQuestion: Question | null;
+  trainingPlan: TrainingPlan | null;
+  loading: boolean;
+  phase: TrainingPhase;
+  progress: Progress;
+}
 
-// 业务组件
-- ErrorBookFilter: 错题本筛选器
-- ErrorQuestionCard: 错题卡片
-- PointsDisplay: 积分展示卡片
-- WishSubmitForm: 愿望提交表单
-- WishStatusCard: 愿望状态卡片
-- ProfileForm: 档案填写表单
-- SelfAssessment: 学习基础自评组件
-```
-
-### 响应式三栏布局设计
-
-#### 桌面端布局（≥1024px）
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Header (固定顶部)                      │
-├──────────┬─────────────────────────────┬─────────────────┤
-│          │                             │                 │
-│  左侧栏   │        中间内容区            │    右侧栏        │
-│ (20%)    │         (50%)              │    (30%)        │
-│          │                             │                 │
-│ 进度导航  │      题目交互区              │  AI 对话框       │
-│          │                             │                 │
-│  - 训前   │   ┌─────────────────┐      │  ┌───────────┐  │
-│  - 步骤1  │   │   题目内容       │      │  │ AI 消息   │  │
-│  - 步骤2  │   │                 │      │  │           │  │
-│  - 综合   │   └─────────────────┘      │  │ 滚动区域  │  │
-│          │   ┌─────────────────┐      │  │           │  │
-│          │   │   答题区域       │      │  └───────────┘  │
-│          │   └─────────────────┘      │  ┌───────────┐  │
-│          │                             │  │ 输入框    │  │
-│          │                             │  └───────────┘  │
-└──────────┴─────────────────────────────┴─────────────────┘
-```
-
-
-#### 移动端布局（<768px）
-
-```
-┌─────────────────────────┐
-│   Header (固定顶部)      │
-│   [☰] 汉堡菜单           │
-├─────────────────────────┤
-│                         │
-│     中间内容区 (100%)    │
-│                         │
-│  ┌───────────────────┐  │
-│  │   题目内容         │  │
-│  │                   │  │
-│  └───────────────────┘  │
-│  ┌───────────────────┐  │
-│  │   答题区域         │  │
-│  └───────────────────┘  │
-│                         │
-│                         │
-│                         │
-│              ┌────┐     │
-│              │ AI │ ←── 浮动按钮
-│              └────┘     │
-└─────────────────────────┘
-
-点击浮动按钮后：
-┌─────────────────────────┐
-│   AI 对话框 (底部弹出)   │
-│  ┌───────────────────┐  │
-│  │ AI 消息滚动区      │  │
-│  │                   │  │
-│  └───────────────────┘  │
-│  ┌───────────────────┐  │
-│  │ 输入框            │  │
-│  └───────────────────┘  │
-└─────────────────────────┘
-```
-
-#### 响应式实现策略
-
-```typescript
-// 使用 Tailwind CSS 响应式类
-<div className="flex flex-col lg:flex-row">
-  {/* 左侧导航 - 移动端隐藏，桌面端显示 */}
-  <aside className="hidden lg:block lg:w-1/5 bg-white border-r">
-    <TrainingNavigation />
-  </aside>
-  
-  {/* 中间内容区 - 自适应宽度 */}
-  <main className="flex-1 lg:w-1/2 p-4">
-    <QuestionArea />
-  </main>
-  
-  {/* 右侧 AI 对话框 - 移动端隐藏，桌面端显示 */}
-  <aside className="hidden lg:block lg:w-3/10 bg-gray-50 border-l">
-    <AIAssistant />
-  </aside>
-  
-  {/* 移动端浮动 AI 按钮 */}
-  <FloatingAIButton className="lg:hidden fixed bottom-4 right-4" />
-</div>
-
-// 使用自定义 Hook 检测屏幕尺寸
-const useResponsive = () => {
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
-  return { isMobile };
+// 三栏布局
+const TrainingCabin: React.FC<TrainingCabinProps> = () => {
+  return (
+    <div className="training-cabin">
+      {/* 左侧栏：任务信息和进度 (20%) */}
+      <LeftPanel 
+        session={session}
+        progress={progress}
+        trainingPlan={trainingPlan}
+      />
+      
+      {/* 中间栏：题目区域 (50%) */}
+      <CenterPanel
+        phase={phase}
+        question={currentQuestion}
+        onSubmitAnswer={handleSubmitAnswer}
+        loading={loading}
+      />
+      
+      {/* 右侧栏：AI 助手 (30%) */}
+      <RightPanel
+        aiAssistantEnabled={phase !== 'FINAL_EXAM'}
+        onSendMessage={handleAIChat}
+      />
+    </div>
+  );
 };
-```
-
-### 后端 API 接口设计
-
-#### 认证接口
-
-```typescript
-POST /api/auth/login
-Request: { username: string, password: string }
-Response: { token: string, user: User, role: 'admin' | 'parent' | 'student' }
-
-POST /api/auth/register
-Request: { username: string, password: string, authCode: string }
-Response: { success: boolean, userId: string }
-
-POST /api/auth/refresh
-Request: { refreshToken: string }
-Response: { token: string }
-
-POST /api/auth/logout
-Request: { token: string }
-Response: { success: boolean }
-```
-
-#### 管理员接口
-
-```typescript
-// 用户管理
-GET /api/admin/users?role=&page=&limit=
-Response: { users: User[], total: number }
-
-POST /api/admin/users
-Request: { username: string, role: string, ... }
-Response: { user: User }
-
-PUT /api/admin/users/:id
-Request: { ...updateFields }
-Response: { user: User }
-
-DELETE /api/admin/users/:id
-Response: { success: boolean }
-
-// 学号管理
-GET /api/admin/student-ids?status=&page=&limit=
-Response: { studentIds: StudentID[], total: number }
-
-POST /api/admin/student-ids/assign
-Request: { studentIdId: string, userId: string }
-Response: { success: boolean }
-
-PUT /api/admin/student-ids/:id/lock
-Response: { success: boolean }
-
-// 授权码管理
-GET /api/admin/auth-codes?status=&page=&limit=
-Response: { authCodes: AuthCode[], total: number }
-
-POST /api/admin/auth-codes/generate
-Request: { count: number, expiryDays: number }
-Response: { authCodes: AuthCode[] }
-
-GET /api/admin/auth-codes/export
-Response: CSV file
-
-// 教材体系管理
-GET /api/admin/materials
-Response: { materials: MaterialNode[] }
-
-POST /api/admin/materials
-Request: { name: string, parentId: string, ... }
-Response: { material: MaterialNode }
-
-PUT /api/admin/materials/:id
-Request: { ...updateFields }
-Response: { material: MaterialNode }
-
-DELETE /api/admin/materials/:id
-Response: { success: boolean }
-
-// AI 服务配置
-GET /api/admin/ai-providers
-Response: { providers: AIProvider[] }
-
-POST /api/admin/ai-providers
-Request: { name: string, apiKey: string, endpoint: string, ... }
-Response: { provider: AIProvider }
-
-PUT /api/admin/ai-providers/:id
-Request: { ...updateFields }
-Response: { provider: AIProvider }
-
-GET /api/admin/ai-instructions?subject=
-Response: { instructions: SubjectInstruction[] }
-
-PUT /api/admin/ai-instructions/:subject
-Request: { systemPrompt: string }
-Response: { instruction: SubjectInstruction }
-
-// API 监控
-GET /api/admin/api-metrics?startDate=&endDate=
-Response: { metrics: APIMetrics }
-```
-
-
-#### 家长接口
-
-```typescript
-// 亲子关系管理
-GET /api/parent/children
-Response: { children: Student[] }
-
-POST /api/parent/children/bind
-Request: { authCode: string, studentId: string }
-Response: { success: boolean, child: Student }
-
-DELETE /api/parent/children/:id/unbind
-Response: { success: boolean }
-
-// 学情概览
-GET /api/parent/overview/:studentId
-Response: { 
-  abilityRadar: { subjects: string[], scores: number[] },
-  errorStats: { unmastered: number, mastering: number, mastered: number },
-  learningStreak: { days: number, weeklyHours: number }
-}
-
-// 任务管理
-GET /api/parent/tasks?studentId=&status=&page=&limit=
-Response: { tasks: Task[], total: number }
-
-POST /api/parent/tasks
-Request: { 
-  studentId: string, 
-  mode: 'profile' | 'custom',
-  config: TaskConfig 
-}
-Response: { task: Task }
-
-GET /api/parent/tasks/:id
-Response: { task: Task }
-
-// 任务报告
-GET /api/parent/reports?studentId=&page=&limit=
-Response: { reports: Report[], total: number }
-
-GET /api/parent/reports/:id
-Response: { report: Report }
-
-GET /api/parent/reports/:id/export
-Response: PDF file
-
-// 愿望审批
-GET /api/parent/wishes?studentId=&status=&page=&limit=
-Response: { wishes: Wish[], total: number }
-
-PUT /api/parent/wishes/:id/approve
-Request: { approved: boolean, reason?: string }
-Response: { wish: Wish }
-```
-
-#### 学员接口
-
-```typescript
-// 个人档案
-GET /api/student/profile
-Response: { profile: StudentProfile }
-
-PUT /api/student/profile
-Request: { ...profileFields }
-Response: { profile: StudentProfile }
-
-POST /api/student/profile/self-assessment
-Request: { subject: string, level: string }
-Response: { success: boolean }
-
-// 训练舱
-GET /api/student/tasks/current
-Response: { task: Task | null }
-
-POST /api/student/training/start/:taskId
-Response: { session: TrainingSession }
-
-GET /api/student/training/session/:sessionId
-Response: { session: TrainingSession }
-
-POST /api/student/training/answer
-Request: { 
-  sessionId: string, 
-  questionId: string, 
-  answer: string 
-}
-Response: { 
-  correct: boolean, 
-  feedback: string,
-  nextQuestion: Question | null 
-}
-
-POST /api/student/training/complete/:sessionId
-Response: { report: Report, points: number }
-
-// AI 助手
-POST /api/student/ai/chat
-Request: { 
-  sessionId: string, 
-  message: string,
-  context: { questionId: string, answer: string }
-}
-Response: { reply: string }
-
-// 错题本
-GET /api/student/errors?subject=&mastery=&page=&limit=
-Response: { errors: ErrorQuestion[], total: number }
-
-GET /api/student/errors/:id
-Response: { error: ErrorQuestion }
-
-POST /api/student/errors/:id/retry
-Response: { session: RetrySession }
-
-PUT /api/student/errors/:id/mastery
-Request: { mastery: 'unmastered' | 'mastering' | 'mastered' }
-Response: { error: ErrorQuestion }
-
-// 积分与愿望
-GET /api/student/points
-Response: { 
-  available: number, 
-  total: number, 
-  history: PointsHistory[] 
-}
-
-GET /api/student/wishes?status=&page=&limit=
-Response: { wishes: Wish[], total: number }
-
-POST /api/student/wishes
-Request: { 
-  description: string, 
-  requiredPoints: number, 
-  imageUrl?: string 
-}
-Response: { wish: Wish }
-
-GET /api/student/wishes/:id
-Response: { wish: Wish }
 ```
 
 ## 数据模型
 
-### 核心实体关系图
-
-```mermaid
-erDiagram
-    User ||--o{ Student : "is"
-    User ||--o{ Parent : "is"
-    User ||--o{ Admin : "is"
-    Parent ||--o{ ParentChildRelation : "has"
-    Student ||--o{ ParentChildRelation : "belongs to"
-    Student ||--o{ StudentProfile : "has"
-    Student ||--o{ Task : "assigned"
-    Student ||--o{ TrainingSession : "participates"
-    Student ||--o{ ErrorQuestion : "collects"
-    Student ||--o{ Wish : "submits"
-    Student ||--o{ PointsTransaction : "earns"
-    Task ||--o{ TrainingSession : "generates"
-    TrainingSession ||--o{ Answer : "contains"
-    TrainingSession ||--o{ AIConversation : "has"
-    TrainingSession ||--|| Report : "produces"
-    MaterialNode ||--o{ Question : "contains"
-    Question ||--o{ ErrorQuestion : "becomes"
-    AIProvider ||--o{ APILog : "logs"
-    SubjectInstruction ||--o{ AIConversation : "guides"
-```
-
-
-### 数据库表结构
-
-#### User（用户表）
-
-```typescript
-interface User {
-  id: string;                    // UUID 主键
-  username: string;              // 用户名（唯一）
-  passwordHash: string;          // 密码哈希
-  role: 'admin' | 'parent' | 'student'; // 角色
-  email?: string;                // 邮箱
-  phone?: string;                // 手机号
-  status: 'active' | 'locked' | 'deleted'; // 状态
-  createdAt: Date;               // 创建时间
-  updatedAt: Date;               // 更新时间
-  lastLoginAt?: Date;            // 最后登录时间
-}
-```
-
-#### StudentID（学号表）
-
-```typescript
-interface StudentID {
-  id: string;                    // UUID 主键
-  studentIdNumber: string;       // 学号（唯一）
-  status: 'available' | 'assigned' | 'locked'; // 状态
-  userId?: string;               // 关联用户 ID（外键）
-  assignedAt?: Date;             // 分配时间
-  createdAt: Date;               // 创建时间
-}
-```
-
-#### AuthCode（授权码表）
-
-```typescript
-interface AuthCode {
-  id: string;                    // UUID 主键
-  code: string;                  // 授权码（唯一）
-  status: 'unused' | 'used' | 'expired'; // 状态
-  expiryDate: Date;              // 过期时间
-  usedBy?: string;               // 使用者用户 ID（外键）
-  usedAt?: Date;                 // 使用时间
-  createdAt: Date;               // 创建时间
-}
-```
-
-#### StudentProfile（学员档案表）
-
-```typescript
-interface StudentProfile {
-  id: string;                    // UUID 主键
-  userId: string;                // 用户 ID（外键，唯一）
-  realName: string;              // 真实姓名
-  grade: string;                 // 年级
-  materialVersion: string;       // 教材版本
-  subjectLevels: {               // 各科目基础水平
-    [subject: string]: 'weak' | 'average' | 'good' | 'excellent';
-  };
-  completeness: number;          // 档案完整度（0-100）
-  createdAt: Date;               // 创建时间
-  updatedAt: Date;               // 更新时间
-}
-```
-
-#### ParentChildRelation（亲子关系表）
-
-```typescript
-interface ParentChildRelation {
-  id: string;                    // UUID 主键
-  parentId: string;              // 家长用户 ID（外键）
-  studentId: string;             // 学员用户 ID（外键）
-  relation: string;              // 关系（父亲/母亲/监护人）
-  bindedAt: Date;                // 绑定时间
-  status: 'active' | 'unbound';  // 状态
-}
-```
-
-#### MaterialNode（教材节点表）
-
-```typescript
-interface MaterialNode {
-  id: string;                    // UUID 主键
-  name: string;                  // 节点名称
-  type: 'version' | 'grade' | 'subject' | 'unit' | 'chapter'; // 类型
-  parentId?: string;             // 父节点 ID（外键）
-  order: number;                 // 排序序号
-  metadata: {                    // 元数据
-    description?: string;
-    keywords?: string[];
-  };
-  createdAt: Date;               // 创建时间
-  updatedAt: Date;               // 更新时间
-}
-```
-
-#### Question（题目表）
-
-```typescript
-interface Question {
-  id: string;                    // UUID 主键
-  materialNodeId: string;        // 教材节点 ID（外键）
-  type: 'choice' | 'fill' | 'essay'; // 题型
-  content: string;               // 题目内容（JSON 格式）
-  answer: string;                // 标准答案
-  difficulty: number;            // 难度（1-5）
-  knowledgePoints: string[];     // 知识点标签
-  createdAt: Date;               // 创建时间
-}
-```
-
-#### Task（任务表）
-
-```typescript
-interface Task {
-  id: string;                    // UUID 主键
-  studentId: string;             // 学员 ID（外键）
-  createdBy: string;             // 创建者 ID（外键，家长）
-  title: string;                 // 任务标题
-  mode: 'profile' | 'custom';    // 发布模式
-  config: {                      // 任务配置
-    materialNodeIds: string[];   // 教材节点 ID 列表
-    questionCount: number;       // 题目数量
-    difficulty: number;          // 难度范围
-  };
-  status: 'pending' | 'in_progress' | 'completed'; // 状态
-  createdAt: Date;               // 创建时间
-  startedAt?: Date;              // 开始时间
-  completedAt?: Date;            // 完成时间
-}
-```
-
-#### TrainingSession（训练会话表）
+### 训练会话 (TrainingSession)
 
 ```typescript
 interface TrainingSession {
-  id: string;                    // UUID 主键
-  taskId: string;                // 任务 ID（外键）
-  studentId: string;             // 学员 ID（外键）
-  phase: 'pre_test' | 'training' | 'final_exam'; // 阶段
-  currentStep: number;           // 当前步骤
-  totalSteps: number;            // 总步骤数
-  progress: number;              // 进度百分比（0-100）
-  questions: string[];           // 题目 ID 列表
-  status: 'active' | 'paused' | 'completed'; // 状态
-  startedAt: Date;               // 开始时间
-  completedAt?: Date;            // 完成时间
-}
-```
-
-
-#### Answer（答题记录表）
-
-```typescript
-interface Answer {
-  id: string;                    // UUID 主键
-  sessionId: string;             // 会话 ID（外键）
-  questionId: string;            // 题目 ID（外键）
-  studentAnswer: string;         // 学员答案
-  isCorrect: boolean;            // 是否正确
-  timeSpent: number;             // 用时（秒）
-  attemptCount: number;          // 尝试次数
-  answeredAt: Date;              // 答题时间
-}
-```
-
-#### AIConversation（AI 对话表）
-
-```typescript
-interface AIConversation {
-  id: string;                    // UUID 主键
-  sessionId: string;             // 会话 ID（外键）
-  questionId?: string;           // 关联题目 ID（外键）
-  role: 'user' | 'assistant';    // 角色
-  message: string;               // 消息内容
-  timestamp: Date;               // 时间戳
-}
-```
-
-#### Report（报告表）
-
-```typescript
-interface Report {
-  id: string;                    // UUID 主键
-  sessionId: string;             // 会话 ID（外键，唯一）
-  studentId: string;             // 学员 ID（外键）
-  taskId: string;                // 任务 ID（外键）
-  content: {                     // 报告内容（JSON 格式）
-    summary: string;             // 总结
-    abilityAnalysis: {           // 能力分析
-      [knowledgePoint: string]: number;
-    };
-    errorAnalysis: {             // 错题分析
-      questionId: string;
-      reason: string;
-      suggestion: string;
-    }[];
-    learningAdvice: string;      // 学习建议
+  id: string;
+  taskId: string;
+  studentId: string;
+  phase: TrainingPhase;
+  
+  // 诊断测试数据
+  diagnosticTest: {
+    totalQuestions: number;
+    currentQuestion: number;
+    answers: AnswerRecord[];
+    results?: DiagnosticResults;
   };
-  generatedAt: Date;             // 生成时间
+  
+  // 训练计划
+  trainingPlan?: TrainingPlan;
+  
+  // 训练阶段数据
+  guidedTraining?: {
+    currentStage: TrainingStageType;
+    stages: {
+      foundation: StageProgress;
+      improvement: StageProgress;
+      application: StageProgress;
+    };
+  };
+  
+  // 综合考试数据
+  finalExam?: {
+    questions: Question[];
+    answers: ExamAnswers;
+    results?: ExamResults;
+  };
+  
+  // 训练报告
+  report?: TrainingReport;
+  
+  // 元数据
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
 }
+
+type TrainingPhase = 
+  | 'CREATED'
+  | 'DIAGNOSTIC_TEST'
+  | 'PLANNING'
+  | 'GUIDED_TRAINING'
+  | 'FINAL_EXAM'
+  | 'COMPLETED';
+
+type TrainingStageType = 
+  | 'foundation'
+  | 'improvement'
+  | 'application';
 ```
 
-#### ErrorQuestion（错题表）
+### 题目 (Question)
 
 ```typescript
-interface ErrorQuestion {
-  id: string;                    // UUID 主键
-  studentId: string;             // 学员 ID（外键）
-  questionId: string;            // 题目 ID（外键）
-  answerId: string;              // 答题记录 ID（外键）
-  subject: string;               // 科目
-  mastery: 'unmastered' | 'mastering' | 'mastered'; // 掌握度
-  retryCount: number;            // 重做次数
-  lastRetryAt?: Date;            // 最后重做时间
-  collectedAt: Date;             // 收集时间
-  updatedAt: Date;               // 更新时间
+interface Question {
+  id: string;
+  stem: string;
+  type: QuestionType;
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
+  knowledgePoint: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  
+  // AI 生成的元数据
+  generatedAt: Date;
+  generationContext: {
+    phase: TrainingPhase;
+    stage?: TrainingStageType;
+    questionNumber: number;
+  };
 }
+
+type QuestionType = 
+  | 'single_choice'
+  | 'multiple_choice'
+  | 'fill_blank'
+  | 'short_answer';
 ```
 
-#### Wish（愿望表）
+### 训练计划 (TrainingPlan)
 
 ```typescript
-interface Wish {
-  id: string;                    // UUID 主键
-  studentId: string;             // 学员 ID（外键）
-  description: string;           // 愿望描述
-  requiredPoints: number;        // 所需积分
-  imageUrl?: string;             // 参考图片 URL
-  status: 'pending' | 'approved' | 'rejected' | 'fulfilled'; // 状态
-  reviewedBy?: string;           // 审批人 ID（外键，家长）
-  reviewReason?: string;         // 审批理由
-  submittedAt: Date;             // 提交时间
-  reviewedAt?: Date;             // 审批时间
-  fulfilledAt?: Date;            // 兑现时间
-}
-```
-
-#### PointsTransaction（积分交易表）
-
-```typescript
-interface PointsTransaction {
-  id: string;                    // UUID 主键
-  studentId: string;             // 学员 ID（外键）
-  amount: number;                // 积分数量（正数为获得，负数为消耗）
-  type: 'task_complete' | 'error_retry' | 'wish_redeem'; // 类型
-  relatedId?: string;            // 关联 ID（任务/错题/愿望）
-  balance: number;               // 交易后余额
-  createdAt: Date;               // 创建时间
-}
-```
-
-#### AIProvider（AI 服务商表）
-
-```typescript
-interface AIProvider {
-  id: string;                    // UUID 主键
-  name: string;                  // 服务商名称
-  type: 'openai' | 'claude' | 'custom'; // 类型
-  apiKey: string;                // API 密钥（加密存储）
-  endpoint: string;              // API 端点
-  model: string;                 // 模型名称
-  priority: number;              // 优先级（数字越小优先级越高）
-  status: 'active' | 'inactive'; // 状态
-  createdAt: Date;               // 创建时间
-  updatedAt: Date;               // 更新时间
-}
-```
-
-#### SubjectInstruction（科目教学指令表）
-
-```typescript
-interface SubjectInstruction {
-  id: string;                    // UUID 主键
-  subject: string;               // 科目（唯一）
-  systemPrompt: string;          // System Prompt 模板
-  examples: {                    // 示例对话
-    question: string;
-    response: string;
+interface TrainingPlan {
+  id: string;
+  sessionId: string;
+  
+  // 学习目标分解
+  learningGoals: {
+    main: string;
+    subGoals: string[];
+  };
+  
+  // 知识点清单
+  knowledgePoints: {
+    point: string;
+    masteryLevel: 'weak' | 'medium' | 'strong';
+    priority: number;
   }[];
-  updatedAt: Date;               // 更新时间
+  
+  // 训练阶段
+  stages: {
+    foundation: TrainingStageConfig;
+    improvement: TrainingStageConfig;
+    application: TrainingStageConfig;
+  };
+  
+  // 综合考试规划
+  finalExam: {
+    questionCount: number;
+    timeLimit: number;
+    passingScore: number;
+    difficultyDistribution: {
+      easy: number;
+      medium: number;
+      hard: number;
+    };
+  };
+  
+  // 预计总用时
+  estimatedDuration: number;
+  
+  generatedAt: Date;
+}
+
+interface TrainingStageConfig {
+  name: string;
+  goal: string;
+  focus: string[];
+  questionCount: number;
+  estimatedTime: number;
+  criteria: string[];
 }
 ```
 
-#### APILog（API 日志表）
+### 答题记录 (AnswerRecord)
 
 ```typescript
-interface APILog {
-  id: string;                    // UUID 主键
-  providerId: string;            // 服务商 ID（外键）
-  endpoint: string;              // 调用端点
-  requestTokens: number;         // 请求 Token 数
-  responseTokens: number;        // 响应 Token 数
-  responseTime: number;          // 响应时间（毫秒）
-  status: 'success' | 'error';   // 状态
-  errorMessage?: string;         // 错误信息
-  createdAt: Date;               // 创建时间
+interface AnswerRecord {
+  questionId: string;
+  questionNumber: number;
+  studentAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  timeSpent: number;
+  feedback: string;
+  explanation: string;
+  knowledgePoint: string;
+  answeredAt: Date;
+}
+```
+
+### 训练报告 (TrainingReport)
+
+```typescript
+interface TrainingReport {
+  id: string;
+  sessionId: string;
+  
+  // 诊断测试分析
+  diagnosticAnalysis: {
+    totalQuestions: number;
+    accuracy: number;
+    weakPoints: string[];
+    initialLevel: string;
+  };
+  
+  // 训练过程回顾
+  trainingReview: {
+    foundation: StageReport;
+    improvement: StageReport;
+    application: StageReport;
+  };
+  
+  // 综合考试成绩
+  examResults: {
+    totalScore: number;
+    accuracy: number;
+    knowledgePointScores: {
+      point: string;
+      score: number;
+      accuracy: number;
+    }[];
+  };
+  
+  // 进步情况
+  improvement: {
+    accuracyImprovement: number;
+    masteredPoints: string[];
+    improvedPoints: string[];
+  };
+  
+  // 薄弱点分析
+  weaknessAnalysis: {
+    remainingWeakPoints: string[];
+    suggestions: string[];
+  };
+  
+  // 学习建议
+  recommendations: {
+    nextSteps: string[];
+    focusAreas: string[];
+    studyMethods: string[];
+  };
+  
+  // 积分奖励
+  pointsAwarded: number;
+  
+  generatedAt: Date;
+  content: string; // Markdown 格式的完整报告
+}
+
+interface StageReport {
+  totalQuestions: number;
+  accuracy: number;
+  timeSpent: number;
+  highlights: string[];
+  improvements: string[];
+}
+```
+
+### 诊断结果 (DiagnosticResults)
+
+```typescript
+interface DiagnosticResults {
+  totalQuestions: number;
+  correctCount: number;
+  accuracy: number;
+  
+  // 知识点分析
+  knowledgePointAnalysis: {
+    point: string;
+    totalQuestions: number;
+    correctCount: number;
+    accuracy: number;
+  }[];
+  
+  // 难度分析
+  difficultyAnalysis: {
+    easy: { total: number; correct: number };
+    medium: { total: number; correct: number };
+    hard: { total: number; correct: number };
+  };
+  
+  // 薄弱知识点
+  weakPoints: string[];
+  
+  // 学习风格评估
+  learningStyle: {
+    preferredDifficulty: 'easy' | 'medium' | 'hard';
+    averageTimePerQuestion: number;
+    errorPatterns: string[];
+  };
 }
 ```
 
 ## 正确性属性
 
-*属性是一个特征或行为，应该在系统的所有有效执行中保持为真——本质上是关于系统应该做什么的形式化陈述。属性作为人类可读规范和机器可验证正确性保证之间的桥梁。*
+*属性是一个特征或行为，应该在系统的所有有效执行中保持为真——本质上是关于系统应该做什么的正式陈述。属性作为人类可读规范和机器可验证正确性保证之间的桥梁。*
 
-现在让我进行验收标准的可测试性分析：
+### 属性 1：任务配置往返一致性
 
+*对于任意*有效的任务配置（训练目标、诊断题目数量、档案提取模式标识），创建任务后查询该任务应该返回相同的配置信息。
 
-### 属性列表
+**验证：需求 1.4, 1.5**
 
-基于需求分析，以下是可测试的正确性属性：
+### 属性 2：输入验证正确性
 
-#### 属性 1: 用户登录验证一致性
+*对于任意*输入字符串，训练目标验证应该拒绝空字符串和长度不在 10-500 范围内的字符串；*对于任意*数字输入，诊断题目数量验证应该拒绝不在 5-20 范围内的值。
 
-*对于任意*有效的用户凭证，系统验证后应返回包含正确角色信息的访问令牌
+**验证：需求 1.2, 1.3**
 
-**验证需求: 1.2**
+### 属性 3：会话初始化完整性
 
-#### 属性 2: 用户 ID 唯一性
+*对于任意*档案提取模式的任务，创建训练会话时应该：(1) 设置阶段为 DIAGNOSTIC_TEST，(2) 初始化空的题目列表和答题记录，(3) 设置诊断题目数量为任务配置值。
 
-*对于任意*新创建的用户账户，系统生成的用户标识符应与所有现有用户 ID 不同
+**验证：需求 2.2, 2.3, 2.4, 2.5**
 
-**验证需求: 1.3**
+### 属性 4：AI 题目生成包含学员信息
 
-#### 属性 3: 会话过期拒绝访问
+*对于任意*处于诊断测试阶段的训练会话，生成题目时 AI prompt 应该包含学员的年级、教材版本、学习基础和训练目标信息。
 
-*对于任意*过期的会话令牌，系统应拒绝访问并要求重新认证
+**验证：需求 3.1, 3.2**
 
-**验证需求: 1.4**
+### 属性 5：题目对象结构完整性
 
-#### 属性 4: 操作审计日志完整性
+*对于任意*AI 生成的题目，返回的题目对象应该包含题干、选项、题型、正确答案、解析和知识点等所有必需字段。
 
-*对于任意*用户登录或关键操作，系统应在审计日志中记录对应条目
+**验证：需求 3.3**
 
-**验证需求: 1.5**
+### 属性 6：诊断题目知识点多样性
 
-#### 属性 5: 授权码批量生成正确性
+*对于任意*完整的诊断测试题目序列，题目应该覆盖至少 3 个不同的知识点。
 
-*对于任意*批量生成请求，系统生成的授权码数量应等于请求数量，且所有授权码应唯一
+**验证：需求 3.4**
 
-**验证需求: 2.1**
+### 属性 7：题目难度递增趋势
 
-#### 属性 6: 学号状态更新一致性
+*对于任意*诊断测试题目序列，后续题目的平均难度应该不低于前面题目的平均难度（难度：easy=1, medium=2, hard=3）。
 
-*对于任意*学号的锁定或解绑操作，系统应正确更新学号状态并保持数据一致性
+**验证：需求 3.5**
 
-**验证需求: 2.4**
+### 属性 8：答案判断返回完整性
 
-#### 属性 7: 授权码导出往返一致性
+*对于任意*答案提交，AI 判断结果应该包含正确答案、详细解析和反馈信息。
 
-*对于任意*授权码列表，导出为 CSV 后再导入应得到等价的授权码数据
+**验证：需求 4.1, 4.2**
 
-**验证需求: 2.5**
+### 属性 9：答题记录持久化
 
-#### 属性 8: 教材数据往返一致性
+*对于任意*答题操作，系统应该创建包含题目ID、学员答案、正确答案、是否正确、用时和知识点的答题记录。
 
-*对于任意*教材树状结构，导出后再导入应得到等价的树结构
+**验证：需求 4.3**
 
-**验证需求: 3.1**
+### 属性 10：诊断测试完成后状态转换
 
-#### 属性 9: 教材节点编辑数据完整性
+*对于任意*训练会话，当答题记录数量等于配置的诊断题目数量时，会话阶段应该自动转换为 PLANNING。
 
-*对于任意*教材节点的编辑操作，系统应验证并保持数据完整性约束（如父子关系有效性）
+**验证：需求 4.5**
 
-**验证需求: 3.3**
+### 属性 11：训练计划结构完整性
 
-#### 属性 10: 教材节点引用完整性
+*对于任意*生成的训练计划，应该包含：(1) 3-5个学习子目标，(2) 5-10个知识点，(3) 三个训练阶段（基础巩固、能力提升、综合应用），(4) 每个阶段包含学习重点、题目数量、预计用时和验收标准，(5) 综合考试规划包含题目数量（20-50）、难度分布和及格标准。
 
-*对于任意*被任务引用的教材节点，删除操作应被阻止
+**验证：需求 5.4, 5.5, 5.6, 5.7, 5.8**
 
-**验证需求: 3.5**
+### 属性 12：诊断结果统计准确性
 
-#### 属性 11: AI 服务故障转移
+*对于任意*完成的诊断测试，分析结果中的正确率应该等于（正确答案数 / 总题目数），错题分布应该准确反映各知识点的答题情况。
 
-*对于任意*主 AI 服务不可用的情况，系统应自动切换到备用服务商并成功完成请求
+**验证：需求 5.2**
 
-**验证需求: 4.2**
+### 属性 13：训练阶段题目针对性
 
-#### 属性 12: 科目指令配置往返一致性
+*对于任意*基础巩固阶段的题目，题目的知识点应该在诊断结果的薄弱知识点列表中。
 
-*对于任意*科目教学指令配置，保存后再读取应得到相同的配置内容
+**验证：需求 6.2**
 
-**验证需求: 4.3**
+### 属性 14：训练阶段题目数量范围
 
-#### 属性 13: API 错误率告警触发
+*对于任意*训练计划，基础巩固阶段应该包含 10-20 道题，能力提升阶段应该包含 15-25 道题，综合应用阶段应该包含 10-15 道题。
 
-*对于任意*超过阈值的 API 错误率，系统应发送告警通知
+**验证：需求 6.7, 7.5, 8.5**
 
-**验证需求: 4.5**
+### 属性 15：答错题目提供引导
 
-#### 属性 14: 亲子绑定验证正确性
+*对于任意*答错的题目，AI 反馈应该包含引导式思考提示，并且系统应该允许学员重做该题。
 
-*对于任意*有效的授权码或学号，家长添加学员操作应成功建立亲子绑定关系
+**验证：需求 6.4, 6.5**
 
-**验证需求: 5.1**
+### 属性 16：训练阶段完成生成小结
 
-#### 属性 15: 解绑后历史数据保留
+*对于任意*完成的训练阶段（基础巩固、能力提升、综合应用），系统应该生成包含题目数量、正确率、用时和改进建议的阶段小结报告。
 
-*对于任意*亲子解绑操作，学员的历史学习数据应被保留
+**验证：需求 6.6, 7.4, 8.4**
 
-**验证需求: 5.4**
+### 属性 17：综合考试题目配置符合性
 
-#### 属性 16: 绑定后档案信息完整性
+*对于任意*生成的综合考试，题目数量应该在 20-50 之间，题型应该包含至少两种不同类型，难度分布应该符合基础题 40%、中等题 40%、难题 20% 的比例（误差 ±5%）。
 
-*对于任意*成功的亲子绑定，学员档案应包含绑定的家长信息
+**验证：需求 9.2, 9.3, 9.4**
 
-**验证需求: 5.5**
+### 属性 18：综合考试知识点覆盖
 
-#### 属性 17: 学情数据实时性
+*对于任意*综合考试，考试题目应该覆盖训练计划中列出的所有知识点（至少每个知识点一道题）。
 
-*对于任意*家长登录操作，系统展示的学情数据应为最新更新的数据
+**验证：需求 9.5**
 
-**验证需求: 6.5**
+### 属性 19：考试期间 AI 助手禁用
 
-#### 属性 18: 档案模式任务生成一致性
+*对于任意*处于 FINAL_EXAM 阶段的训练会话，AI 助手对话功能应该被禁用并返回错误提示。
 
-*对于任意*学员档案，档案提取模式生成的任务应符合档案中的年级、科目和水平设置
+**验证：需求 9.7, 11.4**
 
-**验证需求: 7.2**
+### 属性 20：考试提交后状态转换
 
-#### 属性 19: 任务配置完整性验证
+*对于任意*综合考试，当学员提交所有答案后，会话阶段应该转换为 COMPLETED。
 
-*对于任意*任务发布操作，系统应验证任务配置包含所有必需字段（教材节点、题目数量等）
+**验证：需求 9.8**
 
-**验证需求: 7.4**
+### 属性 21：训练报告内容完整性
 
-#### 属性 20: 任务配置往返一致性
+*对于任意*完成的训练会话，生成的训练报告应该包含：(1) 诊断测试分析，(2) 各训练阶段回顾，(3) 综合考试成绩，(4) 进步情况对比，(5) 薄弱点分析，(6) 学习建议，(7) 积分奖励。
 
-*对于任意*任务配置，保存后再读取应得到相同的配置内容
+**验证：需求 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8**
 
-**验证需求: 7.5**
+### 属性 22：报告生成后任务完成
 
-#### 属性 21: 报告导出内容完整性
+*对于任意*训练会话，当训练报告生成完成后，关联的任务状态应该更新为 COMPLETED。
 
-*对于任意*学习报告，导出的 PDF 应包含所有必需信息（知识点分析、错题统计、学习建议）
+**验证：需求 10.9**
 
-**验证需求: 8.4**
+### 属性 23：训练期间 AI 助手可用
 
-#### 属性 22: 任务完成自动生成报告
+*对于任意*处于 DIAGNOSTIC_TEST 或 GUIDED_TRAINING 阶段的训练会话，AI 助手对话功能应该可用并能正常响应学员提问。
 
-*对于任意*完成的训练任务，系统应自动生成对应的学习报告
+**验证：需求 11.1**
 
-**验证需求: 8.5**
+### 属性 24：AI 助手提供启发式引导
 
-#### 属性 23: 愿望同意积分扣除正确性
+*对于任意*学员向 AI 助手的提问，AI 响应应该包含引导性问题或提示，而不是直接给出答案。
 
-*对于任意*家长同意的愿望，学员积分应减少对应数量，且愿望状态应更新为"待兑现"
+**验证：需求 11.2**
 
-**验证需求: 9.3**
+### 属性 25：AI 服务错误优雅处理
 
-#### 属性 24: 愿望拒绝积分保留
+*对于任意*AI 服务调用，当超时（>30秒）或失败时，系统应该返回友好的错误提示而不是抛出异常；当连续失败 3 次时，系统应该停止重试并建议稍后再试。
 
-*对于任意*家长拒绝的愿望，学员积分应保持不变
-
-**验证需求: 9.4**
-
-#### 属性 25: 审批操作审计完整性
-
-*对于任意*愿望审批操作，系统应记录时间戳和操作人信息
-
-**验证需求: 9.5**
-
-#### 属性 26: 档案难度调整一致性
-
-*对于任意*学员档案，训练舱的初始难度应与档案中的科目基础水平相匹配
-
-**验证需求: 10.3**
-
-#### 属性 27: 档案更新历史保存
-
-*对于任意*档案更新操作，系统应保存修改历史记录
-
-**验证需求: 10.4**
-
-#### 属性 28: 训练流程顺序正确性
-
-*对于任意*训练会话，系统应按照"训前测试 → 动态训练步骤 → 综合考试"的顺序执行
-
-**验证需求: 11.2**
-
-#### 属性 29: 答题记录实时保存
-
-*对于任意*学员答题操作，系统应立即保存答题记录和进度状态
-
-**验证需求: 11.3**
-
-#### 属性 30: AI 对话记录完整性
-
-*对于任意*训练会话中的 AI 对话，系统应记录所有对话内容用于报告生成
-
-**验证需求: 12.5**
-
-#### 属性 31: 错题自动收集完整性
-
-*对于任意*训练舱中答错的题目，系统应自动收集到错题本
-
-**验证需求: 13.1**
-
-#### 属性 32: 错题重做掌握度更新
-
-*对于任意*正确完成的错题重做，系统应更新错题掌握度并奖励积分
-
-**验证需求: 13.4**
-
-#### 属性 33: 积分计算正确性
-
-*对于任意*完成的任务或攻克的错题，系统应根据难度和表现正确计算并发放积分
-
-**验证需求: 14.2**
-
-#### 属性 34: 前后端状态同步一致性
-
-*对于任意*用户操作，前端状态更新后应与后端数据库状态保持一致
-
-**验证需求: 17.2**
-
-#### 属性 35: 离线操作缓存与同步
-
-*对于任意*网络中断期间的用户操作，系统应缓存操作并在恢复连接后成功同步
-
-**验证需求: 17.3**
-
-#### 属性 36: 事务操作原子性
-
-*对于任意*涉及积分扣除和状态更新的事务操作，系统应保证操作的原子性（全部成功或全部失败）
-
-**验证需求: 17.5**
-
-#### 属性 37: 任务完成自动生成报告
-
-*对于任意*完成的训练任务，系统应调用 AI 服务生成学习报告
-
-**验证需求: 18.1**
-
-#### 属性 38: 报告内容完整性
-
-*对于任意*生成的学习报告，应包含知识点掌握度分析、错题统计、能力雷达图和个性化学习建议
-
-**验证需求: 18.2**
-
-#### 属性 39: 报告生成通知发送
-
-*对于任意*生成完成的报告，系统应通知学员和家长查看
-
-**验证需求: 18.4**
-
-#### 属性 40: 报告历史持久化
-
-*对于任意*生成的学习报告，系统应保存到数据库以支持历史查询
-
-**验证需求: 18.5**
-
-#### 属性 41: AI 请求限流保护
-
-*对于任意*超过限流阈值的 AI 服务请求，系统应将请求加入队列而非直接拒绝
-
-**验证需求: 19.3**
+**验证：需求 13.1, 13.2, 13.3, 13.5**
 
 ## 错误处理
 
-### 错误分类
+### AI 服务错误处理策略
 
-系统错误分为以下几类：
+1. **超时控制**
+   - 所有 AI 调用设置 30 秒超时
+   - 超时后返回友好错误提示
+   - 提供重试选项
 
-1. **客户端错误（4xx）**
-   - 400 Bad Request: 请求参数无效
-   - 401 Unauthorized: 未认证或令牌无效
-   - 403 Forbidden: 权限不足
-   - 404 Not Found: 资源不存在
-   - 409 Conflict: 资源冲突（如重复创建）
-   - 422 Unprocessable Entity: 业务逻辑验证失败
+2. **重试机制**
+   - 失败后自动重试，最多 3 次
+   - 使用指数退避策略（1s, 2s, 4s）
+   - 3 次失败后建议用户稍后再试
 
-2. **服务器错误（5xx）**
-   - 500 Internal Server Error: 服务器内部错误
-   - 502 Bad Gateway: AI 服务调用失败
-   - 503 Service Unavailable: 服务暂时不可用
-   - 504 Gateway Timeout: AI 服务响应超时
+3. **降级方案**
+   - 题目生成失败：提示用户刷新重试
+   - 答案判断失败：允许跳过该题
+   - 报告生成失败：保存原始数据，稍后重新生成
 
-### 错误响应格式
+4. **质量检查**
+   - 验证 AI 返回的 JSON 格式
+   - 检查必需字段是否存在
+   - 验证数据类型和范围
+   - 异常内容自动重新生成
 
-```typescript
-interface ErrorResponse {
-  error: {
-    code: string;           // 错误代码（如 "INVALID_AUTH_CODE"）
-    message: string;        // 用户友好的错误消息
-    details?: any;          // 详细错误信息（开发模式）
-    timestamp: string;      // 错误发生时间
-    requestId: string;      // 请求追踪 ID
-  };
-}
-```
+### 数据一致性保证
 
-### 错误处理策略
+1. **事务处理**
+   - 答题记录和会话状态更新使用事务
+   - 确保数据一致性
 
-**前端错误处理：**
-```typescript
-// 全局错误拦截器
-axios.interceptors.response.use(
-  response => response,
-  error => {
-    const { status, data } = error.response;
-    
-    switch (status) {
-      case 401:
-        // 清除令牌，跳转登录页
-        authStore.logout();
-        router.push('/login');
-        break;
-      case 403:
-        // 显示权限不足提示
-        toast.error('您没有权限执行此操作');
-        break;
-      case 404:
-        // 显示资源不存在提示
-        toast.error('请求的资源不存在');
-        break;
-      case 422:
-        // 显示业务逻辑错误
-        toast.error(data.error.message);
-        break;
-      case 500:
-      case 502:
-      case 503:
-        // 显示服务器错误，提示稍后重试
-        toast.error('服务暂时不可用，请稍后重试');
-        break;
-      default:
-        toast.error('发生未知错误');
-    }
-    
-    return Promise.reject(error);
-  }
-);
-```
+2. **状态机验证**
+   - 状态转换前验证前置条件
+   - 防止非法状态转换
 
-**后端错误处理：**
-```typescript
-// 全局错误处理中间件
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  // 记录错误日志
-  logger.error({
-    error: err.message,
-    stack: err.stack,
-    requestId: req.id,
-    path: req.path,
-    method: req.method,
-  });
-  
-  // 判断错误类型
-  if (err instanceof ValidationError) {
-    return res.status(422).json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: err.message,
-        details: err.details,
-        timestamp: new Date().toISOString(),
-        requestId: req.id,
-      },
-    });
-  }
-  
-  if (err instanceof AuthenticationError) {
-    return res.status(401).json({
-      error: {
-        code: 'AUTHENTICATION_ERROR',
-        message: '认证失败，请重新登录',
-        timestamp: new Date().toISOString(),
-        requestId: req.id,
-      },
-    });
-  }
-  
-  // 默认服务器错误
-  res.status(500).json({
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: '服务器内部错误',
-      timestamp: new Date().toISOString(),
-      requestId: req.id,
-    },
-  });
-});
-```
-
-### AI 服务错误处理
-
-```typescript
-class AIServiceManager {
-  async callAI(prompt: string, options: AIOptions): Promise<string> {
-    const providers = this.getActiveProviders(); // 按优先级排序
-    
-    for (const provider of providers) {
-      try {
-        const result = await provider.generate(prompt, options);
-        
-        // 记录成功调用
-        await this.logAPICall(provider.id, 'success', result.tokens);
-        
-        return result.text;
-      } catch (error) {
-        // 记录失败调用
-        await this.logAPICall(provider.id, 'error', 0, error.message);
-        
-        // 如果是最后一个服务商，抛出错误
-        if (provider === providers[providers.length - 1]) {
-          throw new AIServiceError('所有 AI 服务商均不可用');
-        }
-        
-        // 否则尝试下一个服务商
-        logger.warn(`AI 服务商 ${provider.name} 调用失败，切换到备用服务商`);
-        continue;
-      }
-    }
-    
-    throw new AIServiceError('没有可用的 AI 服务商');
-  }
-}
-```
+3. **数据校验**
+   - 所有输入数据进行验证
+   - 防止无效数据进入系统
 
 ## 测试策略
 
-### 测试金字塔
+### 单元测试
 
+**目标**：验证各个组件的独立功能
+
+**测试范围**：
+1. **输入验证**
+   - 训练目标长度验证
+   - 题目数量范围验证
+   - 答案格式验证
+
+2. **数据转换**
+   - JSON 解析和序列化
+   - 数据模型转换
+   - 统计计算
+
+3. **状态机逻辑**
+   - 状态转换规则
+   - 前置条件检查
+   - 状态持久化
+
+4. **错误处理**
+   - 超时处理
+   - 重试逻辑
+   - 降级方案
+
+**测试工具**：Vitest
+
+### 属性测试
+
+**目标**：验证系统的通用正确性属性
+
+**测试范围**：
+1. **数据往返属性**
+   - 任务配置往返一致性（属性 1）
+   - 会话数据持久化
+
+2. **不变量属性**
+   - 会话初始化完整性（属性 3）
+   - 题目对象结构完整性（属性 5）
+   - 训练计划结构完整性（属性 11）
+   - 训练报告内容完整性（属性 21）
+
+3. **状态转换属性**
+   - 诊断测试完成后状态转换（属性 10）
+   - 考试提交后状态转换（属性 20）
+
+4. **业务规则属性**
+   - 输入验证正确性（属性 2）
+   - 题目难度递增趋势（属性 7）
+   - 训练阶段题目数量范围（属性 14）
+   - 综合考试题目配置符合性（属性 17）
+
+5. **错误处理属性**
+   - AI 服务错误优雅处理（属性 25）
+
+**测试配置**：
+- 每个属性测试运行 100 次迭代
+- 使用随机数据生成器
+- 标签格式：`Feature: intelligent-training-platform, Property {N}: {property_text}`
+
+**测试工具**：fast-check (JavaScript 属性测试库)
+
+### 集成测试
+
+**目标**：验证组件间的协作
+
+**测试场景**：
+1. **完整训练流程**
+   - 创建任务 → 启动会话 → 诊断测试 → 生成计划 → 引导训练 → 综合考试 → 生成报告
+
+2. **AI 服务集成**
+   - 题目生成流程
+   - 答案判断流程
+   - 报告生成流程
+
+3. **错误恢复流程**
+   - AI 服务失败重试
+   - 超时处理
+   - 数据恢复
+
+**测试工具**：Vitest + 测试数据库
+
+### 端到端测试
+
+**目标**：验证用户完整使用流程
+
+**测试场景**：
+1. 家长创建档案提取模式任务
+2. 学员完成诊断测试
+3. 学员查看并确认训练计划
+4. 学员完成各训练阶段
+5. 学员参加综合考试
+6. 学员和家长查看训练报告
+
+**测试工具**：Playwright
+
+### Mock 策略
+
+**AI 服务 Mock**：
+- 开发环境：使用 Mock AI 服务，返回预定义的题目和反馈
+- 测试环境：使用真实 AI 服务的测试账号
+- 生产环境：使用真实 AI 服务
+
+**Mock 数据生成器**：
+```typescript
+// 生成随机学员档案
+function generateRandomStudentProfile(): StudentProfile;
+
+// 生成随机训练目标
+function generateRandomTrainingGoal(): string;
+
+// 生成随机题目
+function generateRandomQuestion(difficulty: Difficulty): Question;
+
+// 生成随机训练计划
+function generateRandomTrainingPlan(): TrainingPlan;
 ```
-        /\
-       /  \
-      / E2E \          少量端到端测试
-     /______\
-    /        \
-   /  集成测试 \        适量集成测试
-  /____________\
- /              \
-/   单元测试      \     大量单元测试
-/________________\
-```
+
+### 属性 1：任务配置往返一致性
+
+*对于任意*有效的任务配置（训练目标、诊断题目数量、档案提取模式标识），创建任务后查询该任务，应该返回相同的配置信息。
+
+**验证：需求 1.4, 1.5**
+
+### 属性 2：输入验证正确性
+
+*对于任意*输入字符串作为训练目标，系统应该正确验证其长度在 10-500 字符之间；*对于任意*数字作为题目数量，系统应该正确验证其在 5-20 范围内。
+
+**验证：需求 1.2, 1.3**
+
+### 属性 3：会话初始化完整性
+
+*对于任意*档案提取模式的任务，创建训练会话时应该：
+- 设置阶段为 DIAGNOSTIC_TEST
+- 初始化空的题目列表和答题记录
+- 设置题目数量为任务配置中的值
+- 不依赖题库数据
+
+**验证：需求 2.2, 2.3, 2.4, 2.5**
+
+### 属性 4：AI 题目生成包含学员信息
+
+*对于任意*处于诊断测试阶段的训练会话，生成题目时 AI prompt 应该包含学员的年级、教材版本、学习基础和训练目标信息。
+
+**验证：需求 3.1, 3.2**
+
+### 属性 5：题目对象结构完整性
+
+*对于任意*AI 生成的题目，应该包含所有必需字段：题干、选项、题型、正确答案、解析、知识点、难度。
+
+**验证：需求 3.3**
+
+### 属性 6：诊断题目知识点多样性
+
+*对于任意*诊断测试会话，生成的多道题目应该覆盖至少 3 个不同的知识点。
+
+**验证：需求 3.4**
+
+### 属性 7：诊断题目难度递增
+
+*对于任意*诊断测试会话，生成的题目序列中，后面题目的平均难度应该不低于前面题目的平均难度。
+
+**验证：需求 3.5**
+
+### 属性 8：答题记录完整性
+
+*对于任意*提交的答案，系统应该记录答题情况（正确性、用时、错误类型）并正确推进题目序号。
+
+**验证：需求 4.3, 4.4**
+
+### 属性 9：阶段自动转换
+
+*对于任意*训练会话，当完成的题目数量达到配置的诊断题目数量时，会话阶段应该自动从 DIAGNOSTIC_TEST 转换为 PLANNING。
+
+**验证：需求 4.5**
+
+### 属性 10：诊断结果统计正确性
+
+*对于任意*完成的诊断测试，分析结果中的正确率应该等于（正确题目数 / 总题目数），错题分布应该准确反映每个知识点的答题情况。
+
+**验证：需求 5.2**
+
+### 属性 11：训练计划结构完整性
+
+*对于任意*生成的训练计划，应该包含：
+- 3-5 个学习子目标
+- 5-10 个知识点清单
+- 3 个训练阶段（基础巩固、能力提升、综合应用）
+- 每个阶段包含学习重点、练习题数量、预计用时、验收标准
+- 综合考试规划（考试范围、题目数量 20-50、难度分布、及格标准）
+
+**验证：需求 5.4, 5.5, 5.6, 5.7, 5.8**
+
+### 属性 12：训练阶段题目针对性
+
+*对于任意*基础巩固阶段，生成的题目应该覆盖诊断测试中识别的薄弱知识点。
+
+**验证：需求 6.2**
+
+### 属性 13：训练阶段题目数量范围
+
+*对于任意*训练阶段，生成的题目数量应该在计划配置的范围内：
+- 基础巩固：10-20 题
+- 能力提升：15-25 题
+- 综合应用：10-15 题
+
+**验证：需求 6.7, 7.4, 8.4**
+
+### 属性 14：错题重做功能
+
+*对于任意*答错的题目，系统应该允许学员重新作答，并提供引导式思考提示。
+
+**验证：需求 6.4, 6.5**
+
+### 属性 15：阶段完成生成小结
+
+*对于任意*完成的训练阶段，AI 应该生成包含题目数量、正确率、用时、亮点和改进建议的阶段小结报告。
+
+**验证：需求 6.6**
+
+### 属性 16：综合考试配置正确性
+
+*对于任意*综合考试，应该满足：
+- 题目数量在 20-50 之间
+- 包含多种题型（选择题、填空题、解答题）
+- 难度分布为基础题 40%、中等题 40%、难题 20%（误差 ±5%）
+- 涵盖所有训练过的知识点
+
+**验证：需求 9.2, 9.3, 9.4, 9.5**
+
+### 属性 17：考试期间 AI 助手禁用
+
+*对于任意*处于 FINAL_EXAM 阶段的训练会话，AI 助手功能应该被禁用；*对于任意*其他训练阶段，AI 助手功能应该可用。
+
+**验证：需求 9.7, 11.1, 11.4**
+
+### 属性 18：考试提交触发状态转换
+
+*对于任意*综合考试，当学员提交所有答案后，会话阶段应该从 FINAL_EXAM 转换为 COMPLETED。
+
+**验证：需求 9.8**
+
+### 属性 19：训练报告内容完整性
+
+*对于任意*完成的训练会话，生成的报告应该包含：
+- 诊断测试分析（初始水平评估）
+- 训练过程回顾（各阶段表现）
+- 综合考试成绩（总分、正确率、各知识点得分）
+- 进步情况对比（诊断测试 vs 综合考试）
+- 薄弱点分析
+- 学习建议
+- 积分奖励
+
+**验证：需求 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8**
+
+### 属性 20：报告生成更新任务状态
+
+*对于任意*训练会话，当训练报告生成完成后，关联的任务状态应该更新为 COMPLETED。
+
+**验证：需求 10.9**
+
+### 属性 21：AI 助手启发式引导
+
+*对于任意*学员向 AI 助手的提问，AI 应该提供启发式引导而非直接答案；*对于任意*答错的题目，AI 助手应该主动提供思路引导。
+
+**验证：需求 11.2, 11.3**
+
+### 属性 22：AI 服务错误处理
+
+*对于任意*AI 服务调用，系统应该：
+- 实现超时控制（30 秒）
+- 调用失败时返回友好错误提示并提供重试选项
+- 连续失败 3 次后建议稍后再试
+- 检测内容质量异常并重新生成
+
+**验证：需求 3.6, 13.1, 13.2, 13.3, 13.4, 13.5**
+
+## 错误处理
+
+### AI 服务错误
+
+**场景**：AI 服务调用失败或超时
+
+**处理策略**：
+1. 实现 30 秒超时控制
+2. 捕获所有 AI 调用异常
+3. 返回友好的错误消息
+4. 提供重试按钮
+5. 记录错误日志
+6. 连续失败 3 次后建议用户稍后再试
+
+**降级方案**：
+- 使用备用 AI 提供商
+- 如果所有提供商都失败，保存会话状态，允许用户稍后继续
+
+### 数据验证错误
+
+**场景**：用户输入无效数据
+
+**处理策略**：
+1. 前端实时验证
+2. 后端二次验证
+3. 返回具体的验证错误信息
+4. 高亮显示错误字段
+
+### 会话状态错误
+
+**场景**：会话状态不一致或无效操作
+
+**处理策略**：
+1. 检查会话状态是否有效
+2. 验证操作是否允许在当前状态下执行
+3. 返回明确的状态错误信息
+4. 提供恢复建议
+
+### 网络错误
+
+**场景**：网络连接中断
+
+**处理策略**：
+1. 实现请求重试机制（最多 3 次）
+2. 显示网络错误提示
+3. 保存本地状态，网络恢复后同步
+4. 提供离线模式（查看已生成的内容）
+
+## 测试策略
 
 ### 单元测试
 
-**目标：** 测试独立函数和组件的正确性
+**测试范围**：
+- 数据验证逻辑
+- 状态转换逻辑
+- 统计计算函数
+- 错误处理函数
+- Prompt 构建函数
 
-**工具：** Vitest（前端）、Jest（后端）
+**测试工具**：Vitest
 
-**覆盖范围：**
-- 工具函数（如日期格式化、数据验证）
-- 业务逻辑函数（如积分计算、难度调整）
-- React 组件（使用 React Testing Library）
-- API 路由处理器
-
-**示例：**
+**测试示例**：
 ```typescript
-// 测试积分计算函数
-describe('calculatePoints', () => {
-  it('should calculate points based on difficulty and performance', () => {
-    const points = calculatePoints({
-      difficulty: 3,
-      correctRate: 0.8,
-      timeSpent: 300,
-    });
-    
-    expect(points).toBeGreaterThan(0);
-    expect(points).toBeLessThanOrEqual(100);
-  });
-  
-  it('should return 0 points for incorrect answers', () => {
-    const points = calculatePoints({
-      difficulty: 3,
-      correctRate: 0,
-      timeSpent: 300,
-    });
-    
-    expect(points).toBe(0);
+describe('训练会话状态转换', () => {
+  it('应该在完成所有诊断题目后自动转换到 PLANNING 阶段', () => {
+    const session = createSession({ diagnosticQuestionCount: 10 });
+    for (let i = 0; i < 10; i++) {
+      submitAnswer(session.id, { answer: 'A' });
+    }
+    expect(session.phase).toBe('PLANNING');
   });
 });
 ```
 
 ### 属性测试
 
-**目标：** 验证系统在大量随机输入下的正确性属性
+**测试范围**：
+- 所有正确性属性（属性 1-22）
+- 使用随机生成的测试数据
+- 每个属性至少运行 100 次迭代
 
-**工具：** fast-check
+**测试工具**：fast-check (TypeScript 的属性测试库)
 
-**配置：** 每个属性测试至少运行 100 次迭代
-
-**标注格式：** `// Feature: intelligent-training-platform, Property N: [属性描述]`
-
-**示例：**
+**测试示例**：
 ```typescript
 import fc from 'fast-check';
 
-// Feature: intelligent-training-platform, Property 2: 用户 ID 唯一性
-describe('Property: User ID Uniqueness', () => {
-  it('should generate unique user IDs for all new accounts', () => {
+describe('属性 2：输入验证正确性', () => {
+  it('对于任意输入字符串，应该正确验证训练目标长度', () => {
     fc.assert(
-      fc.property(
-        fc.array(fc.record({
-          username: fc.string({ minLength: 3, maxLength: 20 }),
-          password: fc.string({ minLength: 6 }),
-          role: fc.constantFrom('admin', 'parent', 'student'),
-        }), { minLength: 1, maxLength: 100 }),
-        async (users) => {
-          const createdUsers = [];
-          
-          for (const userData of users) {
-            const user = await userService.createUser(userData);
-            createdUsers.push(user);
-          }
-          
-          // 验证所有 ID 唯一
-          const ids = createdUsers.map(u => u.id);
-          const uniqueIds = new Set(ids);
-          
-          expect(uniqueIds.size).toBe(ids.length);
-        }
-      ),
+      fc.property(fc.string(), (trainingGoal) => {
+        const result = validateTrainingGoal(trainingGoal);
+        const isValid = trainingGoal.length >= 10 && trainingGoal.length <= 500;
+        expect(result.valid).toBe(isValid);
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('对于任意数字，应该正确验证诊断题目数量范围', () => {
+    fc.assert(
+      fc.property(fc.integer(), (questionCount) => {
+        const result = validateQuestionCount(questionCount);
+        const isValid = questionCount >= 5 && questionCount <= 20;
+        expect(result.valid).toBe(isValid);
+      }),
       { numRuns: 100 }
     );
   });
 });
 
-// Feature: intelligent-training-platform, Property 7: 授权码导出往返一致性
-describe('Property: Auth Code Export Round Trip', () => {
-  it('should preserve auth code data through export and import', () => {
-    fc.assert(
-      fc.property(
-        fc.array(fc.record({
-          code: fc.string({ minLength: 8, maxLength: 16 }),
-          status: fc.constantFrom('unused', 'used', 'expired'),
-          expiryDate: fc.date(),
-        }), { minLength: 1, maxLength: 50 }),
-        async (authCodes) => {
-          // 导出为 CSV
-          const csv = await authCodeService.exportToCSV(authCodes);
-          
-          // 从 CSV 导入
-          const imported = await authCodeService.importFromCSV(csv);
-          
-          // 验证数据等价
-          expect(imported).toHaveLength(authCodes.length);
-          
-          for (let i = 0; i < authCodes.length; i++) {
-            expect(imported[i].code).toBe(authCodes[i].code);
-            expect(imported[i].status).toBe(authCodes[i].status);
-          }
-        }
-      ),
-      { numRuns: 100 }
-    );
-  });
-});
-
-// Feature: intelligent-training-platform, Property 23: 愿望同意积分扣除正确性
-describe('Property: Wish Approval Points Deduction', () => {
-  it('should deduct correct points and update wish status on approval', () => {
+describe('属性 11：训练计划结构完整性', () => {
+  it('对于任意生成的训练计划，应该包含所有必需结构', () => {
     fc.assert(
       fc.property(
         fc.record({
-          studentId: fc.uuid(),
-          initialPoints: fc.integer({ min: 100, max: 1000 }),
-          wishPoints: fc.integer({ min: 10, max: 100 }),
+          diagnosticResults: arbitraryDiagnosticResults(),
+          studentProfile: arbitraryStudentProfile(),
+          trainingGoal: fc.string({ minLength: 10, maxLength: 500 })
         }),
-        async ({ studentId, initialPoints, wishPoints }) => {
-          // 设置初始积分
-          await pointsService.setPoints(studentId, initialPoints);
+        async ({ diagnosticResults, studentProfile, trainingGoal }) => {
+          const plan = await generateTrainingPlan(
+            diagnosticResults,
+            studentProfile,
+            trainingGoal
+          );
           
-          // 创建愿望
-          const wish = await wishService.createWish({
-            studentId,
-            description: 'Test wish',
-            requiredPoints: wishPoints,
-          });
+          // 验证子目标数量
+          expect(plan.learningGoals.subGoals.length).toBeGreaterThanOrEqual(3);
+          expect(plan.learningGoals.subGoals.length).toBeLessThanOrEqual(5);
           
-          // 家长同意愿望
-          await wishService.approveWish(wish.id, 'parent-id', true);
+          // 验证知识点数量
+          expect(plan.knowledgePoints.length).toBeGreaterThanOrEqual(5);
+          expect(plan.knowledgePoints.length).toBeLessThanOrEqual(10);
           
-          // 验证积分扣除
-          const currentPoints = await pointsService.getPoints(studentId);
-          expect(currentPoints).toBe(initialPoints - wishPoints);
+          // 验证训练阶段
+          expect(plan.stages).toHaveProperty('foundation');
+          expect(plan.stages).toHaveProperty('improvement');
+          expect(plan.stages).toHaveProperty('application');
           
-          // 验证愿望状态
-          const updatedWish = await wishService.getWish(wish.id);
-          expect(updatedWish.status).toBe('approved');
+          // 验证每个阶段的完整性
+          for (const stage of Object.values(plan.stages)) {
+            expect(stage).toHaveProperty('goal');
+            expect(stage).toHaveProperty('focus');
+            expect(stage).toHaveProperty('questionCount');
+            expect(stage).toHaveProperty('estimatedTime');
+            expect(stage).toHaveProperty('criteria');
+          }
+          
+          // 验证综合考试规划
+          expect(plan.finalExam.questionCount).toBeGreaterThanOrEqual(20);
+          expect(plan.finalExam.questionCount).toBeLessThanOrEqual(50);
+          expect(plan.finalExam).toHaveProperty('timeLimit');
+          expect(plan.finalExam).toHaveProperty('passingScore');
+          expect(plan.finalExam).toHaveProperty('difficultyDistribution');
         }
       ),
       { numRuns: 100 }
@@ -1509,202 +1362,47 @@ describe('Property: Wish Approval Points Deduction', () => {
 
 ### 集成测试
 
-**目标：** 测试多个模块协作的正确性
+**测试范围**：
+- 完整的训练流程（从创建任务到生成报告）
+- AI 服务集成
+- 数据库操作
+- API 端点
 
-**工具：** Supertest（API 测试）
+**测试场景**：
+1. 家长创建档案提取模式任务
+2. 学员进入训练舱，完成诊断测试
+3. AI 生成训练计划
+4. 学员确认计划，进行训练
+5. 完成所有训练阶段
+6. 参加综合考试
+7. 生成训练报告
+8. 家长查看报告
 
-**覆盖范围：**
-- API 端点的完整请求-响应流程
-- 数据库操作的正确性
-- 服务间的交互
+### E2E 测试
 
-**示例：**
-```typescript
-describe('POST /api/parent/tasks', () => {
-  it('should create task and notify student', async () => {
-    const response = await request(app)
-      .post('/api/parent/tasks')
-      .set('Authorization', `Bearer ${parentToken}`)
-      .send({
-        studentId: 'student-123',
-        mode: 'custom',
-        config: {
-          materialNodeIds: ['node-1', 'node-2'],
-          questionCount: 10,
-          difficulty: 3,
-        },
-      });
-    
-    expect(response.status).toBe(201);
-    expect(response.body.task).toHaveProperty('id');
-    
-    // 验证任务已创建
-    const task = await taskService.getTask(response.body.task.id);
-    expect(task.studentId).toBe('student-123');
-    
-    // 验证学员收到通知（检查通知表）
-    const notifications = await notificationService.getNotifications('student-123');
-    expect(notifications).toContainEqual(
-      expect.objectContaining({
-        type: 'task_assigned',
-        taskId: response.body.task.id,
-      })
-    );
-  });
-});
-```
+**测试范围**：
+- 用户完整操作流程
+- UI 交互
+- 跨页面导航
 
-### 端到端测试
+**测试工具**：Playwright
 
-**目标：** 测试完整用户流程
+### Mock 策略
 
-**工具：** Playwright
+**AI 服务 Mock**：
+- 在单元测试和集成测试中 mock AI 服务调用
+- 使用预定义的响应数据
+- 模拟各种错误场景（超时、失败、异常响应）
 
-**覆盖范围：**
-- 关键用户路径（如登录 → 创建任务 → 完成训练 → 查看报告）
-- 跨页面交互
-- 响应式布局
+**数据库 Mock**：
+- 使用测试数据库
+- 每个测试前重置数据
+- 使用事务回滚保证测试隔离
 
-**示例：**
-```typescript
-test('student completes training and earns points', async ({ page }) => {
-  // 登录学员账户
-  await page.goto('/login');
-  await page.fill('[name="username"]', 'student1');
-  await page.fill('[name="password"]', 'password123');
-  await page.click('button[type="submit"]');
-  
-  // 进入训练舱
-  await page.click('text=开始训练');
-  await page.waitForSelector('.training-cabin');
-  
-  // 答题
-  await page.click('text=选项A');
-  await page.click('text=提交答案');
-  
-  // 完成训练
-  await page.click('text=完成训练');
-  
-  // 验证积分增加
-  await page.goto('/points');
-  const points = await page.textContent('.points-display');
-  expect(parseInt(points)).toBeGreaterThan(0);
-});
-```
+### 测试覆盖率目标
 
-### 测试数据管理
+- 代码覆盖率：>80%
+- 属性测试：所有 22 个属性
+- 集成测试：所有主要流程
+- E2E 测试：关键用户路径
 
-**策略：**
-- 使用工厂函数生成测试数据
-- 每个测试独立创建和清理数据
-- 使用事务回滚保持数据库干净
-
-**示例：**
-```typescript
-// 测试数据工厂
-class TestDataFactory {
-  static createUser(overrides?: Partial<User>): User {
-    return {
-      id: uuid(),
-      username: `user_${Date.now()}`,
-      passwordHash: 'hashed_password',
-      role: 'student',
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ...overrides,
-    };
-  }
-  
-  static createTask(overrides?: Partial<Task>): Task {
-    return {
-      id: uuid(),
-      studentId: uuid(),
-      createdBy: uuid(),
-      title: 'Test Task',
-      mode: 'custom',
-      config: {
-        materialNodeIds: ['node-1'],
-        questionCount: 10,
-        difficulty: 3,
-      },
-      status: 'pending',
-      createdAt: new Date(),
-      ...overrides,
-    };
-  }
-}
-
-// 测试中使用
-describe('Task Service', () => {
-  let db: Database;
-  
-  beforeEach(async () => {
-    db = await createTestDatabase();
-  });
-  
-  afterEach(async () => {
-    await db.close();
-  });
-  
-  it('should create task', async () => {
-    const user = TestDataFactory.createUser();
-    await db.users.insert(user);
-    
-    const task = TestDataFactory.createTask({ studentId: user.id });
-    const created = await taskService.createTask(task);
-    
-    expect(created.id).toBeDefined();
-  });
-});
-```
-
-### 持续集成
-
-**CI 流程：**
-1. 代码提交触发 CI
-2. 运行代码检查（ESLint、Prettier）
-3. 运行单元测试和属性测试
-4. 运行集成测试
-5. 生成测试覆盖率报告
-6. 所有检查通过后允许合并
-
-**GitHub Actions 配置示例：**
-```yaml
-name: CI
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Lint
-        run: npm run lint
-      
-      - name: Unit tests
-        run: npm run test:unit
-      
-      - name: Property tests
-        run: npm run test:property
-      
-      - name: Integration tests
-        run: npm run test:integration
-      
-      - name: Coverage report
-        run: npm run test:coverage
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-```

@@ -1,5 +1,4 @@
 // Prisma Schema - 智能提分训练平台数据库模型
-// 这是初始化版本，后续任务会逐步完善
 
 generator client {
   provider = "prisma-client-js"
@@ -10,32 +9,498 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ 用户相关表 ============
+
 // 用户表
 model User {
   id           String   @id @default(uuid())
   username     String   @unique
-  passwordHash String
+  passwordHash String   @map("password_hash")
   role         Role
   email        String?
   phone        String?
   status       UserStatus @default(ACTIVE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  lastLoginAt  DateTime? @map("last_login_at")
 
+  // 家长特有字段
+  realName     String?  @map("real_name")
+  gender       String?
+  address      String?
+  industry     String?
+
+  // 关联关系
+  studentId         StudentID? @relation("UserStudentID")
+  usedAuthCode      AuthCode? @relation("UsedAuthCode")
+  studentProfile    StudentProfile?
+  parentRelations   ParentChildRelation[] @relation("ParentRelations")
+  studentRelations  ParentChildRelation[] @relation("StudentRelations")
+  createdTasks      Task[] @relation("TaskCreator")
+  assignedTasks     Task[] @relation("TaskAssignee")
+  trainingSessions  TrainingSession[]
+  errorQuestions    ErrorQuestion[]
+  wishes            Wish[] @relation("StudentWishes")
+  reviewedWishes    Wish[] @relation("WishReviewer")
+  pointsTransactions PointsTransaction[]
+
+  @@index([role, status])
+  @@index([createdAt])
   @@map("users")
 }
 
-// 用户角色枚举
+// 学号表
+model StudentID {
+  id              String   @id @default(uuid())
+  studentIdNumber String   @unique @map("student_id_number")
+  status          StudentIDStatus @default(AVAILABLE)
+  userId          String?  @unique @map("user_id")
+  assignedAt      DateTime? @map("assigned_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  user User? @relation("UserStudentID", fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("student_ids")
+}
+
+// 授权码表
+model AuthCode {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  status     AuthCodeStatus @default(UNUSED)
+  expiryDate DateTime @map("expiry_date")
+  usedBy     String?  @unique @map("used_by")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  user User? @relation("UsedAuthCode", fields: [usedBy], references: [id])
+
+  @@map("auth_codes")
+}
+
+// 学员档案表
+model StudentProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  realName        String   @map("real_name")
+  gender          String
+  birthDate       DateTime? @map("birth_date")
+  grade           String
+  school          String?
+  materialVersion String   @map("material_version")
+  learningFoundation String? @map("learning_foundation")
+  interests       String?
+  subjectLevels   Json     @map("subject_levels") // { [subject: string]: 'weak' | 'average' | 'good' | 'excellent' }
+  completeness    Int      @default(0) // 0-100
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_profiles")
+}
+
+// 亲子关系表
+model ParentChildRelation {
+  id        String   @id @default(uuid())
+  parentId  String   @map("parent_id")
+  studentId String   @map("student_id")
+  relation  String   // 父亲/母亲/监护人
+  bindedAt  DateTime @default(now()) @map("binded_at")
+  status    RelationStatus @default(ACTIVE)
+
+  // 关联关系
+  parent  User @relation("ParentRelations", fields: [parentId], references: [id])
+  student User @relation("StudentRelations", fields: [studentId], references: [id])
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+  @@map("parent_child_relations")
+}
+
+// ============ 教材相关表 ============
+
+// 教材节点表
+model MaterialNode {
+  id        String   @id @default(uuid())
+  name      String
+  type      MaterialNodeType
+  parentId  String?  @map("parent_id")
+  order     Int      @default(0)
+  metadata  Json     @default("{}") // { subject?: string, version?: string, unit?: string, notes?: string, keywords?: string[] }
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  parent    MaterialNode?  @relation("MaterialHierarchy", fields: [parentId], references: [id])
+  children  MaterialNode[] @relation("MaterialHierarchy")
+  questions Question[]
+
+  @@map("material_nodes")
+}
+
+// 题目表
+model Question {
+  id              String   @id @default(uuid())
+  materialNodeId  String   @map("material_node_id")
+  type            QuestionType
+  content         Json     // 题目内容（JSON 格式）
+  answer          String
+  difficulty      Int      // 1-5
+  knowledgePoints String[] @map("knowledge_points")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  materialNode   MaterialNode    @relation(fields: [materialNodeId], references: [id])
+  answers        Answer[]
+  errorQuestions ErrorQuestion[]
+
+  @@map("questions")
+}
+
+// ============ 任务和训练相关表 ============
+
+// 任务表
+model Task {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  createdBy   String   @map("created_by")
+  title       String
+  mode        TaskMode
+  config      Json     // { materialNodeIds: string[], questionCount: number, difficulty: number }
+  status      TaskStatus @default(PENDING)
+  createdAt   DateTime @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // 关联关系
+  student          User              @relation("TaskAssignee", fields: [studentId], references: [id])
+  creator          User              @relation("TaskCreator", fields: [createdBy], references: [id])
+  trainingSessions TrainingSession[]
+  reports          Report[]
+
+  @@map("tasks")
+}
+
+// 训练会话表
+model TrainingSession {
+  id          String   @id @default(uuid())
+  taskId      String   @map("task_id")
+  studentId   String   @map("student_id")
+  phase       TrainingPhase
+  currentStep Int      @default(0) @map("current_step")
+  totalSteps  Int      @map("total_steps")
+  progress    Int      @default(0) // 0-100
+  questions   String[] // 题目 ID 列表
+  status      SessionStatus @default(ACTIVE)
+  startedAt   DateTime @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // 档案提取模式专用字段
+  diagnosticTestData Json?    @map("diagnostic_test_data") @db.JsonB // 诊断测试数据：{ totalQuestions, currentQuestion, answers: [], results?: {} }
+  trainingPlanData   Json?    @map("training_plan_data") @db.JsonB   // 训练计划数据：完整的训练计划对象
+  trainingProgress   Json?    @map("training_progress") @db.JsonB    // 训练阶段进度：{ currentStage, stages: { foundation: {}, improvement: {}, application: {} } }
+  finalExamData      Json?    @map("final_exam_data") @db.JsonB      // 综合考试数据：{ questions: [], answers: {}, results?: {} }
+  trainingReport     String?  @map("training_report") @db.Text       // 训练报告：Markdown 格式的完整报告
+
+  // 关联关系
+  task            Task              @relation(fields: [taskId], references: [id])
+  student         User              @relation(fields: [studentId], references: [id])
+  answers         Answer[]
+  aiConversations AIConversation[]
+  report          Report?
+
+  @@map("training_sessions")
+}
+
+// 答题记录表
+model Answer {
+  id            String   @id @default(uuid())
+  sessionId     String   @map("session_id")
+  questionId    String   @map("question_id")
+  studentAnswer String   @map("student_answer")
+  isCorrect     Boolean  @map("is_correct")
+  timeSpent     Int      @map("time_spent") // 秒
+  attemptCount  Int      @default(1) @map("attempt_count")
+  answeredAt    DateTime @default(now()) @map("answered_at")
+
+  // 关联关系
+  session        TrainingSession @relation(fields: [sessionId], references: [id])
+  question       Question        @relation(fields: [questionId], references: [id])
+  errorQuestions ErrorQuestion[]
+
+  @@map("answers")
+}
+
+// AI 对话表
+model AIConversation {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  questionId String?  @map("question_id")
+  role       ConversationRole
+  message    String   @db.Text
+  timestamp  DateTime @default(now())
+
+  // 关联关系
+  session TrainingSession @relation(fields: [sessionId], references: [id])
+
+  @@map("ai_conversations")
+}
+
+// 报告表
+model Report {
+  id          String   @id @default(uuid())
+  sessionId   String   @unique @map("session_id")
+  studentId   String   @map("student_id")
+  taskId      String   @map("task_id")
+  content     Json     @db.JsonB // 报告内容（JSON 格式）
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  // 关联关系
+  session TrainingSession @relation(fields: [sessionId], references: [id])
+  task    Task            @relation(fields: [taskId], references: [id])
+
+  @@map("reports")
+}
+
+// ============ 错题和积分相关表 ============
+
+// 错题表
+model ErrorQuestion {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  questionId  String   @map("question_id")
+  answerId    String   @map("answer_id")
+  subject     String
+  mastery     MasteryLevel @default(UNMASTERED)
+  retryCount  Int      @default(0) @map("retry_count")
+  lastRetryAt DateTime? @map("last_retry_at")
+  collectedAt DateTime @default(now()) @map("collected_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  student  User     @relation(fields: [studentId], references: [id])
+  question Question @relation(fields: [questionId], references: [id])
+  answer   Answer   @relation(fields: [answerId], references: [id])
+
+  @@map("error_questions")
+}
+
+// 愿望表
+model Wish {
+  id             String     @id @default(uuid())
+  studentId      String     @map("student_id")
+  type           WishType   @default(CUSTOM) // 愿望类型：现金或自定义
+  description    String     @db.Text
+  requiredPoints Int        @map("required_points")
+  imageUrl       String?    @map("image_url")
+  status         WishStatus @default(PENDING)
+  reviewedBy     String?    @map("reviewed_by")
+  reviewReason   String?    @map("review_reason") @db.Text
+  confirmedAt    DateTime?  @map("confirmed_at") // 学员确认时间
+  submittedAt    DateTime   @default(now()) @map("submitted_at")
+  reviewedAt     DateTime?  @map("reviewed_at")
+  fulfilledAt    DateTime?  @map("fulfilled_at")
+
+  // 关联关系
+  student  User  @relation("StudentWishes", fields: [studentId], references: [id])
+  reviewer User? @relation("WishReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("wishes")
+}
+
+// 积分交易表
+model PointsTransaction {
+  id        String   @id @default(uuid())
+  studentId String   @map("student_id")
+  amount    Int      // 正数为获得，负数为消耗
+  type      TransactionType
+  relatedId String?  @map("related_id") // 关联 ID（任务/错题/愿望）
+  balance   Int      // 交易后余额
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  student User @relation(fields: [studentId], references: [id])
+
+  @@map("points_transactions")
+}
+
+// ============ AI 服务相关表 ============
+
+// AI 服务商表
+model AIProvider {
+  id        String   @id @default(uuid())
+  name      String
+  type      AIProviderType
+  apiKey    String   @map("api_key") // 加密存储
+  endpoint  String
+  model     String
+  priority  Int      @default(0) // 数字越小优先级越高
+  status    ProviderStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联关系
+  apiLogs APILog[]
+
+  @@map("ai_providers")
+}
+
+// 科目教学指令表
+model SubjectInstruction {
+  id           String   @id @default(uuid())
+  subject      String   @unique
+  systemPrompt String   @map("system_prompt") @db.Text
+  examples     Json     @default("[]") // { question: string, response: string }[]
+  providerId   String?  @map("provider_id") // 关联的 AI 服务商 ID
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("subject_instructions")
+}
+
+// API 日志表
+model APILog {
+  id             String   @id @default(uuid())
+  providerId     String   @map("provider_id")
+  endpoint       String
+  requestTokens  Int      @map("request_tokens")
+  responseTokens Int      @map("response_tokens")
+  responseTime   Int      @map("response_time") // 毫秒
+  status         LogStatus
+  errorMessage   String?  @map("error_message") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // 关联关系
+  provider AIProvider @relation(fields: [providerId], references: [id])
+
+  @@map("api_logs")
+}
+
+// ============ 枚举类型 ============
+
 enum Role {
   ADMIN
   PARENT
   STUDENT
 }
 
-// 用户状态枚举
 enum UserStatus {
   ACTIVE
   LOCKED
   DELETED
+}
+
+enum StudentIDStatus {
+  AVAILABLE
+  ASSIGNED
+  LOCKED
+}
+
+enum AuthCodeStatus {
+  UNUSED
+  USED
+  EXPIRED
+}
+
+enum RelationStatus {
+  ACTIVE
+  UNBOUND
+}
+
+enum MaterialNodeType {
+  VERSION
+  GRADE
+  SUBJECT
+  UNIT
+  CHAPTER
+}
+
+enum QuestionType {
+  CHOICE
+  FILL
+  ESSAY
+}
+
+enum TaskMode {
+  PROFILE
+  CUSTOM
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TrainingPhase {
+  PRE_TEST
+  TRAINING
+  FINAL_EXAM
+  DIAGNOSTIC_TEST  // 诊断测试阶段
+  PLANNING         // 训练计划生成阶段
+  GUIDED_TRAINING  // 引导式训练阶段
+  COMPLETED        // 训练完成阶段
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum ConversationRole {
+  USER
+  ASSISTANT
+}
+
+enum MasteryLevel {
+  UNMASTERED
+  MASTERING
+  MASTERED
+}
+
+enum WishType {
+  CASH    // 现金奖励
+  CUSTOM  // 自定义愿望
+}
+
+enum WishStatus {
+  PENDING   // 待审批
+  APPROVED  // 已批准（待学员确认）
+  REJECTED  // 已拒绝
+  FULFILLED // 已兑现（学员已确认并扣除积分）
+}
+
+enum TransactionType {
+  TASK_COMPLETE
+  ERROR_RETRY
+  WISH_REDEEM
+}
+
+enum AIProviderType {
+  OPENAI
+  CLAUDE
+  DEEPSEEK
+  QWEN
+  GEMINI
+  ZHIPU
+  DOUBAO
+  WENXIN
+  CUSTOM
+}
+
+enum ProviderStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LogStatus {
+  SUCCESS
+  ERROR
 }
