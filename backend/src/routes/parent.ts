@@ -187,6 +187,19 @@ router.post(
 );
 
 /**
+ * @route   POST /api/parent/tasks/smart-assign
+ * @desc    AI 智能一键派单：根据近 3 天错题分布 + IRT 薄弱维度自动生成今日巩固小练
+ * @access  Parent
+ * @body    studentId - 学员 ID（必填）
+ */
+router.post(
+  '/tasks/smart-assign',
+  idempotencyMiddleware(),
+  validateOwnership({ source: 'body', key: 'studentId' }),
+  (req, res, next) => parentTaskController.smartAssign(req, res, next)
+);
+
+/**
  * @route   DELETE /api/parent/tasks/:id
  * @desc    删除任务
  * @access  Parent

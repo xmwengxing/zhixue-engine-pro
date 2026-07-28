@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as studentErrorService from '../../services/studentErrorService';
-import type { ErrorQuestion } from '../../services/studentErrorService';
+import type { ErrorQuestion, DueReviewResponse } from '../../services/studentErrorService';
 
 /**
  * 错题本中心页面
@@ -25,6 +25,11 @@ const ErrorBook: React.FC = () => {
 
   // 选中的错题（用于详情查看）
   const [selectedError, setSelectedError] = useState<ErrorQuestion | null>(null);
+
+  // 今日待复习（艾宾浩斯间隔重复）
+  const [dueReviews, setDueReviews] = useState<ErrorQuestion[]>([]);
+  const [dueTotal, setDueTotal] = useState(0);
+  const [cyclesToMaster, setCyclesToMaster] = useState(3);
 
   // 加载错题列表
   // 使用 useCallback 包装异步函数，避免 React Hooks 依赖项警告
@@ -58,6 +63,24 @@ const ErrorBook: React.FC = () => {
   useEffect(() => {
     loadErrors();
   }, [loadErrors]);
+
+  // 加载今日待复习列表
+  const loadDueReviews = useCallback(async () => {
+    try {
+      const res: DueReviewResponse = await studentErrorService.getDueReviews(20);
+      setDueReviews(res.items || []);
+      setDueTotal(res.total || 0);
+      if (typeof res.cyclesToMaster === 'number') {
+        setCyclesToMaster(res.cyclesToMaster);
+      }
+    } catch (error) {
+      console.error('加载今日待复习失败:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDueReviews();
+  }, [loadDueReviews]);
 
   // 开始重做错题
   const handleRetry = async (errorId: string) => {
@@ -126,6 +149,30 @@ const ErrorBook: React.FC = () => {
     return typeMap[type] || type;
   };
 
+  // 复习阶段文案：已通过 X / 共 N 阶段
+  const getReviewStageText = (error: ErrorQuestion) => {
+    const stage = error.reviewStage ?? 0;
+    return `复习 ${stage}/${cyclesToMaster} 阶段`;
+  };
+
+  // 下次复习时间格式化
+  const formatNextReview = (nextReviewAt?: string | null) => {
+    if (!nextReviewAt) return '已彻底掌握';
+    const d = new Date(nextReviewAt);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const label = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    return isToday ? '今天复习' : `下次 ${label}`;
+  };
+
+  // 题目内容预览（兼容字符串与对象两种结构）
+  const getQuestionPreview = (error: ErrorQuestion) => {
+    const c = error.question.content;
+    return typeof c === 'string'
+      ? c
+      : (c.text || (c as { question?: string }).question || '题目内容');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       {/* 页面标题 */}
@@ -134,6 +181,62 @@ const ErrorBook: React.FC = () => {
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           系统自动收集您的错题，帮助您针对性攻克薄弱知识点
         </p>
+      </div>
+
+      {/* 今日待复习（艾宾浩斯间隔重复） */}
+      <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-lg font-semibold text-indigo-900 dark:text-indigo-200">
+              今日待复习
+            </h2>
+            <p className="text-xs text-indigo-700 dark:text-indigo-300">
+              基于艾宾浩斯遗忘曲线，连续 {cyclesToMaster} 个周期答对即可彻底掌握
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium">
+            {dueTotal} 道
+          </span>
+        </div>
+
+        {dueReviews.length === 0 ? (
+          <p className="text-sm text-indigo-700 dark:text-indigo-300">
+            🎉 今天没有待复习的错题，继续保持！
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {dueReviews.map((error) => (
+              <div
+                key={error.id}
+                className="bg-white dark:bg-slate-800 rounded-lg border border-indigo-200 dark:border-indigo-700 p-3 flex flex-col"
+              >
+                <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">
+                  {error.subject}
+                  <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                    {getQuestionTypeText(error.question.type)}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
+                  {getQuestionPreview(error)}
+                </div>
+                <div className="mt-auto flex items-center justify-between">
+                  <span className="text-xs text-indigo-600 dark:text-indigo-300">
+                    {getReviewStageText(error)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRetry(error.id);
+                    }}
+                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded hover:bg-indigo-700 transition-colors"
+                  >
+                    立即复习
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 筛选器 */}
@@ -244,6 +347,12 @@ const ErrorBook: React.FC = () => {
               <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-3">
                 <span>难度: {'★'.repeat(error.question.difficulty)}</span>
                 <span>重做 {error.retryCount} 次</span>
+              </div>
+
+              {/* 间隔重复信息 */}
+              <div className="flex justify-between items-center text-xs text-indigo-600 dark:text-indigo-300 mb-3">
+                <span>{getReviewStageText(error)}</span>
+                <span>{formatNextReview(error.nextReviewAt)}</span>
               </div>
 
               {/* 操作按钮 */}

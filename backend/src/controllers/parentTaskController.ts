@@ -490,6 +490,49 @@ class ParentTaskController {
   }
 
   /**
+   * AI 智能一键派单（自动生成今日巩固小练任务）
+   * POST /api/parent/tasks/smart-assign
+   */
+  async smartAssign(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user!.userId;
+      const { studentId } = req.body;
+
+      if (!studentId || typeof studentId !== 'string') {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: '学员 ID 不能为空',
+          },
+        });
+      }
+
+      const result = await parentTaskService.smartAssign(parentId, studentId);
+
+      return res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === '无权为该学员布置任务') {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: error.message },
+        });
+      }
+      if (
+        error.message === '学员不存在' ||
+        error.message.includes('档案不完整') ||
+        error.message.includes('AI 科目老师')
+      ) {
+        return res.status(400).json({
+          error: { code: 'INVALID_PARAMS', message: error.message },
+        });
+      }
+      return next(error);
+    }
+  }
+
+  /**
    * AI 生成激励批语草稿（创建任务前使用）
    * POST /api/parent/encouragement/ai
    */

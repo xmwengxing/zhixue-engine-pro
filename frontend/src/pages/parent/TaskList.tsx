@@ -18,6 +18,14 @@ interface Task {
   };
 }
 
+interface Child {
+  id: string;
+  username: string;
+  studentProfile?: {
+    realName: string;
+  };
+}
+
 /**
  * 任务列表页面
  * 显示家长创建的所有任务
@@ -30,6 +38,12 @@ export default function TaskList() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
+
+  // AI 智能派单相关状态
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignMsg, setAssignMsg] = useState('');
 
   // 删除确认弹窗状态
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -63,6 +77,58 @@ export default function TaskList() {
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  /**
+   * 加载家长绑定的学员列表（供 AI 智能派单选择）
+   */
+  const loadChildren = useCallback(async () => {
+    try {
+      const response = await request.get('/parent/children');
+      const list: Child[] = response.data.children || [];
+      setChildren(list);
+      if (list.length > 0 && !selectedStudentId) {
+        setSelectedStudentId(list[0].id);
+      }
+    } catch (err: unknown) {
+      // 列表加载失败不阻塞任务页，仅记录日志
+      console.error('加载学员列表失败:', err);
+    }
+  }, [selectedStudentId]);
+
+  useEffect(() => {
+    loadChildren();
+  }, [loadChildren]);
+
+  /**
+   * AI 一键布置今日巩固：根据近 3 天错题 + IRT 能力自动派单
+   */
+  const handleSmartAssign = async () => {
+    if (!selectedStudentId) {
+      setAssignMsg('请先选择要派单的学员');
+      return;
+    }
+    try {
+      setAssigning(true);
+      setError('');
+      setAssignMsg('');
+      const response = await request.post('/parent/tasks/smart-assign', {
+        studentId: selectedStudentId,
+      });
+      const basis = response.data?.basis;
+      const weak = basis?.weakPoints?.length
+        ? `薄弱点：${basis.weakPoints.join('、')}`
+        : '';
+      setAssignMsg(
+        `已为学员生成「${response.data?.task?.title || '今日巩固小练'}」，近3天错题 ${basis?.errorCount ?? 0} 道${weak ? '，' + weak : ''}`
+      );
+      // 刷新任务列表
+      await loadTasks();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'AI 智能派单失败'));
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   /**
    * 获取状态显示文本
@@ -193,6 +259,42 @@ export default function TaskList() {
           >
             创建新任务
           </button>
+        </div>
+
+        {/* AI 智能派单工具条 */}
+        <div className="mb-6 flex flex-wrap items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">
+            AI 一键巩固
+          </span>
+          <select
+            value={selectedStudentId}
+            onChange={(e) => setSelectedStudentId(e.target.value)}
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {children.length === 0 && <option value="">（暂无绑定学员）</option>}
+            {children.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.studentProfile?.realName || c.username}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleSmartAssign}
+            disabled={assigning || children.length === 0 || !selectedStudentId}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            {assigning ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                AI 派单中...
+              </>
+            ) : (
+              'AI 一键布置今日巩固'
+            )}
+          </button>
+          {assignMsg && (
+            <span className="text-sm text-green-700 dark:text-green-300">{assignMsg}</span>
+          )}
         </div>
 
         {/* 错误提示 */}

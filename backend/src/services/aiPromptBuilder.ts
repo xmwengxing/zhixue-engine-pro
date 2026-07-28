@@ -33,6 +33,13 @@ export interface TrainingContext {
   weakPoints: string[];
   /** IRT 自适应推荐的目标难度（可选，提供时对 AI 强约束） */
   targetDifficulty?: 'easy' | 'medium' | 'hard';
+  /** 知识点下钻溯源模式（学生在某知识点连错 ≥2 次时触发前置知识点微测） */
+  breakdownTrace?: {
+    /** 学生频繁出错的目标知识点 */
+    strugglingPoint: string;
+    /** 该知识点连续错误次数 */
+    consecutiveErrors: number;
+  };
 }
 
 /**
@@ -332,7 +339,7 @@ export class AIPromptBuilder {
    * 构建训练题目生成 Prompt
    */
   buildTrainingQuestionPrompt(context: TrainingContext): string {
-    const { studentProfile, trainingGoal, stage, stageGoal, questionNumber, totalQuestions, masteredPoints, weakPoints, targetDifficulty } = context;
+    const { studentProfile, trainingGoal, stage, stageGoal, questionNumber, totalQuestions, masteredPoints, weakPoints, targetDifficulty, breakdownTrace } = context;
 
     const stageNames = {
       foundation: '基础巩固',
@@ -357,6 +364,16 @@ export class AIPromptBuilder {
       ? `\n【难度硬性要求】本题难度必须为 ${difficultyNames[targetDifficulty]}，这是根据学员实时能力评估（IRT 自适应算法）确定的，JSON 中 difficulty 字段必须为 "${targetDifficulty}"。`
       : '';
 
+    // 知识点下钻溯源模式（Breakdown Trace）：连错 ≥2 次时退回前置知识点微测
+    const breakdownConstraint = breakdownTrace
+      ? `
+【溯源诊断模式 · 最高优先级】学员在知识点「${breakdownTrace.strugglingPoint}」上已连续答错 ${breakdownTrace.consecutiveErrors} 次，判定为前置基础不牢。本题不要继续考察该知识点本身，而要：
+1. 分析「${breakdownTrace.strugglingPoint}」的学习依赖链，找出它最关键的一个【前置基础知识点】（例如"二次函数最值"的前置是"配方法"或"一元二次方程"）
+2. 围绕该前置知识点出一道基础微测题（难度必须为 easy），帮助定位漏洞
+3. JSON 中 knowledgePoint 填写该前置知识点名称，difficulty 必须为 "easy"
+4. explanation 中说明该前置知识点与「${breakdownTrace.strugglingPoint}」的关联，帮助学员理解为什么要回头补基础`
+      : '';
+
     return `你是一位教师，正在为学员生成训练题目。
 
 学员信息：
@@ -370,7 +387,7 @@ export class AIPromptBuilder {
 
 已掌握知识点：${masteredPoints.length > 0 ? masteredPoints.join('、') : '无'}
 薄弱知识点：${weakPoints.length > 0 ? weakPoints.join('、') : '无'}
-${difficultyConstraint}
+${difficultyConstraint}${breakdownConstraint}
 
 要求：
 1. ${stageInstructions[stage]}

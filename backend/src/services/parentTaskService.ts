@@ -773,6 +773,165 @@ ${wrapUserInput('孩子与任务信息', studentInfo)}
       suggestion: text.trim(),
     };
   }
+
+  /**
+   * AI 智能一键派单（教研降维）
+   *
+   * 家长只需点一下"一键布置今日巩固"，系统自动：
+   * 1. 聚合孩子近 3 天错题分布（科目 + 知识点）
+   * 2. 读取最近训练会话的 IRT 能力值与薄弱难度
+   * 3. 结合学生档案自动生成一个 15 分钟提分小练任务（无需家长选知识点/难度）
+   */
+  async smartAssign(parentId: string, studentId: string) {
+    // 校验亲子绑定关系
+    const relation = await prisma.parentChildRelation.findFirst({
+      where: { parentId, studentId, status: 'ACTIVE' },
+    });
+    if (!relation) {
+      throw new Error('无权为该学员布置任务');
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      include: { studentProfile: true },
+    });
+    if (!student || student.role !== 'STUDENT') {
+      throw new Error('学员不存在');
+    }
+    if (!student.studentProfile) {
+      throw new Error('学员档案不完整，请先完善学员档案');
+    }
+
+    // ===== 1. 聚合近 3 天错题分布 =====
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    const recentErrors = await prisma.errorQuestion.findMany({
+      where: {
+        studentId,
+        mastery: { not: 'MASTERED' },
+        OR: [
+          { collectedAt: { gte: threeDaysAgo } },
+          { updatedAt: { gte: threeDaysAgo } },
+        ],
+      },
+      include: {
+        question: { include: { materialNode: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    });
+
+    // 统计科目与知识点分布
+    const subjectCount: Record<string, number> = {};
+    const knowledgePointCount: Record<string, number> = {};
+    for (const err of recentErrors) {
+      subjectCount[err.subject] = (subjectCount[err.subject] || 0) + 1;
+      const points = err.question?.knowledgePoints || [];
+      for (const p of points) {
+        knowledgePointCount[p] = (knowledgePointCount[p] || 0) + 1;
+      }
+      if (points.length === 0 && err.question?.materialNode?.name) {
+        const name = err.question.materialNode.name;
+        knowledgePointCount[name] = (knowledgePointCount[name] || 0) + 1;
+      }
+    }
+
+    const topSubject =
+      Object.entries(subjectCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const topWeakPoints = Object.entries(knowledgePointCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([point]) => point);
+
+    // ===== 2. 读取最近训练会话的 IRT 能力估计 =====
+    const recentSession = await prisma.trainingSession.findFirst({
+      where: { studentId, trainingProgress: { not: undefined } },
+      orderBy: { startedAt: 'desc' },
+      select: { trainingProgress: true },
+    });
+    const irt = (recentSession?.trainingProgress as any)?.irt;
+    const abilityTheta: number | null =
+      typeof irt?.theta === 'number' ? irt.theta : null;
+    const abilityDesc =
+      abilityTheta === null
+        ? '暂无能力评估数据'
+        : abilityTheta < -0.5
+          ? '当前能力偏弱，需要基础巩固'
+          : abilityTheta > 0.7
+            ? '当前能力较强，可适度挑战'
+            : '当前能力中等，稳步提升';
+
+    // ===== 3. 选择 AI 科目老师（匹配错题最多的科目，否则取第一个可用） =====
+    let subjectInstruction = null;
+    if (topSubject) {
+      subjectInstruction = await prisma.subjectInstruction.findFirst({
+        where: { subject: { contains: topSubject } },
+      });
+    }
+    if (!subjectInstruction) {
+      subjectInstruction = await prisma.subjectInstruction.findFirst({
+        orderBy: { subject: 'asc' },
+      });
+    }
+    if (!subjectInstruction) {
+      throw new Error('系统尚未配置 AI 科目老师，请联系管理员');
+    }
+
+    // ===== 4. 自动组装训练目标并复用 PROFILE 模式创建任务 =====
+    const goalParts: string[] = ['15 分钟提分小练（AI 智能派单）'];
+    if (topWeakPoints.length > 0) {
+      goalParts.push(`重点巩固近期薄弱知识点：${topWeakPoints.join('、')}`);
+    } else {
+      goalParts.push('根据学员档案进行综合巩固训练');
+    }
+    goalParts.push(abilityDesc);
+    const trainingGoal = goalParts.join('；');
+
+    const task = await this.createTask(parentId, {
+      mode: 'PROFILE',
+      studentId,
+      profileConfig: {
+        aiTeacher: subjectInstruction.id,
+        trainingGoal,
+        diagnosticQuestionCount: 5, // 小练：最小诊断量，快速进入训练
+      },
+    });
+
+    // 附加智能派单元数据（供报告与前端展示派单依据）
+    const config = (task.config as any) || {};
+    await prisma.task.update({
+      where: { id: task.id },
+      data: {
+        title: `每日巩固 · ${topSubject || subjectInstruction.subject}提分小练`,
+        config: {
+          ...config,
+          smartAssign: {
+            assignedAt: new Date().toISOString(),
+            errorCount: recentErrors.length,
+            topSubject,
+            weakPoints: topWeakPoints,
+            abilityTheta,
+          },
+        },
+      },
+    });
+
+    logger.info(
+      `AI 智能派单成功: 任务 ${task.id}, 学员 ${studentId}, 近3天错题 ${recentErrors.length} 道, 薄弱点 [${topWeakPoints.join(',')}]`
+    );
+
+    return {
+      task: { ...task, title: `每日巩固 · ${topSubject || subjectInstruction.subject}提分小练` },
+      basis: {
+        errorCount: recentErrors.length,
+        topSubject,
+        weakPoints: topWeakPoints,
+        abilityTheta,
+        abilityDesc,
+      },
+    };
+  }
 }
 
 export const parentTaskService = new ParentTaskService();

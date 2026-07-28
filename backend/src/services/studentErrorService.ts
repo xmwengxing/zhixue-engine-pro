@@ -1,5 +1,10 @@
 // 学员端错题管理服务
 import { PrismaClient, MasteryLevel } from '@prisma/client';
+import {
+  initialReviewFields,
+  getDueReviews as getDueReviewsFromSR,
+  CYCLES_TO_MASTER,
+} from './spacedRepetitionService';
 
 const prisma = new PrismaClient();
 
@@ -166,6 +171,14 @@ export const updateMastery = async (
     throw new Error('错题不存在或无权访问');
   }
 
+  // 防"伪掌握"守卫：只有连续 3 个艾宾浩斯复习周期均答对，才允许标记为 MASTERED
+  // （短期记忆答对 1 次不等于真正掌握，见《业务逻辑与功能改善_1.md》建议 2）
+  if (mastery === 'MASTERED' && error.consecutiveCorrect < CYCLES_TO_MASTER) {
+    throw new Error(
+      `该错题尚未通过间隔重复验证（已连续答对 ${error.consecutiveCorrect}/${CYCLES_TO_MASTER} 个复习周期），暂不能标记为彻底掌握`
+    );
+  }
+
   // 检查掌握度是否提升
   const masteryLevels = ['UNMASTERED', 'MASTERING', 'MASTERED'];
   const oldLevel = masteryLevels.indexOf(error.mastery);
@@ -238,7 +251,7 @@ export const collectErrorQuestion = async (
     return existing;
   }
 
-  // 创建新的错题记录
+  // 创建新的错题记录（进入艾宾浩斯第 1 天复习周期）
   const errorQuestion = await prisma.errorQuestion.create({
     data: {
       studentId,
@@ -247,10 +260,18 @@ export const collectErrorQuestion = async (
       subject,
       mastery: 'UNMASTERED',
       retryCount: 0,
+      ...initialReviewFields(),
     },
   });
 
   return errorQuestion;
+};
+
+/**
+ * 获取今日到期待复习的错题（艾宾浩斯间隔重复）
+ */
+export const getDueReviews = async (studentId: string, limit = 20) => {
+  return getDueReviewsFromSR(studentId, limit);
 };
 
 /**

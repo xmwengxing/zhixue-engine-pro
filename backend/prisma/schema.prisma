@@ -284,6 +284,12 @@ model ErrorQuestion {
   collectedAt DateTime @default(now()) @map("collected_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  // ===== 艾宾浩斯间隔重复（Spaced Repetition）字段 =====
+  reviewStage        Int       @default(0) @map("review_stage")          // 当前复习阶段：0=未开始，1/2/3/4 对应第 1/3/7/15 天周期
+  consecutiveCorrect Int       @default(0) @map("consecutive_correct")   // 连续复习答对次数（跨周期），答错清零
+  nextReviewAt       DateTime? @map("next_review_at")                    // 下次到期复习时间（归档后为 null）
+  reviewHistory      Json?     @map("review_history") @db.JsonB          // 复习轨迹 [{ stage, isCorrect, reviewedAt }]
+
   // 关联关系
   student  User     @relation(fields: [studentId], references: [id])
   question Question @relation(fields: [questionId], references: [id])
@@ -481,6 +487,7 @@ enum TransactionType {
   TASK_COMPLETE
   ERROR_RETRY
   WISH_REDEEM
+  GUIDED_SOLVE // 苏格拉底式引导后独立解出题目的奖励
 }
 
 enum AIProviderType {

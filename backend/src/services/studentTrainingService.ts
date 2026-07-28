@@ -5,6 +5,7 @@ import { aiServiceManager } from './aiServiceManager';
 import { completeTaskTransaction } from '../utils/transaction';
 import { reportStatusService, ReportStatus } from './reportStatusService';
 import { safeJsonParse } from '../utils/aiJson';
+import { recordReviewResult, initialReviewFields } from './spacedRepetitionService';
 
 const prisma = new PrismaClient();
 
@@ -393,6 +394,39 @@ export class StudentTrainingService {
       `IRT 自适应：会话 ${session.id} theta=${irtState.theta}，推荐难度=${targetDifficulty}`
     );
 
+    // 知识点下钻溯源（Breakdown Trace）：检测连错 ≥2 次的知识点
+    let breakdownTrace: { strugglingPoint: string; consecutiveErrors: number } | undefined;
+    const kpErrors: Record<string, number> = trainingProgress.knowledgePointErrors || {};
+    const strugglingEntry = Object.entries(kpErrors)
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])[0];
+
+    if (strugglingEntry) {
+      breakdownTrace = {
+        strugglingPoint: strugglingEntry[0],
+        consecutiveErrors: strugglingEntry[1],
+      };
+      // 触发后清零计数，避免连续多题都在溯源同一知识点；
+      // 若前置微测题再答错，会以前置知识点为新目标重新累计，形成逐层下钻
+      trainingProgress.knowledgePointErrors[strugglingEntry[0]] = 0;
+      if (!trainingProgress.breakdownHistory) {
+        trainingProgress.breakdownHistory = [];
+      }
+      trainingProgress.breakdownHistory.push({
+        strugglingPoint: strugglingEntry[0],
+        triggeredAt: new Date().toISOString(),
+        stage: currentStage,
+        questionNumber,
+      });
+      await prisma.trainingSession.update({
+        where: { id: session.id },
+        data: { trainingProgress },
+      });
+      logger.info(
+        `溯源诊断触发：会话 ${session.id} 知识点「${strugglingEntry[0]}」连错 ${strugglingEntry[1]} 次，下钻前置知识点微测`
+      );
+    }
+
     // 构建训练上下文（buildTrainingQuestionPrompt 需要嵌套的 studentProfile 结构）
     const context = {
       studentProfile: {
@@ -407,13 +441,17 @@ export class StudentTrainingService {
       totalQuestions: totalQuestions,
       masteredPoints: trainingProgress.masteredPoints || [],
       weakPoints: trainingProgress.weakPoints || [],
-      targetDifficulty,
+      // 溯源模式下强制 easy 难度（前置基础微测）
+      targetDifficulty: breakdownTrace ? ('easy' as const) : targetDifficulty,
+      breakdownTrace,
     };
 
     // 调用 AI 生成题目
     const question = await aiService.generateTrainingQuestion(currentStage, context, questionNumber);
 
-    logger.info(`成功生成 ${currentStage} 阶段第 ${questionNumber} 道题目（目标难度 ${targetDifficulty}）`);
+    logger.info(
+      `成功生成 ${currentStage} 阶段第 ${questionNumber} 道题目（目标难度 ${breakdownTrace ? 'easy·溯源' : targetDifficulty}）`
+    );
 
     return question;
   }
@@ -962,8 +1000,56 @@ export class StudentTrainingService {
       irtState,
       questionDifficulty,
       evaluation.isCorrect,
-      timeSpent
+      timeSpent,
+      questionData?.type
     );
+
+    // 苏格拉底式引导奖励：AI 分步引导后学员独立答对 → 给予部分积分
+    // （满分 5 分，每次提示 -1，最低 2 分；直接答对不在此奖励，走任务完成积分）
+    let guidedReward = 0;
+    if (evaluation.isCorrect && trainingProgress.socratic?.hintCount > 0) {
+      guidedReward = Math.max(2, 5 - trainingProgress.socratic.hintCount);
+      try {
+        const lastTransaction = await prisma.pointsTransaction.findFirst({
+          where: { studentId: session.studentId },
+          orderBy: { createdAt: 'desc' },
+        });
+        await prisma.pointsTransaction.create({
+          data: {
+            studentId: session.studentId,
+            amount: guidedReward,
+            type: 'GUIDED_SOLVE',
+            relatedId: session.id,
+            balance: (lastTransaction?.balance || 0) + guidedReward,
+          },
+        });
+        logger.info(
+          `苏格拉底引导奖励：学员 ${session.studentId} 经 ${trainingProgress.socratic.hintCount} 次引导后答对，+${guidedReward} 分`
+        );
+      } catch (error) {
+        logger.error('发放引导奖励积分失败:', error);
+        guidedReward = 0;
+      }
+    }
+    // 本题作答完毕，重置提示计数
+    if (trainingProgress.socratic) {
+      trainingProgress.socratic = { questionKey: null, hintCount: 0 };
+    }
+
+    // 知识点下钻溯源（Breakdown Trace）：跟踪同一知识点的连续错误次数
+    // 答对清零；连错 ≥2 次将在下一次出题时触发"前置知识点微测"
+    const knowledgePoint = questionData?.knowledgePoint;
+    if (knowledgePoint && typeof knowledgePoint === 'string') {
+      if (!trainingProgress.knowledgePointErrors) {
+        trainingProgress.knowledgePointErrors = {};
+      }
+      if (evaluation.isCorrect) {
+        trainingProgress.knowledgePointErrors[knowledgePoint] = 0;
+      } else {
+        trainingProgress.knowledgePointErrors[knowledgePoint] =
+          (trainingProgress.knowledgePointErrors[knowledgePoint] || 0) + 1;
+      }
+    }
 
     // 更新会话
     await prisma.trainingSession.update({
@@ -986,6 +1072,8 @@ export class StudentTrainingService {
       // IRT 自适应信息（供前端展示难度变化）
       nextDifficulty: trainingProgress.irt.lastRecommended,
       abilityTheta: trainingProgress.irt.theta,
+      // 苏格拉底引导奖励积分（>0 表示经引导后独立解出）
+      guidedReward,
     };
   }
 
@@ -1023,9 +1111,17 @@ export class StudentTrainingService {
       },
     });
 
-    // 如果答错，自动收集到错题本
+    // 错题本联动（艾宾浩斯间隔重复）：
+    // - 答错 → 收集/重置错题复习周期
+    // - 答对 → 若该题在错题本中，推进复习周期（连续 3 周期答对才归档）
     if (!isCorrect) {
       await this.collectErrorQuestion(studentId, questionId, answerRecord.id, question);
+    } else {
+      try {
+        await recordReviewResult(studentId, questionId, true);
+      } catch (error) {
+        logger.error('推进错题复习周期失败:', error);
+      }
     }
 
     // 更新会话进度
@@ -1115,12 +1211,14 @@ export class StudentTrainingService {
       });
 
       if (existing) {
-        // 更新错题记录
+        // 更新错题记录，并重置艾宾浩斯复习周期（再次答错说明未掌握）
         await prisma.errorQuestion.update({
           where: { id: existing.id },
           data: {
             answerId, // 更新为最新的答题记录
             retryCount: existing.retryCount + 1,
+            mastery: 'UNMASTERED',
+            ...initialReviewFields(),
             updatedAt: new Date(),
           },
         });
@@ -1168,6 +1266,7 @@ export class StudentTrainingService {
             subject,
             mastery: 'UNMASTERED',
             retryCount: 0,
+            ...initialReviewFields(), // 排期第 1 天复习周期
           },
         });
       }
@@ -2036,8 +2135,28 @@ export class StudentTrainingService {
         },
       });
 
-      // 构建 AI 提示词
-      const prompt = await this.buildAIPrompt(session, message, context);
+      // 苏格拉底式引导：累计当前题目的提示次数（答对前每次求助 +1）
+      // hintCount 决定引导深度（第 1 次只问"题目求什么"，逐级加深，绝不直接给答案）
+      const trainingProgress = (session.trainingProgress as any) || {};
+      if (!trainingProgress.socratic) {
+        trainingProgress.socratic = { questionKey: null, hintCount: 0 };
+      }
+      const questionKey = context?.questionId || 'current';
+      if (trainingProgress.socratic.questionKey !== questionKey) {
+        // 切换到新题目，重置提示计数
+        trainingProgress.socratic = { questionKey, hintCount: 0 };
+      }
+      if (!context?.isCorrect) {
+        trainingProgress.socratic.hintCount += 1;
+        await prisma.trainingSession.update({
+          where: { id: sessionId },
+          data: { trainingProgress },
+        });
+      }
+      const hintLevel = trainingProgress.socratic.hintCount;
+
+      // 构建 AI 提示词（苏格拉底式分步引导）
+      const prompt = await this.buildAIPrompt(session, message, context, hintLevel);
 
       // 获取科目信息
       const subject = await this.getSessionSubject(session);
@@ -2081,7 +2200,8 @@ export class StudentTrainingService {
       questionId?: string;
       answer?: string;
       isCorrect?: boolean;
-    }
+    },
+    hintLevel: number = 1
   ): Promise<string> {
     let prompt = '';
 
@@ -2140,13 +2260,24 @@ export class StudentTrainingService {
     // 添加用户当前消息
     prompt += `学员当前问题: ${userMessage}\n\n`;
 
-    // 添加指导原则
-    prompt += `请根据以上信息，以启发式教学的方式回复学员。注意:\n`;
-    prompt += `1. 不要直接给出答案，而是通过提问引导学员思考\n`;
-    prompt += `2. 如果学员答错，分析错误原因并提供思路提示\n`;
-    prompt += `3. 鼓励学员独立思考，培养解题能力\n`;
+    // 苏格拉底式分步引导原则（引导深度随提示次数递进，绝不直接给答案）
+    const socraticStages: Record<number, string> = {
+      1: '第 1 级引导（澄清目标）：只通过提问帮学员明确"这道题要求的是什么？已知条件里有哪个关键信息或公式？"，不要给出任何解题步骤。',
+      2: '第 2 级引导（启动第一步）：提示学员尝试第一个动作，例如"试着把已知数值代入那个公式看看？"，仍然不要透露中间结果。',
+      3: '第 3 级引导（定位卡点）：针对学员卡住的具体步骤给出方向性提示（指出该用什么方法），但保留最终计算和结论让学员自己完成。',
+    };
+    const stageInstruction =
+      socraticStages[Math.min(hintLevel, 3)] || socraticStages[3];
+
+    prompt += `请根据以上信息，以苏格拉底式提问法回复学员。当前是学员在这道题上的第 ${hintLevel} 次求助。\n\n`;
+    prompt += `【本次引导要求】${stageInstruction}\n\n`;
+    prompt += `通用原则:\n`;
+    prompt += `1. 绝对不要直接给出最终答案或完整解析，通过提问一步步引导学员自己想出来\n`;
+    prompt += `2. 每次回复以一个引导性问题结尾，等待学员回应\n`;
+    prompt += `3. 如果学员答错，先肯定其思考中正确的部分，再用提问指出矛盾之处\n`;
     prompt += `4. 语言要友好、耐心，适合中小学生理解\n`;
     prompt += `5. 回复要简洁明了，不超过 200 字\n`;
+    prompt += `6. 如果学员已经答对并只是想确认思路，可以总结解题思维方法并给予表扬\n`;
 
     return prompt;
   }

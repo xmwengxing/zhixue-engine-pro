@@ -164,6 +164,13 @@ router.get('/report/status/:sessionId', reportStatusController.getReportStatus);
 router.get('/errors', studentErrorController.getErrors);
 
 /**
+ * @route   GET /api/student/errors/due
+ * @desc    获取今日到期待复习错题（艾宾浩斯间隔重复）
+ * @access  Private (Student)
+ */
+router.get('/errors/due', studentErrorController.getDueReviews);
+
+/**
  * @route   GET /api/student/errors/:id
  * @desc    获取错题详情
  * @access  Private (Student)

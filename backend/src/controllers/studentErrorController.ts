@@ -31,6 +31,31 @@ export const getErrors = async (
 };
 
 /**
+ * @route   GET /api/student/errors/due
+ * @desc    获取今日到期待复习错题（艾宾浩斯间隔重复）
+ * @access  Private (Student)
+ */
+export const getDueReviews = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const studentId = req.user!.userId;
+    const { limit = '20' } = req.query;
+
+    const result = await studentErrorService.getDueReviews(
+      studentId,
+      parseInt(limit as string)
+    );
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @route   GET /api/student/errors/:id
  * @desc    获取错题详情
  * @access  Private (Student)
