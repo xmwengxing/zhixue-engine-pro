@@ -127,7 +127,18 @@ const startServer = async () => {
     } catch (error) {
       logger.warn('⚠️  Redis 初始化失败，系统将在无缓存模式下运行:', error);
     }
-    
+
+    // 启动 AI 生成队列 Worker（Redis 不可用时自动降级为同步执行）
+    try {
+      const { startAIWorker } = await import('./queue/aiQueue');
+      startAIWorker(4);
+    } catch (error) {
+      logger.warn(
+        '⚠️  AI 队列 Worker 启动失败，长耗时生成将降级为同步执行:',
+        error
+      );
+    }
+
     // 启动 HTTP 服务器
     const server = app.listen(PORT, () => {
       logger.info(`🚀 服务器运行在 http://localhost:${PORT}`);
@@ -154,6 +165,15 @@ const startServer = async () => {
             logger.info('Redis 连接已断开');
           } catch (error) {
             // Redis 可能未初始化，忽略错误
+          }
+
+          // 关闭 AI 生成队列
+          try {
+            const { closeAIQueue } = await import('./queue/aiQueue');
+            await closeAIQueue();
+            logger.info('AI 生成队列已关闭');
+          } catch (error) {
+            // 忽略关闭错误
           }
           
           process.exit(0);

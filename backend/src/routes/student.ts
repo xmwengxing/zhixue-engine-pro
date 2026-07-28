@@ -7,10 +7,15 @@ import * as studentErrorController from '../controllers/studentErrorController';
 import { studentPointsController } from '../controllers/studentPointsController';
 import { studentWishController } from '../controllers/studentWishController';
 import { reportStatusController } from '../controllers/reportStatusController';
+import aiStreamRouter from './aiStream';
+import { idempotencyMiddleware } from '../middlewares/idempotency';
 
 const router = Router();
 
 // ============ 所有学员端路由都需要认证和学员角色 ============
+// SSE 端点单独挂载：EventSource 不支持自定义请求头，令牌经 ?token= 传递，
+// 由 aiStreamController 自行校验，故置于全局 authenticate 之前。
+router.use('/ai/stream', aiStreamRouter);
 router.use(authenticate);
 router.use(requireStudent);
 
@@ -86,7 +91,11 @@ router.get('/training/session/:sessionId', studentTrainingController.getSession)
  * @desc    提交答案（支持档案提取模式）
  * @access  Private (Student)
  */
-router.post('/training/submit-answer/:sessionId', studentTrainingController.submitAnswer);
+router.post(
+  '/training/submit-answer/:sessionId',
+  idempotencyMiddleware(),
+  studentTrainingController.submitAnswer
+);
 
 /**
  * @route   POST /api/student/training/confirm-plan/:sessionId
@@ -107,7 +116,11 @@ router.post('/training/complete-stage/:sessionId', studentTrainingController.com
  * @desc    开始综合考试
  * @access  Private (Student)
  */
-router.post('/training/start-exam/:sessionId', studentTrainingController.startFinalExam);
+router.post(
+  '/training/start-exam/:sessionId',
+  idempotencyMiddleware(),
+  studentTrainingController.startFinalExam
+);
 
 /**
  * @route   POST /api/student/training/submit-exam/:sessionId
@@ -138,6 +151,8 @@ router.post('/training/chat/:sessionId', studentTrainingController.aiChat);
  * @access  Private (Student)
  */
 router.get('/report/status/:sessionId', reportStatusController.getReportStatus);
+
+// ============ AI 生成进度 SSE（流式响应，路由已在认证前挂载） ============
 
 // ============ 错题本相关路由 ============
 
@@ -197,7 +212,11 @@ router.get('/wishes', studentWishController.getWishes.bind(studentWishController
  * @desc    提交愿望
  * @access  Private (Student)
  */
-router.post('/wishes', studentWishController.createWish.bind(studentWishController));
+router.post(
+  '/wishes',
+  idempotencyMiddleware(),
+  studentWishController.createWish.bind(studentWishController)
+);
 
 /**
  * @route   GET /api/student/wishes/:id

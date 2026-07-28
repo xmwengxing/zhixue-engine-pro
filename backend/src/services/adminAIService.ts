@@ -1,4 +1,5 @@
 import { PrismaClient, AIProviderType, ProviderStatus } from '@prisma/client';
+import { safeJsonParse } from '../utils/aiJson';
 
 const prisma = new PrismaClient();
 
@@ -212,12 +213,9 @@ export class AdminAIService {
 
       const responseText = await response.text();
       let responseJson: any = null;
-      
-      try {
-        responseJson = JSON.parse(responseText);
-      } catch {
-        // 无法解析 JSON
-      }
+
+      // 安全解析上游 provider 的 JSON 响应（解析失败保留 null，不抛异常）
+      responseJson = safeJsonParse(responseText);
 
       if (response.ok) {
         // 请求成功
@@ -283,6 +281,30 @@ export class AdminAIService {
     });
   }
 
+  // 各供应商 Token 单价估算（元 / 1K tokens，输入/输出分开）
+  // 用于成本看板估算，非精确账单
+  private static readonly TOKEN_PRICING: Record<
+    string,
+    { input: number; output: number }
+  > = {
+    OPENAI: { input: 0.018, output: 0.072 },
+    CLAUDE: { input: 0.022, output: 0.11 },
+    DEEPSEEK: { input: 0.002, output: 0.008 },
+    QWEN: { input: 0.004, output: 0.012 },
+    GEMINI: { input: 0.009, output: 0.036 },
+    ZHIPU: { input: 0.005, output: 0.005 },
+    DOUBAO: { input: 0.0008, output: 0.002 },
+    WENXIN: { input: 0.004, output: 0.016 },
+    CUSTOM: { input: 0.01, output: 0.03 },
+  };
+
+  // 估算单条日志成本（元）
+  private estimateCost(providerType: string, requestTokens: number, responseTokens: number): number {
+    const pricing =
+      AdminAIService.TOKEN_PRICING[providerType] || AdminAIService.TOKEN_PRICING.CUSTOM;
+    return (requestTokens / 1000) * pricing.input + (responseTokens / 1000) * pricing.output;
+  }
+
   // 获取 API 指标统计
   async getAPIMetrics(startDate?: Date, endDate?: Date) {
     const where: any = {};
@@ -328,6 +350,52 @@ export class AdminAIService {
       ? logs.reduce((sum, log) => sum + log.responseTime, 0) / totalCalls
       : 0;
 
+    // P95 响应延迟
+    const sortedTimes = logs.map(log => log.responseTime).sort((a, b) => a - b);
+    const p95ResponseTime = sortedTimes.length > 0
+      ? sortedTimes[Math.min(sortedTimes.length - 1, Math.floor(sortedTimes.length * 0.95))]
+      : 0;
+
+    // 总成本估算（元）
+    const totalCost = logs.reduce(
+      (sum, log) => sum + this.estimateCost(log.provider.type, log.requestTokens, log.responseTokens),
+      0
+    );
+
+    // 今日 vs 昨日同期对比（独立于筛选区间，始终按自然日统计）
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    // 昨日同期截止点：昨天的"现在时刻"
+    const yesterdaySameTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const [todayAgg, yesterdayAgg, lastHourErrors] = await Promise.all([
+      prisma.aPILog.aggregate({
+        where: { createdAt: { gte: todayStart } },
+        _count: { id: true },
+        _sum: { requestTokens: true, responseTokens: true },
+      }),
+      prisma.aPILog.aggregate({
+        where: { createdAt: { gte: yesterdayStart, lte: yesterdaySameTime } },
+        _count: { id: true },
+        _sum: { requestTokens: true, responseTokens: true },
+      }),
+      prisma.aPILog.count({
+        where: {
+          createdAt: { gte: new Date(now.getTime() - 60 * 60 * 1000) },
+          status: 'ERROR',
+        },
+      }),
+    ]);
+
+    const todayCalls = todayAgg._count.id;
+    const todayTokens =
+      (todayAgg._sum.requestTokens || 0) + (todayAgg._sum.responseTokens || 0);
+    const yesterdayCalls = yesterdayAgg._count.id;
+    const yesterdayTokens =
+      (yesterdayAgg._sum.requestTokens || 0) + (yesterdayAgg._sum.responseTokens || 0);
+
     // 按服务商分组统计
     const providerStats = logs.reduce((acc: any, log) => {
       const providerId = log.provider.id;
@@ -341,6 +409,9 @@ export class AdminAIService {
           errorCalls: 0,
           errorRate: 0,
           totalTokens: 0,
+          requestTokens: 0,
+          responseTokens: 0,
+          estimatedCost: 0,
           avgResponseTime: 0,
         };
       }
@@ -352,6 +423,13 @@ export class AdminAIService {
         acc[providerId].errorCalls++;
       }
       acc[providerId].totalTokens += log.requestTokens + log.responseTokens;
+      acc[providerId].requestTokens += log.requestTokens;
+      acc[providerId].responseTokens += log.responseTokens;
+      acc[providerId].estimatedCost += this.estimateCost(
+        log.provider.type,
+        log.requestTokens,
+        log.responseTokens
+      );
       acc[providerId].avgResponseTime += log.responseTime;
 
       return acc;
@@ -365,6 +443,7 @@ export class AdminAIService {
       stats.avgResponseTime = stats.totalCalls > 0
         ? stats.avgResponseTime / stats.totalCalls
         : 0;
+      stats.estimatedCost = Math.round(stats.estimatedCost * 100) / 100;
     });
 
     // 按时间分组统计（按小时）
@@ -413,6 +492,13 @@ export class AdminAIService {
         totalRequestTokens,
         totalResponseTokens,
         avgResponseTime: Math.round(avgResponseTime),
+        p95ResponseTime,
+        estimatedCost: Math.round(totalCost * 100) / 100,
+        lastHourErrors,
+        todayCalls,
+        todayTokens,
+        yesterdayCalls,
+        yesterdayTokens,
       },
       providerStats: Object.values(providerStats),
       timeSeriesData: Object.values(timeSeriesData).sort((a: any, b: any) => 

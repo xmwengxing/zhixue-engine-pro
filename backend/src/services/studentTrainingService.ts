@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { logger } from '../middlewares/logger';
 import { aiServiceManager } from './aiServiceManager';
 import { completeTaskTransaction } from '../utils/transaction';
+import { reportStatusService, ReportStatus } from './reportStatusService';
+import { safeJsonParse } from '../utils/aiJson';
 
 const prisma = new PrismaClient();
 
@@ -372,10 +374,32 @@ export class StudentTrainingService {
     
     const taskConfig = session.task.config as any;
 
-    // 构建训练上下文
+    // IRT 自适应难度：读取/初始化能力估计，推荐目标难度
+    const { irtService } = await import('./irtService');
+    const diagnosticAccuracy = this.getDiagnosticAccuracy(session);
+    const irtState = irtService.ensureState(trainingProgress.irt, diagnosticAccuracy);
+    const targetDifficulty = irtService.recommendDifficulty(irtState.theta);
+
+    // 若为首次初始化，持久化 IRT 状态
+    if (!trainingProgress.irt) {
+      trainingProgress.irt = irtState;
+      await prisma.trainingSession.update({
+        where: { id: session.id },
+        data: { trainingProgress },
+      });
+    }
+
+    logger.info(
+      `IRT 自适应：会话 ${session.id} theta=${irtState.theta}，推荐难度=${targetDifficulty}`
+    );
+
+    // 构建训练上下文（buildTrainingQuestionPrompt 需要嵌套的 studentProfile 结构）
     const context = {
-      grade: profile.grade,
-      materialVersion: profile.materialVersion || '人教版',
+      studentProfile: {
+        grade: profile.grade,
+        materialVersion: profile.materialVersion || '人教版',
+        learningFoundation: profile.learningFoundation || '中等',
+      },
       trainingGoal: taskConfig.trainingGoal || '提升学习能力',
       stage: currentStage,
       stageGoal: trainingPlan.stages[currentStage].goal,
@@ -383,14 +407,27 @@ export class StudentTrainingService {
       totalQuestions: totalQuestions,
       masteredPoints: trainingProgress.masteredPoints || [],
       weakPoints: trainingProgress.weakPoints || [],
+      targetDifficulty,
     };
 
     // 调用 AI 生成题目
     const question = await aiService.generateTrainingQuestion(currentStage, context, questionNumber);
 
-    logger.info(`成功生成 ${currentStage} 阶段第 ${questionNumber} 道题目`);
+    logger.info(`成功生成 ${currentStage} 阶段第 ${questionNumber} 道题目（目标难度 ${targetDifficulty}）`);
 
     return question;
+  }
+
+  /**
+   * 从诊断测试数据中计算正确率（用于 IRT 初始化）
+   */
+  private getDiagnosticAccuracy(session: any): number | undefined {
+    const diagnosticData = session.diagnosticTestData as any;
+    if (!diagnosticData?.answers || !Array.isArray(diagnosticData.answers) || diagnosticData.answers.length === 0) {
+      return undefined;
+    }
+    const correct = diagnosticData.answers.filter((a: any) => a.isCorrect).length;
+    return correct / diagnosticData.answers.length;
   }
 
   /**
@@ -910,6 +947,24 @@ export class StudentTrainingService {
     stageData.answers.push(answerRecord);
     stageData.currentQuestion += 1;
 
+    // IRT 自适应：根据本次作答更新能力估计
+    const { irtService } = await import('./irtService');
+    const irtState = irtService.ensureState(
+      trainingProgress.irt,
+      this.getDiagnosticAccuracy(session)
+    );
+    const questionDifficulty = (['easy', 'medium', 'hard'] as const).includes(
+      questionData?.difficulty
+    )
+      ? questionData.difficulty
+      : 'medium';
+    trainingProgress.irt = irtService.update(
+      irtState,
+      questionDifficulty,
+      evaluation.isCorrect,
+      timeSpent
+    );
+
     // 更新会话
     await prisma.trainingSession.update({
       where: { id: session.id },
@@ -928,6 +983,9 @@ export class StudentTrainingService {
       guidance: evaluation.guidance,
       stageCompleted: stageCompleted,
       currentStage: currentStage,
+      // IRT 自适应信息（供前端展示难度变化）
+      nextDifficulty: trainingProgress.irt.lastRecommended,
+      abilityTheta: trainingProgress.irt.theta,
     };
   }
 
@@ -1682,6 +1740,50 @@ export class StudentTrainingService {
   }
 
   /**
+   * 请求训练报告（非阻塞）
+   * - 若报告已生成，直接返回 completed 内容；
+   * - 否则确保异步生成已触发（复用 generateReportAsync + reportStatusService），
+   *   立即返回 generating 状态，由调用方通过 SSE 订阅进度。
+   */
+  async requestTrainingReport(
+    sessionId: string,
+    studentId: string
+  ): Promise<{ status: 'completed' | 'generating'; content?: unknown; pointsAwarded?: number }> {
+    const session = await prisma.trainingSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new Error('训练会话不存在');
+    }
+
+    if (session.studentId !== studentId) {
+      throw new Error('无权访问此会话');
+    }
+
+    if (session.phase !== 'COMPLETED') {
+      throw new Error('训练尚未完成');
+    }
+
+    if (session.trainingReport) {
+      return {
+        status: 'completed',
+        content: session.trainingReport,
+      };
+    }
+
+    // 报告尚未生成：若状态机无进行中的任务，则触发异步生成
+    const existing = reportStatusService.getStatus(sessionId);
+    if (!existing || existing.status === ReportStatus.FAILED) {
+      this.generateReportAsync(sessionId).catch((error) => {
+        logger.error('触发报告异步生成失败:', error);
+      });
+    }
+
+    return { status: 'generating' };
+  }
+
+  /**
    * 构建用于报告生成的会话数据
    */
   private buildSessionDataForReport(session: any): any {
@@ -1998,12 +2100,18 @@ export class StudentTrainingService {
         prompt += `题型: ${this.getQuestionTypeText(question.type)}\n`;
         prompt += `难度: ${question.difficulty}/5\n`;
         
-        // 解析题目内容
+        // 解析题目内容（自身持久化数据，安全解析兜底）
         try {
-          const content = typeof question.content === 'string' 
-            ? JSON.parse(question.content) 
-            : question.content;
-          prompt += `题目内容: ${content.text || content.question || '无'}\n`;
+          let text: string;
+          if (typeof question.content === 'string') {
+            const parsed = safeJsonParse<{ text?: string; question?: string }>(
+              question.content
+            );
+            text = parsed?.text || parsed?.question || question.content;
+          } else {
+            text = String(question.content);
+          }
+          prompt += `题目内容: ${text}\n`;
         } catch {
           prompt += `题目内容: ${question.content}\n`;
         }

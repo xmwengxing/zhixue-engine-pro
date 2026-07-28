@@ -160,57 +160,46 @@ export class StudentWishService {
   }
 
   /**
-   * 学员确认已批准的愿望（扣除积分）
+   * 学员确认已批准的愿望（原子化扣除积分，防并发重复兑换）
+   *
+   * 在同一交互式事务内：
+   *  1. 对愿望行加 FOR UPDATE 行锁 —— 串行化同一愿望的多次确认，杜绝重复兑换；
+   *  2. 复用 studentPointsService.deductWithinTx 在「同一把积分行锁」下扣减，
+   *     杜绝并发超扣与余额为负。
    */
   async confirmWish(wishId: string, studentId: string) {
-    // 获取愿望信息
-    const wish = await prisma.wish.findFirst({
-      where: {
-        id: wishId,
-        studentId, // 确保只能确认自己的愿望
-      },
-    });
+    return prisma.$transaction(async (tx) => {
+      // 行级锁愿望行，确保同一愿望不会被并发重复确认/兑换
+      const wishRows = await tx.$queryRawUnsafe<{
+        status: string;
+        confirmed_at: Date | null;
+        required_points: number;
+      }[]>(
+        `SELECT "status", "confirmed_at", "required_points" FROM "wishes" WHERE "id" = $1 AND "student_id" = $2 FOR UPDATE`,
+        wishId,
+        studentId
+      );
 
-    if (!wish) {
-      throw new Error('愿望不存在');
-    }
+      if (!wishRows.length) {
+        throw new Error('愿望不存在');
+      }
 
-    if (wish.status !== 'APPROVED') {
-      throw new Error('只能确认已批准的愿望');
-    }
+      const wish = wishRows[0];
+      if (wish.status !== 'APPROVED') {
+        throw new Error('只能确认已批准的愿望');
+      }
+      if (wish.confirmed_at) {
+        throw new Error('愿望已确认');
+      }
 
-    if (wish.confirmedAt) {
-      throw new Error('愿望已确认');
-    }
+      // 在同一事务、同一把锁下扣减积分，杜绝重复兑换与超扣
+      await studentPointsService.deductWithinTx(
+        tx,
+        studentId,
+        wish.required_points,
+        wishId
+      );
 
-    // 检查积分是否足够
-    const hasEnough = await studentPointsService.hasEnoughPoints(studentId, wish.requiredPoints);
-    if (!hasEnough) {
-      throw new Error('积分不足');
-    }
-
-    // 使用事务：扣除积分并更新愿望状态
-    const result = await prisma.$transaction(async (tx) => {
-      // 获取当前积分余额
-      const latestTransaction = await tx.pointsTransaction.findFirst({
-        where: { studentId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      const currentBalance = latestTransaction?.balance || 0;
-
-      // 扣除积分
-      await tx.pointsTransaction.create({
-        data: {
-          studentId,
-          amount: -wish.requiredPoints,
-          type: 'WISH_REDEEM',
-          relatedId: wishId,
-          balance: currentBalance - wish.requiredPoints,
-        },
-      });
-
-      // 更新愿望状态为已兑现
       const updatedWish = await tx.wish.update({
         where: { id: wishId },
         data: {
@@ -222,8 +211,6 @@ export class StudentWishService {
 
       return updatedWish;
     });
-
-    return result;
   }
 
   /**

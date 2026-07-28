@@ -37,6 +37,8 @@ export interface CreateTaskRequest {
   studentId: string;
   customConfig?: CustomConfig;
   profileConfig?: ProfileConfig;
+  /** 家长激励寄语（可选，<=200 字） */
+  parentEncouragement?: string;
 }
 
 /**
@@ -337,6 +339,12 @@ export class ParentTaskService {
         );
       }
 
+      // 家长激励寄语（可选）
+      const encouragement = (data.parentEncouragement || '').trim();
+      if (encouragement.length > 200) {
+        throw new Error('激励寄语不能超过 200 字');
+      }
+
       // 创建任务
       const task = await prisma.task.create({
         data: {
@@ -347,6 +355,7 @@ export class ParentTaskService {
           config: {
             ...taskConfig,
             aiInstruction, // 保存组装好的 AI 指令
+            ...(encouragement ? { parentEncouragement: encouragement } : {}),
           } as any,
           status: 'PENDING',
         },
@@ -627,6 +636,142 @@ export class ParentTaskService {
       logger.error('删除任务失败:', error);
       throw error;
     }
+  }
+
+  /**
+   * 设置家长激励寄语（存储于 task.config.parentEncouragement）
+   */
+  async setEncouragement(taskId: string, parentId: string, message: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+
+    if (!task) {
+      throw new Error('任务不存在');
+    }
+    if (task.createdBy !== parentId) {
+      throw new Error('无权操作该任务');
+    }
+
+    const trimmed = (message || '').trim();
+    if (trimmed.length > 200) {
+      throw new Error('激励寄语不能超过 200 字');
+    }
+
+    const config = (task.config as any) || {};
+    config.parentEncouragement = trimmed;
+    config.encouragementUpdatedAt = new Date().toISOString();
+
+    const updated = await prisma.task.update({
+      where: { id: taskId },
+      data: { config },
+    });
+
+    logger.info(`家长 ${parentId} 更新任务 ${taskId} 的激励寄语`);
+
+    return {
+      taskId: updated.id,
+      parentEncouragement: trimmed,
+    };
+  }
+
+  /**
+   * AI 生成激励批语草稿（创建任务前使用，无需已有任务）
+   */
+  async generateEncouragementDraft(parentId: string, studentId: string, goal?: string) {
+    // 校验亲子绑定关系
+    const relation = await prisma.parentChildRelation.findFirst({
+      where: { parentId, studentId, status: 'ACTIVE' },
+    });
+    if (!relation) {
+      throw new Error('无权操作该学员');
+    }
+
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: studentId },
+    });
+
+    const { aiServiceManager } = await import('./aiServiceManager');
+    const { wrapUserInput } = await import('./aiPromptBuilder');
+
+    const studentInfo = [
+      `姓名：${profile?.realName || '孩子'}`,
+      `年级：${profile?.grade || '未知'}`,
+      `学习基础：${profile?.learningFoundation || '中等'}`,
+      `学习目标：${goal || '提升学习能力'}`,
+    ].join('\n');
+
+    const prompt = `你是一位温暖的家庭教育顾问，请代家长为孩子写一段激励寄语。
+
+${wrapUserInput('孩子与目标信息', studentInfo)}
+
+要求：
+1. 以家长第一人称口吻（如"孩子，爸爸妈妈想对你说"）
+2. 温暖、具体、正向，联系学习目标
+3. 50-80 字
+4. 只输出寄语正文，不要任何其他内容`;
+
+    const text = await aiServiceManager.callAI(prompt, {
+      temperature: 0.8,
+      maxTokens: 300,
+      timeout: 15000,
+    });
+
+    return { suggestion: text.trim() };
+  }
+
+  /**
+   * AI 生成定制激励批语（家长可再编辑后保存）
+   */
+  async generateEncouragement(taskId: string, parentId: string) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        student: {
+          include: { studentProfile: true },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new Error('任务不存在');
+    }
+    if (task.createdBy !== parentId) {
+      throw new Error('无权操作该任务');
+    }
+
+    const profile = task.student?.studentProfile;
+    const config = (task.config as any) || {};
+
+    const { aiServiceManager } = await import('./aiServiceManager');
+    const { wrapUserInput } = await import('./aiPromptBuilder');
+
+    const studentInfo = [
+      `姓名：${profile?.realName || '孩子'}`,
+      `年级：${profile?.grade || '未知'}`,
+      `学习基础：${profile?.learningFoundation || '中等'}`,
+      `任务名称：${task.title}`,
+      `学习目标：${config.trainingGoal || config.goal || '提升学习能力'}`,
+    ].join('\n');
+
+    const prompt = `你是一位温暖的家庭教育顾问，请代家长为孩子写一段激励寄语。
+
+${wrapUserInput('孩子与任务信息', studentInfo)}
+
+要求：
+1. 以家长第一人称口吻（如"孩子，爸爸妈妈想对你说"）
+2. 温暖、具体、正向，联系本次任务目标
+3. 50-80 字，不要出现引号以外的标点滥用
+4. 只输出寄语正文，不要任何其他内容`;
+
+    const text = await aiServiceManager.callAI(prompt, {
+      temperature: 0.8,
+      maxTokens: 300,
+      timeout: 15000,
+    });
+
+    return {
+      taskId: task.id,
+      suggestion: text.trim(),
+    };
   }
 }
 

@@ -1,6 +1,6 @@
 // 训练舱左侧栏 - 任务信息和进度
 import React from 'react';
-import type { TrainingSession, TrainingPlan } from '../../pages/student/TrainingCabin';
+import type { TrainingSession } from '../../pages/student/TrainingCabin';
 
 interface TrainingLeftPanelProps {
   session: TrainingSession;

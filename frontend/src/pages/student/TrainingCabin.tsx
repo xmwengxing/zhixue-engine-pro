@@ -60,6 +60,7 @@ export interface TrainingSession {
     config: {
       trainingGoal?: string;
       diagnosticQuestionCount?: number;
+      parentEncouragement?: string;
     };
   };
   

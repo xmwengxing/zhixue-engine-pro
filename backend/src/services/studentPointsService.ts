@@ -1,4 +1,4 @@
-import { PrismaClient, TransactionType } from '@prisma/client';
+import { Prisma, PrismaClient, TransactionType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -85,7 +85,25 @@ export class StudentPointsService {
   }
 
   /**
-   * 添加积分交易记录
+   * 在事务内锁定并读取学员最新积分余额。
+   * 通过 SELECT ... FOR UPDATE 对最新一条积分流水加行级锁，
+   * 阻止并发事务读到过期余额，从而避免丢失更新（积分超扣/重复加分）。
+   */
+  private async readLockedBalance(
+    tx: Prisma.TransactionClient,
+    studentId: string
+  ): Promise<number> {
+    const rows = await tx.$queryRawUnsafe<{ balance: number }[]>(
+      `SELECT "balance" FROM "points_transactions" WHERE "student_id" = $1 ORDER BY "created_at" DESC, "id" DESC LIMIT 1 FOR UPDATE`,
+      studentId
+    );
+    return rows.length ? Number(rows[0].balance) : 0;
+  }
+
+  /**
+   * 原子化添加积分交易（防并发丢失更新 / 超扣）
+   * 在交互式事务内对学员最新积分流水加行级锁(FOR UPDATE)，
+   * 读取实时余额后再计算新余额并写入，确保并发写入串行化。
    */
   async addTransaction(
     studentId: string,
@@ -93,27 +111,48 @@ export class StudentPointsService {
     type: TransactionType,
     relatedId?: string
   ) {
-    // 获取当前余额
-    const latestTransaction = await prisma.pointsTransaction.findFirst({
-      where: { studentId },
-      orderBy: { createdAt: 'desc' },
+    return prisma.$transaction(async (tx) => {
+      const currentBalance = await this.readLockedBalance(tx, studentId);
+      const newBalance = currentBalance + amount;
+      if (newBalance < 0) {
+        throw new Error('积分余额不足');
+      }
+      return tx.pointsTransaction.create({
+        data: {
+          studentId,
+          amount,
+          type,
+          relatedId,
+          balance: newBalance,
+        },
+      });
     });
+  }
 
-    const currentBalance = latestTransaction?.balance || 0;
-    const newBalance = currentBalance + amount;
-
-    // 创建交易记录
-    const transaction = await prisma.pointsTransaction.create({
+  /**
+   * 在外部传入的事务内扣除积分（供心愿确认等跨服务事务复用）。
+   * 与 readLockedBalance 共用同一把行锁，确保愿望状态更新与积分扣减原子化，
+   * 从根本上杜绝并发下的「重复兑换」。
+   */
+  async deductWithinTx(
+    tx: Prisma.TransactionClient,
+    studentId: string,
+    points: number,
+    relatedId?: string
+  ) {
+    const currentBalance = await this.readLockedBalance(tx, studentId);
+    if (currentBalance < points) {
+      throw new Error('积分不足');
+    }
+    return tx.pointsTransaction.create({
       data: {
         studentId,
-        amount,
-        type,
+        amount: -points,
+        type: TransactionType.WISH_REDEEM,
         relatedId,
-        balance: newBalance,
+        balance: currentBalance - points,
       },
     });
-
-    return transaction;
   }
 
   /**
@@ -160,22 +199,25 @@ export class StudentPointsService {
   }
 
   /**
-   * 扣除愿望积分
+   * 扣除愿望积分（原子化，防并发超扣）
+   * 在事务内加行级锁读取实时余额并校验，避免「读-判-写」非原子导致的超扣。
    */
   async deductWishPoints(studentId: string, wishId: string, points: number) {
-    // 检查余额是否足够
-    const { available } = await this.getPoints(studentId);
-
-    if (available < points) {
-      throw new Error('积分不足');
-    }
-
-    return await this.addTransaction(
-      studentId,
-      -points,
-      TransactionType.WISH_REDEEM,
-      wishId
-    );
+    return prisma.$transaction(async (tx) => {
+      const currentBalance = await this.readLockedBalance(tx, studentId);
+      if (currentBalance < points) {
+        throw new Error('积分不足');
+      }
+      return tx.pointsTransaction.create({
+        data: {
+          studentId,
+          amount: -points,
+          type: TransactionType.WISH_REDEEM,
+          relatedId: wishId,
+          balance: currentBalance - points,
+        },
+      });
+    });
   }
 
   /**

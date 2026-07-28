@@ -20,13 +20,16 @@ export default defineConfig({
         manualChunks: {
           // React 核心库
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          
+
           // 状态管理
           'state-vendor': ['zustand'],
-          
+
           // HTTP 客户端
           'http-vendor': ['axios'],
-          
+
+          // 图表库（独立分包，避免首屏体积过大）
+          'charts-vendor': ['recharts'],
+
           // UI 组件库（如果使用）
           // 'ui-vendor': ['antd', '@ant-design/icons'],
         },

@@ -433,6 +433,135 @@ class ParentTaskController {
       return next(error);
     }
   }
+
+  /**
+   * 设置家长激励寄语
+   * PUT /api/parent/tasks/:id/encouragement
+   */
+  async setEncouragement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user!.userId;
+      const { id: taskId } = req.params;
+
+      if (!taskId || typeof taskId !== 'string') {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: '任务 ID 不能为空',
+          },
+        });
+      }
+
+      const { message } = req.body;
+
+      if (typeof message !== 'string') {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_PARAMS',
+            message: '激励寄语内容必须为字符串',
+          },
+        });
+      }
+
+      const result = await parentTaskService.setEncouragement(taskId, parentId, message);
+
+      return res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === '任务不存在') {
+        return res.status(404).json({
+          error: { code: 'NOT_FOUND', message: error.message },
+        });
+      }
+      if (error.message === '无权操作该任务') {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: error.message },
+        });
+      }
+      if (error.message.includes('不能超过')) {
+        return res.status(400).json({
+          error: { code: 'INVALID_PARAMS', message: error.message },
+        });
+      }
+      return next(error);
+    }
+  }
+
+  /**
+   * AI 生成激励批语草稿（创建任务前使用）
+   * POST /api/parent/encouragement/ai
+   */
+  async generateEncouragementDraft(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user!.userId;
+      const { studentId, goal } = req.body;
+
+      if (!studentId || typeof studentId !== 'string') {
+        return res.status(400).json({
+          error: { code: 'INVALID_PARAMS', message: 'studentId 必填' },
+        });
+      }
+
+      const result = await parentTaskService.generateEncouragementDraft(
+        parentId,
+        studentId,
+        typeof goal === 'string' ? goal : undefined
+      );
+
+      return res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === '无权操作该学员') {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: error.message },
+        });
+      }
+      return next(error);
+    }
+  }
+
+  /**
+   * AI 生成定制激励批语
+   * POST /api/parent/tasks/:id/encouragement/ai
+   */
+  async generateEncouragement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user!.userId;
+      const { id: taskId } = req.params;
+
+      if (!taskId || typeof taskId !== 'string') {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: '任务 ID 不能为空',
+          },
+        });
+      }
+
+      const result = await parentTaskService.generateEncouragement(taskId, parentId);
+
+      return res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === '任务不存在') {
+        return res.status(404).json({
+          error: { code: 'NOT_FOUND', message: error.message },
+        });
+      }
+      if (error.message === '无权操作该任务') {
+        return res.status(403).json({
+          error: { code: 'FORBIDDEN', message: error.message },
+        });
+      }
+      return next(error);
+    }
+  }
 }
 
 export const parentTaskController = new ParentTaskController();

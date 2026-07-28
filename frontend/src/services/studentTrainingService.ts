@@ -110,6 +110,23 @@ export const getSession = async (sessionId: string): Promise<TrainingSession> =>
 };
 
 /**
+ * 生成稳定的幂等键（离线/重试防重复提交）
+ * 同一 (sessionId, questionId) 在浏览器内复用同一键，避免网络恢复后重复提交。
+ */
+function getIdempotencyKey(seed: string): string {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return `${seed}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+  }
+  const storageKey = `idem:${seed}`;
+  let key = window.localStorage.getItem(storageKey);
+  if (!key) {
+    key = `${seed}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(storageKey, key);
+  }
+  return key;
+}
+
+/**
  * 提交答案
  */
 export const submitAnswer = async (
@@ -118,13 +135,13 @@ export const submitAnswer = async (
   answer: string,
   timeSpent: number
 ): Promise<SubmitAnswerResponse> => {
-  const response = await request.post('/student/training/answer', {
-    sessionId,
-    questionId,
-    answer,
-    timeSpent,
-  });
-  // 修复：直接返回 response，而不是 response.data
+  // 修正端点路径以匹配后端 /training/submit-answer/:sessionId，并携带幂等键
+  const idempotencyKey = getIdempotencyKey(`answer:${sessionId}:${questionId}`);
+  const response = await request.post(
+    `/student/training/submit-answer/${sessionId}`,
+    { sessionId, questionId, answer, timeSpent },
+    { headers: { 'Idempotency-Key': idempotencyKey } }
+  );
   return response;
 };
 
@@ -156,4 +173,32 @@ export const sendAIMessage = async (
   });
   // 修复：直接返回 response.reply，而不是 response.data.reply
   return response.reply;
+};
+
+/**
+ * 开始综合考试（异步生成题目）
+ * 后端入队后台生成，返回 { status:'generating', jobId } 或同步降级结果。
+ */
+export interface StartFinalExamResponse {
+  success?: boolean;
+  status: 'generating' | 'started';
+  jobId?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export const startFinalExam = async (sessionId: string): Promise<StartFinalExamResponse> => {
+  const response = await request.post(`/student/training/start-exam/${sessionId}`);
+  return response;
+};
+
+/**
+ * 获取训练报告
+ * 若报告已生成返回内容，否则返回 { status:'generating' } 由前端订阅 SSE。
+ */
+export const getTrainingReport = async (
+  sessionId: string
+): Promise<{ status: string; content?: unknown; [key: string]: unknown }> => {
+  const response = await request.get(`/student/training/report/${sessionId}`);
+  return response;
 };

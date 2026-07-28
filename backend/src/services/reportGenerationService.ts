@@ -2,6 +2,8 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../middlewares/logger';
 import { aiServiceManager } from './aiServiceManager';
+import { parseAIJson, safeJsonParse } from '../utils/aiJson';
+import { ReportContentSchema } from '../utils/aiSchema';
 
 const prisma = new PrismaClient();
 
@@ -301,9 +303,13 @@ export class ReportGenerationService {
         try {
           const content =
             typeof answer.question.content === 'string'
-              ? JSON.parse(answer.question.content)
+              ? safeJsonParse<{ text?: string; question?: string }>(answer.question.content)
               : answer.question.content;
-          prompt += `题目: ${content.text || content.question || '无'}\n`;
+          if (content) {
+            prompt += `题目: ${content.text || content.question || '无'}\n`;
+          } else {
+            prompt += `题目: ${answer.question.content}\n`;
+          }
         } catch {
           prompt += `题目: ${answer.question.content}\n`;
         }
@@ -353,29 +359,27 @@ export class ReportGenerationService {
    * 解析 AI 响应
    */
   private parseAIResponse(aiResponse: string, reportData: any): ReportContent {
-    try {
-      // 尝试提取 JSON 内容
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('AI 响应中未找到 JSON 内容');
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      // 构建完整的报告内容
-      const content: ReportContent = {
-        summary: parsed.summary || '训练完成',
-        abilityAnalysis: parsed.abilityAnalysis || {},
-        errorAnalysis: parsed.errorAnalysis || [],
-        learningAdvice: parsed.learningAdvice || '继续保持学习',
-        statistics: reportData.statistics,
-      };
-
-      return content;
-    } catch (error) {
-      logger.warn('解析 AI 响应失败，使用基础报告:', error);
+    const result = parseAIJson(aiResponse, ReportContentSchema);
+    if (!result.ok) {
+      // 结构校验失败，降级为基础报告（防注入结构破坏导致的数据污染）
+      logger.warn('解析 AI 响应校验失败，使用基础报告:', result.error);
       return this.generateBasicReport(reportData);
     }
+
+    const parsed = result.data;
+    const content: ReportContent = {
+      summary: parsed.summary || '训练完成',
+      abilityAnalysis: parsed.abilityAnalysis || {},
+      errorAnalysis: (parsed.errorAnalysis || []).map((e) => ({
+        questionId: e.questionId ?? '',
+        reason: e.reason ?? '',
+        suggestion: e.suggestion ?? '',
+      })),
+      learningAdvice: parsed.learningAdvice || '继续保持学习',
+      statistics: reportData.statistics,
+    };
+
+    return content;
   }
 
   /**

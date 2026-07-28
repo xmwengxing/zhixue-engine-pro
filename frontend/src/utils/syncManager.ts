@@ -237,18 +237,20 @@ class SyncManager {
       let response: any;
       
       // 根据HTTP方法调用对应的request方法
+      // 携带 Idempotency-Key：离线队列重试同一 operation 时复用相同键，后端据此去重
+      const idempotencyHeaders = { 'Idempotency-Key': operation.id };
       switch (method.toLowerCase()) {
         case 'get':
           response = await request.get(endpoint);
           break;
         case 'post':
-          response = await request.post(endpoint, operation.data);
+          response = await request.post(endpoint, operation.data, { headers: idempotencyHeaders });
           break;
         case 'put':
-          response = await request.put(endpoint, operation.data);
+          response = await request.put(endpoint, operation.data, { headers: idempotencyHeaders });
           break;
         case 'delete':
-          response = await request.delete(endpoint);
+          response = await request.delete(endpoint, { headers: idempotencyHeaders });
           break;
         default:
           throw new Error(`不支持的HTTP方法: ${method}`);

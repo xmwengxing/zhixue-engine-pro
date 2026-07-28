@@ -2,7 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import TrainingPlanDisplay from './TrainingPlanDisplay';
 import TrainingReportDisplay from './TrainingReportDisplay';
+import ReportGeneratingProgress from './ReportGeneratingProgress';
 import type { TrainingSession, Question } from '../../pages/student/TrainingCabin';
+import { startFinalExam, getSession } from '../../services/studentTrainingService';
+import { subscribeExamProgress } from '../../services/aiStreamService';
 
 interface TrainingCenterPanelProps {
   session: TrainingSession;
@@ -10,6 +13,17 @@ interface TrainingCenterPanelProps {
   onSessionUpdate: (session: Partial<TrainingSession>) => void;
   onQuestionUpdate: (question: Question | null) => void;
 }
+
+// 家长激励寄语卡片
+const ParentEncouragementCard: React.FC<{ message: string }> = ({ message }) => (
+  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border border-rose-200 rounded-xl p-5 mb-6 flex items-start space-x-3 w-full max-w-2xl">
+    <div className="text-2xl leading-none flex-shrink-0">💌</div>
+    <div className="flex-1">
+      <p className="text-sm font-semibold text-rose-700 mb-1">爸爸妈妈想对你说</p>
+      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{message}</p>
+    </div>
+  </div>
+);
 
 const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
   session,
@@ -26,6 +40,10 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
     explanation?: string;
   } | null>(null);
   const [startTime, setStartTime] = useState<number>(Date.now());
+
+  // FINAL_EXAM 阶段：题目来自 startFinalExam 批量生成的 finalExamData，前端逐题管理
+  const [finalExamIndex, setFinalExamIndex] = useState<number | null>(null);
+  const [finalExamAnswers, setFinalExamAnswers] = useState<Record<number, string>>({});
 
   // 当题目变化时重置状态
   useEffect(() => {
@@ -46,8 +64,64 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
     }
   }, [session.phase, currentQuestion, isLoading]);
 
+  // 开始综合考试：触发后台异步生成题目，并通过 SSE 订阅进度
+  const handleStartFinalExam = async () => {
+    setIsLoading(true);
+    try {
+      const data = await startFinalExam(session.id);
+
+      const beginExam = async () => {
+        try {
+          const refreshed = (await getSession(session.id)) as unknown as TrainingSession;
+          onSessionUpdate(refreshed);
+          const questions = (refreshed.finalExamData as { questions?: Question[] } | undefined)?.questions;
+          if (questions && questions.length > 0) {
+            setFinalExamIndex(0);
+            onQuestionUpdate(questions[0]);
+          }
+        } catch (err) {
+          console.error('刷新综合考试题目失败:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      if (data.jobId) {
+        // 异步生成：订阅 SSE，完成后进入考试
+        subscribeExamProgress(data.jobId, {
+          onDone: () => {
+            beginExam();
+          },
+          onError: (message) => {
+            console.error('综合考试生成失败:', message);
+            alert('综合考试生成失败，请重试');
+            setIsLoading(false);
+          },
+        });
+      } else {
+        // 同步降级：直接开始
+        await beginExam();
+      }
+    } catch (err) {
+      console.error('开始综合考试失败:', err);
+      alert('开始综合考试失败，请重试');
+      setIsLoading(false);
+    }
+  };
+
   // 加载下一道题目
   const loadNextQuestion = async () => {
+    // FINAL_EXAM 阶段：题目来自 startFinalExam 批量生成的 finalExamData，不走 next-question
+    if (session.phase === 'FINAL_EXAM' && finalExamIndex !== null) {
+      const questions = (session.finalExamData as { questions?: Question[] } | undefined)?.questions;
+      const next = finalExamIndex + 1;
+      if (questions && next < questions.length) {
+        setFinalExamIndex(next);
+        onQuestionUpdate(questions[next]);
+      }
+      return;
+    }
+
     setIsLoading(true);
     try {
       // 调用 API 获取下一道题目
@@ -75,6 +149,12 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
 
   // 提交答案
   const handleSubmitAnswer = async () => {
+    // FINAL_EXAM 阶段：收集答案，最后一题批量提交
+    if (session.phase === 'FINAL_EXAM' && finalExamIndex !== null) {
+      await handleFinalExamSubmit();
+      return;
+    }
+
     if (!answer.trim() || !currentQuestion) {
       alert('请先作答');
       return;
@@ -136,6 +216,55 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
     }
   };
 
+  // 综合考试提交：逐题收集答案，最后一题批量提交后端评估
+  const handleFinalExamSubmit = async () => {
+    if (!answer.trim()) {
+      alert('请先作答');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const idx = finalExamIndex as number;
+      const updatedAnswers = { ...finalExamAnswers, [idx]: answer };
+      setFinalExamAnswers(updatedAnswers);
+
+      const questions = (session.finalExamData as { questions?: Question[] } | undefined)?.questions;
+      if (questions && idx < questions.length - 1) {
+        // 还有下一题
+        const next = idx + 1;
+        setFinalExamIndex(next);
+        onQuestionUpdate(questions[next]);
+        return;
+      }
+
+      // 最后一题：批量提交
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/student/training/submit-exam/${session.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ answers: updatedAnswers }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '提交综合考试失败');
+      }
+
+      // 后端已将 phase 置为 COMPLETED，刷新会话以进入报告生成阶段
+      const refreshed = (await getSession(session.id)) as unknown as TrainingSession;
+      onSessionUpdate(refreshed);
+    } catch (error) {
+      console.error('提交综合考试失败:', error);
+      alert('提交综合考试失败，请重试');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 确认训练计划
   const handleConfirmPlan = async () => {
     try {
@@ -154,7 +283,7 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
         throw new Error(errorData.message || '确认训练计划失败');
       }
       
-      const data = await response.json();
+      await response.json().catch(() => null);
       
       // 更新会话状态
       onSessionUpdate({ phase: 'GUIDED_TRAINING' });
@@ -179,8 +308,10 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
     }
 
     if (!currentQuestion) {
+      const encouragement = session.task?.config?.parentEncouragement;
       return (
-        <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <div className="flex flex-col items-center justify-center h-full space-y-4 px-6">
+          {encouragement && <ParentEncouragementCard message={encouragement} />}
           <svg className="w-16 h-16 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
@@ -275,7 +406,7 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
             </p>
           </div>
           <button
-            onClick={loadNextQuestion}
+            onClick={handleStartFinalExam}
             className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
           >
             开始考试
@@ -291,15 +422,21 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
   const renderCompleted = () => {
     if (!session.trainingReport) {
       return (
-        <div className="flex flex-col items-center justify-center h-full space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500" />
-          <p className="text-gray-600">AI 正在生成训练报告...</p>
-        </div>
+        <ReportGeneratingProgress
+          sessionId={session.id}
+          onComplete={(report) => onSessionUpdate({ trainingReport: report })}
+          onError={(message) => console.error('报告生成失败:', message)}
+        />
       );
     }
 
     return (
       <div className="h-full overflow-y-auto">
+        {session.task?.config?.parentEncouragement && (
+          <div className="px-6 pt-6">
+            <ParentEncouragementCard message={session.task.config.parentEncouragement} />
+          </div>
+        )}
         <TrainingReportDisplay report={session.trainingReport} />
       </div>
     );

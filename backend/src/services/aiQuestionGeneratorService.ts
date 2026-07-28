@@ -12,6 +12,13 @@ import {
   TrainingSessionData,
   ChatContext,
 } from './aiPromptBuilder';
+import { parseAIJson } from '../utils/aiJson';
+import {
+  QuestionSchema,
+  QuestionArraySchema,
+  TrainingPlanSchema,
+  EvaluationSchema,
+} from '../utils/aiSchema';
 
 /**
  * 题目对象
@@ -99,10 +106,7 @@ export class AIQuestionGeneratorService {
       // 解析 JSON 响应
       const question = this.parseQuestionJSON(response);
 
-      // 验证题目结构
-      this.validateQuestion(question);
-
-      // 设置题目类型为单选题
+      // 设置题目类型为单选题（结构与类型已由 zod schema 校验）
       question.type = 'single_choice';
 
       return question;
@@ -201,10 +205,7 @@ export class AIQuestionGeneratorService {
       // 解析 JSON 响应
       const question = this.parseQuestionJSON(response);
 
-      // 验证题目结构
-      this.validateQuestion(question);
-
-      // 设置题目类型为单选题
+      // 设置题目类型为单选题（结构与类型已由 zod schema 校验）
       question.type = 'single_choice';
 
       return question;
@@ -248,7 +249,7 @@ export class AIQuestionGeneratorService {
       // 验证每个题目
       questions.forEach((question, index) => {
         try {
-          this.validateQuestion(question);
+          // 结构已由 zod schema 校验
           question.type = 'single_choice';
         } catch (error: any) {
           console.error(`验证第 ${index + 1} 题失败:`, error);
@@ -296,11 +297,8 @@ export class AIQuestionGeneratorService {
         timeout: 30000, // 30 秒超时
       });
 
-      // 解析 JSON 响应
+      // 解析 JSON 响应（结构与类型已由 zod schema 校验）
       const trainingPlan = this.parseTrainingPlanJSON(response);
-
-      // 验证训练计划结构
-      this.validateTrainingPlan(trainingPlan);
 
       return trainingPlan;
     } catch (error: any) {
@@ -343,23 +341,16 @@ export class AIQuestionGeneratorService {
   }
 
   /**
-   * 解析训练计划 JSON
+   * 解析训练计划 JSON（zod 严格校验，防注入结构破坏）
    */
   private parseTrainingPlanJSON(response: string): TrainingPlan {
-    try {
-      // 尝试提取 JSON
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('响应中未找到 JSON 格式的训练计划');
-      }
-
-      const trainingPlan = JSON.parse(jsonMatch[0]);
-      return trainingPlan;
-    } catch (error: any) {
-      console.error('解析训练计划 JSON 失败:', error);
+    const result = parseAIJson(response, TrainingPlanSchema);
+    if (!result.ok) {
+      console.error('解析训练计划 JSON 失败:', result.error);
       console.error('原始响应:', response);
-      throw new Error(`解析训练计划失败：${error.message}`);
+      throw new Error(`解析训练计划失败：${result.error}`);
     }
+    return result.data as unknown as TrainingPlan;
   }
 
   /**
@@ -466,192 +457,50 @@ export class AIQuestionGeneratorService {
   }
 
   /**
-   * 验证训练计划结构
-   */
-  private validateTrainingPlan(plan: any): void {
-    // 验证学习目标
-    if (!plan.learningGoals || !plan.learningGoals.main || !Array.isArray(plan.learningGoals.subGoals)) {
-      throw new Error('训练计划缺少学习目标');
-    }
-
-    // 验证子目标数量（3-5个）
-    if (plan.learningGoals.subGoals.length < 3 || plan.learningGoals.subGoals.length > 5) {
-      throw new Error(`子目标数量应为 3-5 个，实际为 ${plan.learningGoals.subGoals.length} 个`);
-    }
-
-    // 验证知识点清单
-    if (!Array.isArray(plan.knowledgePoints)) {
-      throw new Error('训练计划缺少知识点清单');
-    }
-
-    // 验证知识点数量（5-10个）
-    if (plan.knowledgePoints.length < 5 || plan.knowledgePoints.length > 10) {
-      throw new Error(`知识点数量应为 5-10 个，实际为 ${plan.knowledgePoints.length} 个`);
-    }
-
-    // 验证知识点结构
-    plan.knowledgePoints.forEach((kp: any, index: number) => {
-      if (!kp.point || !kp.masteryLevel || typeof kp.priority !== 'number') {
-        throw new Error(`第 ${index + 1} 个知识点结构不完整`);
-      }
-      if (!['weak', 'medium', 'strong'].includes(kp.masteryLevel)) {
-        throw new Error(`第 ${index + 1} 个知识点的掌握程度值无效：${kp.masteryLevel}`);
-      }
-    });
-
-    // 验证训练阶段
-    if (!plan.stages || !plan.stages.foundation || !plan.stages.improvement || !plan.stages.application) {
-      throw new Error('训练计划缺少训练阶段');
-    }
-
-    // 验证每个阶段的结构
-    const stages = ['foundation', 'improvement', 'application'];
-    const stageNames = { foundation: '基础巩固', improvement: '能力提升', application: '综合应用' };
-    
-    stages.forEach((stageName) => {
-      const stage = plan.stages[stageName];
-      
-      if (!stage.name || !stage.goal || !Array.isArray(stage.focus) || 
-          typeof stage.questionCount !== 'number' || typeof stage.estimatedTime !== 'number' ||
-          !Array.isArray(stage.criteria)) {
-        throw new Error(`${stageNames[stageName as keyof typeof stageNames]}阶段结构不完整`);
-      }
-
-      // 验证题目数量范围
-      const ranges = {
-        foundation: { min: 10, max: 20 },
-        improvement: { min: 15, max: 25 },
-        application: { min: 10, max: 15 },
-      };
-      
-      const range = ranges[stageName as keyof typeof ranges];
-      if (stage.questionCount < range.min || stage.questionCount > range.max) {
-        throw new Error(
-          `${stageNames[stageName as keyof typeof stageNames]}阶段题目数量应为 ${range.min}-${range.max}，实际为 ${stage.questionCount}`
-        );
-      }
-    });
-
-    // 验证综合考试规划
-    if (!plan.finalExam) {
-      throw new Error('训练计划缺少综合考试规划');
-    }
-
-    const exam = plan.finalExam;
-    if (typeof exam.questionCount !== 'number' || typeof exam.timeLimit !== 'number' ||
-        typeof exam.passingScore !== 'number' || !exam.difficultyDistribution) {
-      throw new Error('综合考试规划结构不完整');
-    }
-
-    // 验证考试题目数量（20-50）
-    if (exam.questionCount < 20 || exam.questionCount > 50) {
-      throw new Error(`综合考试题目数量应为 20-50，实际为 ${exam.questionCount}`);
-    }
-
-    // 验证难度分布
-    const dist = exam.difficultyDistribution;
-    if (typeof dist.easy !== 'number' || typeof dist.medium !== 'number' || typeof dist.hard !== 'number') {
-      throw new Error('综合考试难度分布格式错误');
-    }
-
-    // 验证难度分布总和为 100（允许 ±5% 误差）
-    const total = dist.easy + dist.medium + dist.hard;
-    if (Math.abs(total - 100) > 5) {
-      throw new Error(`综合考试难度分布总和应为 100%，实际为 ${total}%`);
-    }
-
-    // 验证预计总用时
-    if (typeof plan.estimatedDuration !== 'number' || plan.estimatedDuration <= 0) {
-      throw new Error('训练计划缺少有效的预计总用时');
-    }
-  }
-
-  /**
-   * 解析题目 JSON
+   * 解析题目 JSON（zod 严格校验，防注入结构破坏）
    */
   private parseQuestionJSON(response: string): Question {
-    try {
-      // 尝试提取 JSON
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('响应中未找到 JSON 格式的题目');
-      }
-
-      const question = JSON.parse(jsonMatch[0]);
-      return question;
-    } catch (error: any) {
-      console.error('解析题目 JSON 失败:', error);
+    const result = parseAIJson(response, QuestionSchema);
+    if (!result.ok) {
+      console.error('解析题目 JSON 失败:', result.error);
       console.error('原始响应:', response);
-      throw new Error(`解析题目失败：${error.message}`);
+      throw new Error(`解析题目失败：${result.error}`);
     }
+    return result.data as unknown as Question;
   }
 
   /**
-   * 解析题目数组 JSON
+   * 解析题目数组 JSON（zod 严格校验，防注入结构破坏）
    */
   private parseQuestionsArrayJSON(response: string): Question[] {
-    try {
-      // 尝试提取 JSON 数组
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        throw new Error('响应中未找到 JSON 数组格式的题目');
-      }
-
-      const questions = JSON.parse(jsonMatch[0]);
-      
-      if (!Array.isArray(questions)) {
-        throw new Error('解析结果不是数组');
-      }
-
-      return questions;
-    } catch (error: any) {
-      console.error('解析题目数组 JSON 失败:', error);
+    const result = parseAIJson(response, QuestionArraySchema);
+    if (!result.ok) {
+      console.error('解析题目数组 JSON 失败:', result.error);
       console.error('原始响应:', response);
-      throw new Error(`解析题目数组失败：${error.message}`);
+      throw new Error(`解析题目数组失败：${result.error}`);
     }
+    return result.data as unknown as Question[];
   }
 
   /**
-   * 解析答案评估 JSON
+   * 解析答案评估 JSON（zod 严格校验，防注入结构破坏）
    */
-  private parseEvaluationJSON(response: string): { isCorrect: boolean; feedback: string; guidance?: string } {
-    try {
-      // 尝试提取 JSON
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('响应中未找到 JSON 格式的评估结果');
-      }
-
-      const evaluation = JSON.parse(jsonMatch[0]);
-      return evaluation;
-    } catch (error: any) {
-      console.error('解析评估 JSON 失败:', error);
+  private parseEvaluationJSON(response: string): {
+    isCorrect: boolean;
+    feedback: string;
+    guidance?: string;
+  } {
+    const result = parseAIJson(response, EvaluationSchema);
+    if (!result.ok) {
+      console.error('解析评估 JSON 失败:', result.error);
       console.error('原始响应:', response);
-      throw new Error(`解析评估结果失败：${error.message}`);
+      throw new Error(`解析评估结果失败：${result.error}`);
     }
-  }
-
-  /**
-   * 验证题目结构
-   */
-  private validateQuestion(question: any): void {
-    const requiredFields = ['stem', 'options', 'correctAnswer', 'knowledgePoint', 'difficulty', 'explanation'];
-    
-    for (const field of requiredFields) {
-      if (!question[field]) {
-        throw new Error(`题目缺少必需字段：${field}`);
-      }
-    }
-
-    // 验证选项
-    if (!Array.isArray(question.options) || question.options.length < 2) {
-      throw new Error('题目选项格式错误或数量不足');
-    }
-
-    // 验证难度
-    if (!['easy', 'medium', 'hard'].includes(question.difficulty)) {
-      throw new Error(`题目难度值无效：${question.difficulty}`);
-    }
+    return result.data as unknown as {
+      isCorrect: boolean;
+      feedback: string;
+      guidance?: string;
+    };
   }
 
   /**

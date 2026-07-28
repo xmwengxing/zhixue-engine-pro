@@ -6,6 +6,13 @@ import { parentReportController } from '../controllers/parentReportController';
 import { parentWishController } from '../controllers/parentWishController';
 import { parentProfileController } from '../controllers/parentProfileController';
 import { authenticate, requireParent } from '../middlewares/auth';
+import {
+  validateOwnership,
+  taskOwnership,
+  reportOwnership,
+  wishOwnership,
+} from '../middlewares/ownership';
+import { idempotencyMiddleware } from '../middlewares/idempotency';
 
 const router = Router();
 
@@ -118,8 +125,10 @@ router.delete('/children/:id/unbind', (req, res, next) =>
  * @access  Parent
  * @param   studentId - 学员 ID
  */
-router.get('/overview/:studentId', (req, res, next) =>
-  parentOverviewController.getStudentOverview(req, res, next)
+router.get(
+  '/overview/:studentId',
+  validateOwnership({ source: 'param', key: 'studentId' }),
+  (req, res, next) => parentOverviewController.getStudentOverview(req, res, next)
 );
 
 // ============ 任务管理路由 ============
@@ -142,8 +151,10 @@ router.get('/tasks/ai-teachers', (req, res, next) =>
  * @query   page - 页码（可选，默认 1）
  * @query   limit - 每页数量（可选，默认 10）
  */
-router.get('/tasks', (req, res, next) =>
-  parentTaskController.getTasks(req, res, next)
+router.get(
+  '/tasks',
+  validateOwnership({ source: 'query', key: 'studentId' }),
+  (req, res, next) => parentTaskController.getTasks(req, res, next)
 );
 
 /**
@@ -152,7 +163,7 @@ router.get('/tasks', (req, res, next) =>
  * @access  Parent
  * @param   id - 任务 ID
  */
-router.get('/tasks/:id', (req, res, next) =>
+router.get('/tasks/:id', taskOwnership, (req, res, next) =>
   parentTaskController.getTaskById(req, res, next)
 );
 
@@ -168,8 +179,11 @@ router.get('/tasks/:id', (req, res, next) =>
  * @body    config.questionCount - 题目数量
  * @body    config.difficulty - 难度（1-5）
  */
-router.post('/tasks', (req, res, next) =>
-  parentTaskController.createTask(req, res, next)
+router.post(
+  '/tasks',
+  idempotencyMiddleware(),
+  validateOwnership({ source: 'body', key: 'studentId' }),
+  (req, res, next) => parentTaskController.createTask(req, res, next)
 );
 
 /**
@@ -178,8 +192,42 @@ router.post('/tasks', (req, res, next) =>
  * @access  Parent
  * @param   id - 任务 ID
  */
-router.delete('/tasks/:id', (req, res, next) =>
+router.delete('/tasks/:id', taskOwnership, (req, res, next) =>
   parentTaskController.deleteTask(req, res, next)
+);
+
+/**
+ * @route   PUT /api/parent/tasks/:id/encouragement
+ * @desc    设置家长激励寄语
+ * @access  Parent
+ * @param   id - 任务 ID
+ * @body    message - 激励寄语内容（<=200 字，空字符串表示清除）
+ */
+router.put('/tasks/:id/encouragement', taskOwnership, (req, res, next) =>
+  parentTaskController.setEncouragement(req, res, next)
+);
+
+/**
+ * @route   POST /api/parent/tasks/:id/encouragement/ai
+ * @desc    AI 生成定制激励批语（返回建议文本，家长可编辑后保存）
+ * @access  Parent
+ * @param   id - 任务 ID
+ */
+router.post('/tasks/:id/encouragement/ai', taskOwnership, (req, res, next) =>
+  parentTaskController.generateEncouragement(req, res, next)
+);
+
+/**
+ * @route   POST /api/parent/encouragement/ai
+ * @desc    AI 生成激励批语草稿（创建任务前使用，无需已有任务）
+ * @access  Parent
+ * @body    studentId - 学员 ID（必填）
+ * @body    goal - 学习目标（可选）
+ */
+router.post(
+  '/encouragement/ai',
+  validateOwnership({ source: 'body', key: 'studentId' }),
+  (req, res, next) => parentTaskController.generateEncouragementDraft(req, res, next)
 );
 
 // ============ 报告管理路由 ============
@@ -192,8 +240,10 @@ router.delete('/tasks/:id', (req, res, next) =>
  * @query   page - 页码（可选，默认 1）
  * @query   limit - 每页数量（可选，默认 10）
  */
-router.get('/reports', (req, res, next) =>
-  parentReportController.getReports(req, res, next)
+router.get(
+  '/reports',
+  validateOwnership({ source: 'query', key: 'studentId' }),
+  (req, res, next) => parentReportController.getReports(req, res, next)
 );
 
 /**
@@ -202,7 +252,7 @@ router.get('/reports', (req, res, next) =>
  * @access  Parent
  * @param   id - 报告 ID
  */
-router.get('/reports/:id', (req, res, next) =>
+router.get('/reports/:id', reportOwnership, (req, res, next) =>
   parentReportController.getReportById(req, res, next)
 );
 
@@ -212,7 +262,7 @@ router.get('/reports/:id', (req, res, next) =>
  * @access  Parent
  * @param   id - 报告 ID
  */
-router.get('/reports/:id/export', (req, res, next) =>
+router.get('/reports/:id/export', reportOwnership, (req, res, next) =>
   parentReportController.exportReport(req, res, next)
 );
 
@@ -227,8 +277,10 @@ router.get('/reports/:id/export', (req, res, next) =>
  * @query   page - 页码（可选，默认 1）
  * @query   limit - 每页数量（可选，默认 10）
  */
-router.get('/wishes', (req, res, next) =>
-  parentWishController.getWishes(req, res, next)
+router.get(
+  '/wishes',
+  validateOwnership({ source: 'query', key: 'studentId' }),
+  (req, res, next) => parentWishController.getWishes(req, res, next)
 );
 
 /**
@@ -237,7 +289,7 @@ router.get('/wishes', (req, res, next) =>
  * @access  Parent
  * @param   id - 愿望 ID
  */
-router.get('/wishes/:id', (req, res, next) =>
+router.get('/wishes/:id', wishOwnership, (req, res, next) =>
   parentWishController.getWishById(req, res, next)
 );
 
@@ -249,7 +301,7 @@ router.get('/wishes/:id', (req, res, next) =>
  * @body    approved - 是否同意（必填：true/false）
  * @body    reason - 审批理由（可选）
  */
-router.put('/wishes/:id/approve', (req, res, next) =>
+router.put('/wishes/:id/approve', wishOwnership, (req, res, next) =>
   parentWishController.approveWish(req, res, next)
 );
 

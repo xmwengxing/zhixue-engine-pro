@@ -1,6 +1,7 @@
 // 学员训练控制器
 import { Request, Response, NextFunction } from 'express';
 import { studentTrainingService } from '../services/studentTrainingService';
+import { enqueueAIJob } from '../queue/aiQueue';
 import { logger } from '../middlewares/logger';
 
 /**
@@ -624,6 +625,19 @@ export const startFinalExam = async (
       return;
     }
 
+    // 入队异步生成综合考试题目；队列不可用时降级为同步执行
+    const jobId = await enqueueAIJob({ kind: 'exam', sessionId, studentId: userId });
+    if (jobId) {
+      res.status(202).json({
+        success: true,
+        status: 'generating',
+        jobId,
+        message: '综合考试题目生成中',
+      });
+      return;
+    }
+
+    // 降级：队列不可用，同步生成（保持原有行为）
     const result = await studentTrainingService.startFinalExam(sessionId, userId);
 
     res.json({
@@ -811,11 +825,22 @@ export const getTrainingReport = async (
       return;
     }
 
-    const report = await studentTrainingService.getTrainingReport(sessionId, userId);
+    // 非阻塞获取报告：已生成直接返回，否则触发异步生成并返回 generating 状态
+    const report = await studentTrainingService.requestTrainingReport(sessionId, userId);
 
-    res.json({
+    if (report.status === 'completed') {
+      res.json({
+        success: true,
+        content: report.content,
+        status: 'completed',
+      });
+      return;
+    }
+
+    res.status(202).json({
       success: true,
-      ...report,
+      status: 'generating',
+      message: '报告生成中',
     });
   } catch (error: any) {
     logger.error('获取训练报告失败:', error);

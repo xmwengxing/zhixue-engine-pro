@@ -39,3 +39,9 @@ docker-compose.override.yml
 # 临时文件
 *.tmp
 .cache/
+
+# AI 助手本地数据
+.claude/
+.workbuddy/
+CLAUDE.md
+AGENTS.md

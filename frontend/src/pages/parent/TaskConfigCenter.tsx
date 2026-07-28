@@ -72,6 +72,39 @@ export default function TaskConfigCenter() {
   // 选中的学员(用于档案模式显示)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  // 家长激励寄语（两种模式共用）
+  const [encouragement, setEncouragement] = useState('');
+  const [generatingEncouragement, setGeneratingEncouragement] = useState(false);
+
+  /**
+   * AI 生成激励寄语草稿
+   */
+  const handleGenerateEncouragement = async () => {
+    const studentId = mode === 'CUSTOM' ? customForm.studentId : profileForm.studentId;
+    const goal = mode === 'CUSTOM' ? customForm.goal : profileForm.trainingGoal;
+
+    if (!studentId) {
+      alert('请先选择学员');
+      return;
+    }
+
+    setGeneratingEncouragement(true);
+    try {
+      const response = await request.post('/parent/encouragement/ai', {
+        studentId,
+        goal: goal || undefined,
+      });
+      if (response.data?.suggestion) {
+        setEncouragement(response.data.suggestion.slice(0, 200));
+      }
+    } catch (err: unknown) {
+      console.error('AI 生成激励寄语失败:', err);
+      alert(getErrorMessage(err, 'AI 生成失败，请稍后重试或手动填写'));
+    } finally {
+      setGeneratingEncouragement(false);
+    }
+  };
+
   /**
    * 加载学员列表和 AI 老师列表
    */
@@ -137,6 +170,7 @@ export default function TaskConfigCenter() {
 
       let requestBody: any = {
         mode,
+        parentEncouragement: encouragement.trim() || undefined,
       };
 
       if (mode === 'CUSTOM') {
@@ -610,6 +644,31 @@ export default function TaskConfigCenter() {
                 </div>
               </>
             )}
+
+            {/* 家长激励寄语（两种模式共用） */}
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  家长激励寄语 (选填)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGenerateEncouragement}
+                  disabled={generatingEncouragement}
+                  className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingEncouragement ? 'AI 生成中...' : '✨ AI 帮我写'}
+                </button>
+              </div>
+              <textarea
+                value={encouragement}
+                onChange={(e) => setEncouragement(e.target.value.slice(0, 200))}
+                placeholder="写一段激励孩子的话，孩子在训练时会看到。也可以点击「AI 帮我写」生成后再修改"
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="mt-1 text-sm text-gray-500">{encouragement.length}/200 字</p>
+            </div>
 
             {/* 提交按钮 */}
             <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">

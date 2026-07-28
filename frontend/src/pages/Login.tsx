@@ -32,10 +32,6 @@ export const Login = () => {
       setError('请输入密码');
       return false;
     }
-    if (password.length < 6) {
-      setError('密码至少 6 个字符');
-      return false;
-    }
     return true;
   };
 
@@ -200,7 +196,7 @@ export const Login = () => {
                 测试账户：
               </p>
               <div className="text-xs text-gray-500 space-y-1">
-                <p>管理员: admin / password123</p>
+                <p>管理员: admin / admin</p>
                 <p>家长: parent1 / password123</p>
                 <p>学员: student1 / password123</p>
               </div>

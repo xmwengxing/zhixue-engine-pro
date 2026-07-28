@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import StudentDashboardHome from './StudentDashboardHome';
-import ProfileManagement from './ProfileManagement';
-import SelfAssessment from '../../components/student/SelfAssessment';
-import TrainingCabin from './TrainingCabin';
-import ErrorBook from './ErrorBook';
-import ErrorRetry from './ErrorRetry';
-import PointsWishMall from './PointsWishMall';
-import TaskCenter from './TaskCenter';
+import { LoadingFallback } from '../../components/LoadingFallback';
+
+// 子页面懒加载（Code Splitting，降低首屏体积）
+const StudentDashboardHome = lazy(() => import('./StudentDashboardHome'));
+const ProfileManagement = lazy(() => import('./ProfileManagement'));
+const SelfAssessment = lazy(() => import('../../components/student/SelfAssessment'));
+const TrainingCabin = lazy(() => import('./TrainingCabin'));
+const ErrorBook = lazy(() => import('./ErrorBook'));
+const ErrorRetry = lazy(() => import('./ErrorRetry'));
+const PointsWishMall = lazy(() => import('./PointsWishMall'));
+const TaskCenter = lazy(() => import('./TaskCenter'));
 
 /**
  * 学员仪表盘页面
@@ -280,17 +283,19 @@ export const StudentDashboard = () => {
         )}
 
         {/* 路由内容 */}
-        <Routes>
-          <Route path="/" element={<StudentDashboardHome />} />
-          <Route path="/profile" element={<ProfileManagement />} />
-          <Route path="/self-assessment" element={<SelfAssessment />} />
-          <Route path="/tasks" element={<TaskCenter />} />
-          <Route path="/training/:taskId" element={<TrainingCabin />} />
-          <Route path="/errors" element={<ErrorBook />} />
-          <Route path="/error-retry/:sessionId" element={<ErrorRetry />} />
-          <Route path="/points-wish" element={<PointsWishMall />} />
-          <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">页面未找到</h1></div>} />
-        </Routes>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<StudentDashboardHome />} />
+            <Route path="/profile" element={<ProfileManagement />} />
+            <Route path="/self-assessment" element={<SelfAssessment />} />
+            <Route path="/tasks" element={<TaskCenter />} />
+            <Route path="/training/:taskId" element={<TrainingCabin />} />
+            <Route path="/errors" element={<ErrorBook />} />
+            <Route path="/error-retry/:sessionId" element={<ErrorRetry />} />
+            <Route path="/points-wish" element={<PointsWishMall />} />
+            <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">页面未找到</h1></div>} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

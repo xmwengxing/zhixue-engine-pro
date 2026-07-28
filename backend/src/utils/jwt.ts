@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import type { SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
@@ -11,9 +12,25 @@ export interface JWTPayload {
 }
 
 // JWT 配置
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// 安全约定：密钥必须来自环境变量，禁止任何硬编码默认值（否则可被用于伪造令牌）。
+// 生产环境缺失则直接启动失败（fail-fast）；非生产环境缺失时回退到进程内随机密钥，
+// 既保证本地/测试可用，又不再是可预测的硬编码常量。
+function resolveSecret(name: string): string {
+  const value = process.env[name];
+  if (value && value.trim().length > 0) {
+    return value;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `环境变量 ${name} 未配置，生产环境禁止缺失（存在令牌伪造风险）。请在部署配置中设置。`
+    );
+  }
+  return crypto.randomBytes(32).toString('hex');
+}
+
+const JWT_SECRET = resolveSecret('JWT_SECRET');
 const JWT_EXPIRES_IN: StringValue = (process.env.JWT_EXPIRES_IN || '7d') as StringValue;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
+const JWT_REFRESH_SECRET = resolveSecret('JWT_REFRESH_SECRET');
 const JWT_REFRESH_EXPIRES_IN: StringValue = (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as StringValue;
 
 /**

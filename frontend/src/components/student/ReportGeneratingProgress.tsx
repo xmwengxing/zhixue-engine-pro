@@ -1,6 +1,7 @@
 // 报告生成进度提示组件
 import React, { useEffect, useState } from 'react';
-import request from '../../utils/request';
+import { subscribeReportProgress, type SSEDoneReport } from '../../services/aiStreamService';
+import { getTrainingReport } from '../../services/studentTrainingService';
 
 interface ReportStatus {
   sessionId: string;
@@ -13,13 +14,15 @@ interface ReportStatus {
 
 interface ReportGeneratingProgressProps {
   sessionId: string;
-  onComplete?: (reportId: string) => void;
+  // 报告生成完成后回调，参数为 Markdown 格式的报告内容
+  onComplete?: (report: string) => void;
   onError?: (error: string) => void;
 }
 
 /**
  * 报告生成进度提示组件
- * 参照设计稿：训练舱-ai报告生成中
+ * 通过 SSE 订阅报告生成进度（替代原有的 2 秒轮询，更实时、更省资源）。
+ * 挂载时同时调用 getTrainingReport 触发异步生成（FINAL_EXAM 完成路径不会自动生成报告）。
  */
 const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
   sessionId,
@@ -27,53 +30,90 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
   onError,
 }) => {
   const [status, setStatus] = useState<ReportStatus | null>(null);
-  const [polling, setPolling] = useState(true);
 
   useEffect(() => {
-    if (!polling) return;
+    let cancelled = false;
 
-    const pollStatus = async () => {
+    // 拉取报告内容（已生成时直接回调，否则返回 generating 触发后端异步生成）
+    const fetchReportContent = async (): Promise<string | null> => {
       try {
-        const response = await request.get(`/api/student/report/status/${sessionId}`);
-        const newStatus: ReportStatus = response;
-        setStatus(newStatus);
-
-        // 如果完成或失败，停止轮询
-        if (newStatus.status === 'COMPLETED') {
-          setPolling(false);
-          if (onComplete && newStatus.reportId) {
-            onComplete(newStatus.reportId);
-          }
-        } else if (newStatus.status === 'FAILED') {
-          setPolling(false);
-          if (onError && newStatus.error) {
-            onError(newStatus.error);
-          }
+        const resp = await getTrainingReport(sessionId);
+        if (resp.status === 'completed' && typeof resp.content === 'string') {
+          return resp.content;
         }
-      } catch (err: unknown) {
-        console.error('获取报告状态失败:', err);
-        // 如果状态不存在，可能报告已经生成完成很久了
-        const apiError = err as { response?: { status?: number } };
-        if (apiError.response?.status === 404) {
-          setPolling(false);
-        }
+      } catch {
+        /* ignore */
       }
+      return null;
     };
 
-    // 立即执行一次
-    pollStatus();
+    // 先尝试直接获取（处理报告已生成或同步降级场景）
+    fetchReportContent().then((content) => {
+      if (cancelled) return;
+      if (content) {
+        setStatus({
+          sessionId,
+          status: 'COMPLETED',
+          progress: 100,
+          message: '',
+        });
+        onComplete?.(content);
+      }
+    });
 
-    // 每 2 秒轮询一次
-    const interval = setInterval(pollStatus, 2000);
+    // 通过 SSE 订阅报告生成进度（无论是否已触发，都保证能收到 done 事件）
+    const unsubscribe = subscribeReportProgress(sessionId, {
+      onProgress: (data) => {
+        setStatus({
+          sessionId,
+          status: (data.state as ReportStatus['status']) || 'GENERATING',
+          progress: data.progress || 0,
+          message: data.message || '',
+          reportId: (data as { reportId?: string }).reportId,
+        });
+      },
+      onDone: async (data) => {
+        const d = data as SSEDoneReport;
+        // 生成完成，拉取报告内容并回调
+        const content = await fetchReportContent();
+        if (cancelled) return;
+        setStatus({
+          sessionId,
+          status: 'COMPLETED',
+          progress: 100,
+          message: '',
+          reportId: d.reportId,
+        });
+        if (content) {
+          onComplete?.(content);
+        } else if (onError) {
+          onError('报告内容获取失败');
+        }
+      },
+      onError: (message) => {
+        if (cancelled) return;
+        setStatus({
+          sessionId,
+          status: 'FAILED',
+          progress: 0,
+          message,
+          error: message,
+        });
+        if (onError) onError(message);
+      },
+    });
 
-    return () => clearInterval(interval);
-  }, [sessionId, polling, onComplete, onError]);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [sessionId, onComplete, onError]);
 
   if (!status) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-gray-600">正在检查报告状态...</p>
+        <p className="text-gray-600">正在准备生成报告...</p>
       </div>
     );
   }
@@ -94,25 +134,7 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
     );
   }
 
-  if (status.status === 'COMPLETED') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
-        <div className="text-green-500 text-6xl mb-4">✓</div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">报告生成完成</h3>
-        <p className="text-gray-600 mb-4">您的学习报告已经准备好了</p>
-        {status.reportId && (
-          <button
-            onClick={() => onComplete && onComplete(status.reportId!)}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            查看报告
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // PENDING 或 GENERATING 状态
+  // PENDING / GENERATING 状态
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
       {/* AI 图标动画 */}

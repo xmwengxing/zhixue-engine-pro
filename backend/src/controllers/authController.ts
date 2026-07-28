@@ -8,7 +8,8 @@ import { logger } from '../middlewares/logger';
  */
 const loginSchema = z.object({
   username: z.string().min(3, '用户名至少 3 个字符').max(20, '用户名最多 20 个字符'),
-  password: z.string().min(6, '密码至少 6 个字符'),
+  // 登录只校验非空，不强制密码策略（密码强度由注册/改密接口保证）
+  password: z.string().min(1, '请输入密码'),
 });
 
 /**
