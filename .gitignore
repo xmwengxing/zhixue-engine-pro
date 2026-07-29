@@ -40,6 +40,13 @@ docker-compose.override.yml
 *.tmp
 .cache/
 
+# Python
+__pycache__/
+*.pyc
+
+# GitNexus 索引
+.gitnexus/
+
 # AI 助手本地数据
 .claude/
 .workbuddy/

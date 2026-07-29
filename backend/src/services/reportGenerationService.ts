@@ -51,7 +51,28 @@ export class ReportGenerationService {
       reportStatusService.setGenerating(sessionId, 10, '正在聚合报告数据...');
 
       // 1. 聚合报告数据
-      const reportData = await this.aggregateReportData(sessionId);
+      const reportData: any = await this.aggregateReportData(sessionId);
+
+      // P4：统一学科口径（优先任务一级字段 subject，回退教材链），与学情更新管线一致
+      const effectiveSubject = (reportData.taskSubject || reportData.subject) as string;
+      if (effectiveSubject && effectiveSubject !== '通用') {
+        reportData.subject = effectiveSubject;
+      }
+
+      // P4：附加历史学情，供 AI 生成"本学科历史对比"
+      try {
+        const { getSubjectState } = await import('./subjectLearningStateService');
+        const prior = await getSubjectState(reportData.studentId, reportData.subject);
+        reportData.history = {
+          irtTheta: prior.irtTheta,
+          weakPoints: prior.weakPoints,
+          masteryMap: prior.masteryMap,
+          taskHistoryCount: Array.isArray(prior.taskHistory) ? prior.taskHistory.length : 0,
+          hasHistory: Array.isArray(prior.taskHistory) ? prior.taskHistory.length > 0 : false,
+        };
+      } catch (e) {
+        logger.warn('[Report] 读取历史学情失败（非致命）', e);
+      }
 
       reportStatusService.setGenerating(sessionId, 40, '正在调用 AI 生成报告内容...');
 
@@ -62,6 +83,22 @@ export class ReportGenerationService {
 
       // 3. 保存报告到数据库
       const report = await this.saveReport(sessionId, reportData.studentId, reportData.taskId, content);
+
+      // P4：会话结束后增量更新学科学情档案（失败仅记日志，绝不阻断报告主流程）
+      try {
+        const { subjectLearningStateService } = await import('./subjectLearningStateService');
+        await subjectLearningStateService.updateFromSession(sessionId);
+      } catch (e) {
+        logger.error('[Report] 学情档案更新失败（非致命）', e);
+      }
+
+      // P5：会话结束后更新学员长期记忆（AI 按 MEMORY_SPEC 合并；失败仅记日志）
+      try {
+        const { studentMemoryService } = await import('./studentMemoryService');
+        await studentMemoryService.updateFromSession(sessionId);
+      } catch (e) {
+        logger.error('[Report] 学员记忆更新失败（非致命）', e);
+      }
 
       reportStatusService.setCompleted(sessionId, report.id);
 
@@ -216,6 +253,7 @@ export class ReportGenerationService {
         taskId: session.taskId,
         studentName: session.student.username,
         subject,
+        taskSubject: (session.task as any)?.subject ?? null, // P4：任务一级学科字段，优先于教材链
         phase: session.phase,
         statistics: {
           totalQuestions,
@@ -328,6 +366,22 @@ export class ReportGenerationService {
         (c: any) => c.role === 'USER'
       ).length;
       prompt += `学员提问次数: ${userMessages}\n\n`;
+    }
+
+    // 本学科历史对比（P4）
+    if (reportData.history && reportData.history.hasHistory) {
+      prompt += `## 本学科历史对比\n`;
+      prompt += `该学员本学科既往已完成 ${reportData.history.taskHistoryCount} 次总任务。\n`;
+      const prevWeak = (reportData.history.weakPoints || []).slice(0, 5);
+      if (prevWeak.length > 0) {
+        prompt += `历史薄弱点（按掌握度升序）: ${prevWeak
+          .map((w: any) => `${w.point}(${w.score}分)`)
+          .join('、')}\n`;
+      }
+      if (reportData.history.irtTheta != null) {
+        prompt += `历史能力估计(IRT θ): ${reportData.history.irtTheta}\n`;
+      }
+      prompt += `请在"学习建议"中结合历史薄弱点给出连续性改进路径，并指出本次相较历史的变化（进步/退步/新出现薄弱点）。\n\n`;
     }
 
     // 生成要求
@@ -450,6 +504,17 @@ export class ReportGenerationService {
         where: { sessionId },
       });
 
+      // P3 双轨：从任务读取学科/大类/专项类型，为报告打标（专项报告与总任务报告隔离查询）
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: { subject: true, category: true, specialType: true },
+      });
+      const reportTags = {
+        subject: task?.subject ?? null,
+        category: task?.category ?? ('SUBJECT_MAIN' as const),
+        specialType: task?.specialType ?? null,
+      };
+
       if (existing) {
         // 更新现有报告
         return await prisma.report.update({
@@ -457,6 +522,7 @@ export class ReportGenerationService {
           data: {
             content: content as any,
             generatedAt: new Date(),
+            ...reportTags,
           },
         });
       }
@@ -468,6 +534,7 @@ export class ReportGenerationService {
           studentId,
           taskId,
           content: content as any,
+          ...reportTags,
         },
       });
     } catch (error: any) {
@@ -560,13 +627,31 @@ export class ReportGenerationService {
   /**
    * 获取学员的所有报告
    */
-  async getStudentReports(studentId: string, page: number = 1, limit: number = 10) {
+  async getStudentReports(
+    studentId: string,
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      /** P3 双轨：报告大类过滤（SUBJECT_MAIN=总任务报告 / SPECIAL=专项报告） */
+      category?: 'SUBJECT_MAIN' | 'SPECIAL';
+      /** P3 双轨：学科过滤 */
+      subject?: string;
+    }
+  ) {
     try {
       const skip = (page - 1) * limit;
 
+      const where: any = { studentId };
+      if (filters?.category) {
+        where.category = filters.category;
+      }
+      if (filters?.subject) {
+        where.subject = filters.subject;
+      }
+
       const [reports, total] = await Promise.all([
         prisma.report.findMany({
-          where: { studentId },
+          where,
           include: {
             session: {
               include: {
@@ -581,7 +666,7 @@ export class ReportGenerationService {
           take: limit,
         }),
         prisma.report.count({
-          where: { studentId },
+          where,
         }),
       ]);
 

@@ -10,6 +10,7 @@ import TaskReportCenter from './TaskReportCenter';
 import ReportDetail from './ReportDetail';
 import WishApprovalList from './WishApprovalList';
 import ParentProfileCenter from './ParentProfileCenter';
+import SubjectLearningState from './SubjectLearningState';
 
 /**
  * 家长仪表盘页面
@@ -70,6 +71,18 @@ export const ParentDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[24px]">monitoring</span>
                 <span className="text-sm font-medium leading-normal">学情概览</span>
+              </Link>
+
+              <Link
+                to="/parent/learning-state"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/parent/learning-state')
+                    ? 'bg-primary text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">menu_book</span>
+                <span className="text-sm font-medium leading-normal">学科档案</span>
               </Link>
 
               <Link
@@ -314,6 +327,7 @@ export const ParentDashboard = () => {
           <Route path="/tasks/create" element={<TaskConfigCenter />} />
           <Route path="/reports" element={<TaskReportCenter />} />
           <Route path="/reports/:id" element={<ReportDetail />} />
+          <Route path="/learning-state" element={<SubjectLearningState />} />
           <Route path="/wishes" element={<WishApprovalList />} />
           <Route path="/profile" element={<ParentProfileCenter />} />
           <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">页面未找到</h1></div>} />

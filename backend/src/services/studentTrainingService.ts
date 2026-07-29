@@ -19,9 +19,11 @@ export class StudentTrainingService {
   async getCurrentTask(studentId: string) {
     try {
       // 查找状态为 PENDING 或 IN_PROGRESS 的任务
+      // P3 双轨：仅取学科总任务，专项攻克任务（含错题重做临时任务）走独立列表
       const task = await prisma.task.findFirst({
         where: {
           studentId,
+          category: 'SUBJECT_MAIN',
           status: {
             in: ['PENDING', 'IN_PROGRESS'],
           },
@@ -43,6 +45,62 @@ export class StudentTrainingService {
     } catch (error) {
       logger.error('获取当前任务失败:', error);
       throw new Error('获取当前任务失败');
+    }
+  }
+
+  /**
+   * P3 双轨：获取学员任务列表（学科总任务 / 专项攻克双区隔离查询）
+   */
+  async getTasks(
+    studentId: string,
+    filters: {
+      category?: 'SUBJECT_MAIN' | 'SPECIAL';
+      subject?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) {
+    try {
+      const { category, subject, status, page = 1, limit = 20 } = filters;
+
+      const where: any = { studentId };
+      if (category) {
+        where.category = category;
+        // 专项区排除学员自己发起的错题重做临时任务（createdBy=自己），只展示家长布置的专项
+        // 注：错题重做任务仍归 SPECIAL，但入口在错题本，不在任务列表重复展示
+        if (category === 'SPECIAL') {
+          where.createdBy = { not: studentId };
+        }
+      }
+      if (subject) {
+        where.subject = subject;
+      }
+      if (status && ['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
+        where.status = status;
+      }
+
+      const skip = (page - 1) * limit;
+
+      const [tasks, total] = await Promise.all([
+        prisma.task.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            creator: {
+              select: { id: true, username: true },
+            },
+          },
+        }),
+        prisma.task.count({ where }),
+      ]);
+
+      return { tasks, total, page, limit };
+    } catch (error) {
+      logger.error('获取学员任务列表失败:', error);
+      throw new Error('获取学员任务列表失败');
     }
   }
 
@@ -92,16 +150,36 @@ export class StudentTrainingService {
         mode?: string;
         diagnosticQuestionCount?: number; // 诊断测试题目数量
         trainingGoal?: string; // 训练目标
+        questionIds?: string[]; // 组卷模式：固定题目列表
       };
       
       // 检测是否为档案提取模式
       const isProfileMode = config.profileBased || config.mode === 'PROFILE';
+      // 检测是否为组卷模式（固定题目、保持顺序）
+      const isExamPaperMode = config.mode === 'EXAM_PAPER';
       
       let questions: any[] = [];
       let initialPhase: any = 'PRE_TEST';
       let diagnosticTestData = null;
       
-      if (isProfileMode) {
+      if (isExamPaperMode) {
+        // 组卷模式：使用任务配置中固定的题目列表（保持出卷顺序）
+        const questionIds = config.questionIds || [];
+        if (questionIds.length === 0) {
+          throw new Error('组卷任务没有题目');
+        }
+        const found = await prisma.question.findMany({
+          where: { id: { in: questionIds } },
+        });
+        const byId = new Map(found.map((q) => [q.id, q]));
+        questions = questionIds
+          .map((id) => byId.get(id))
+          .filter((q): q is NonNullable<typeof q> => !!q);
+        if (questions.length === 0) {
+          throw new Error('组卷任务的题目已不存在，请联系家长重新布置');
+        }
+        logger.info(`组卷模式：加载固定题目 ${questions.length}/${questionIds.length} 道`);
+      } else if (isProfileMode) {
         // 档案提取模式：由 AI 动态生成题目，不需要预先查找题库
         logger.info('档案提取模式：将由 AI 动态生成题目');
         
@@ -280,7 +358,15 @@ export class StudentTrainingService {
       throw new Error('已完成所有诊断题目');
     }
 
-    logger.info(`为会话 ${session.id} 生成第 ${questionNumber}/${totalQuestions} 道诊断题目`);
+    // P2 题库化初测：任务发布时已从题库预抽题目，优先从题集出题
+    const taskConfigForBank = session.task.config as any;
+    const bankQuestionIds: string[] | undefined = taskConfigForBank?.initialTest?.questionIds;
+    if (Array.isArray(bankQuestionIds) && bankQuestionIds.length > 0) {
+      return await this.getBankDiagnosticQuestion(session, bankQuestionIds, questionNumber, totalQuestions);
+    }
+
+    // ---- 以下为存量任务（无预抽题集）的 AI 生成兜底路径 ----
+    logger.info(`为会话 ${session.id} 生成第 ${questionNumber}/${totalQuestions} 道诊断题目（AI 兜底）`);
 
     // 获取学员档案
     const profile = session.student?.studentProfile;
@@ -320,6 +406,66 @@ export class StudentTrainingService {
     logger.info(`成功生成第 ${questionNumber} 道诊断题目，知识点：${question.knowledgePoint}`);
 
     return question;
+  }
+
+  /**
+   * 从预抽题库题集中取诊断题目（P2 题库化初测）
+   * 将 Question 记录转换为诊断题目结构（与 AI 生成题目结构保持一致）
+   */
+  private async getBankDiagnosticQuestion(
+    session: any,
+    questionIds: string[],
+    questionNumber: number,
+    totalQuestions: number
+  ) {
+    const qid = questionIds[questionNumber - 1];
+    if (!qid) {
+      throw new Error(`预抽题集中不存在第 ${questionNumber} 题（共 ${questionIds.length} 题）`);
+    }
+
+    const q = await prisma.question.findUnique({
+      where: { id: qid },
+      include: { materialNode: { select: { name: true } } },
+    });
+    if (!q) {
+      throw new Error(`题库题目 ${qid} 不存在（可能已被删除），请联系家长重新发布任务`);
+    }
+
+    const content = (q.content ?? {}) as { stem?: string; options?: string[] };
+    const answerConfig = (q.answerConfig ?? {}) as {
+      options?: string[];
+      correctAnswer?: string;
+      explanation?: string;
+    };
+    const options = content.options ?? answerConfig.options ?? [];
+
+    // 题型映射：题库 QuestionType → 诊断题目 type
+    const typeMap: Record<string, string> = {
+      CHOICE: 'single_choice',
+      FILL: 'fill_blank',
+      JUDGE: 'judge',
+      ESSAY: 'short_answer',
+      CALC: 'calculation',
+      COMPREHENSIVE: 'comprehensive',
+    };
+
+    logger.info(`会话 ${session.id} 第 ${questionNumber}/${totalQuestions} 道诊断题目取自题库: ${qid}`);
+
+    return {
+      id: q.id,
+      fromBank: true,
+      stem: content.stem ?? '',
+      options,
+      correctAnswer: answerConfig.correctAnswer ?? q.answer,
+      explanation: answerConfig.explanation ?? '',
+      knowledgePoint: q.knowledgePoints[0] ?? '',
+      knowledgePoints: q.knowledgePoints,
+      difficulty: q.difficulty,
+      type: typeMap[q.type] ?? 'single_choice',
+      subject: q.materialNode?.name,
+      questionNumber,
+      totalQuestions,
+    };
   }
 
   /**
@@ -862,15 +1008,35 @@ export class StudentTrainingService {
 
     const taskConfig = session.task.config as any;
 
-    // 使用 AI 判断答案
-    const evaluation = await aiQuestionGeneratorService.evaluateAnswer(
-      questionData,
-      answer,
-      {
-        grade: profile.grade,
-        trainingGoal: taskConfig.trainingGoal || '提升学习能力',
-      }
-    );
+    // P2：题库客观题（单选/判断）本地判分，主观题与 AI 生成题仍走 AI 评估
+    let evaluation: any;
+    const isObjectiveBankQuestion =
+      questionData?.fromBank &&
+      questionData?.correctAnswer &&
+      ['single_choice', 'judge'].includes(questionData?.type);
+
+    if (isObjectiveBankQuestion) {
+      const normalize = (s: string) =>
+        String(s ?? '').trim().toUpperCase().replace(/[．.、\s]/g, '');
+      const isCorrect = normalize(answer) === normalize(questionData.correctAnswer);
+      evaluation = {
+        isCorrect,
+        correctAnswer: questionData.correctAnswer,
+        feedback: isCorrect ? '回答正确！' : `回答错误，正确答案是 ${questionData.correctAnswer}`,
+        explanation: questionData.explanation || '',
+        guidance: isCorrect ? '' : (questionData.explanation || '建议复习该知识点后再试。'),
+      };
+    } else {
+      // 使用 AI 判断答案
+      evaluation = await aiQuestionGeneratorService.evaluateAnswer(
+        questionData,
+        answer,
+        {
+          grade: profile.grade,
+          trainingGoal: taskConfig.trainingGoal || '提升学习能力',
+        }
+      );
+    }
 
     // 获取诊断测试数据
     const diagnosticData = session.diagnosticTestData as any;
@@ -2161,15 +2327,43 @@ export class StudentTrainingService {
       // 获取科目信息
       const subject = await this.getSessionSubject(session);
 
-      // 调用 AI 服务
-      const reply = await aiServiceManager.callAIWithSubject(
-        subject,
-        prompt,
-        {
-          maxTokens: 1000,
-          temperature: 0.7,
+      // P5：分层上下文装配（L1约束→L2指令→L3流程→L4记忆→L5学情→L6会话状态）
+      // 装配失败时回退到原有单层学科指令路径，保证对话永远可用
+      let layeredSystemPrompt: string | undefined;
+      try {
+        const { buildAgentContext } = await import('./agentContextBuilder');
+        const built = await buildAgentContext({
+          studentId,
+          subject,
+          phase: session.phase,
+          scene: '训练舱引导式对话（苏格拉底式，不直接给答案）',
+          sessionState: [
+            `任务：《${(session.task as any)?.title ?? '未知'}》`,
+            `阶段：${session.phase}｜提示深度：第 ${hintLevel} 次求助`,
+            context?.questionId ? `当前题目ID：${context.questionId}` : '',
+            context?.isCorrect !== undefined ? `最近作答：${context.isCorrect ? '正确' : '错误'}` : '',
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        });
+        if (built.systemPrompt && built.systemPrompt.length > 0) {
+          layeredSystemPrompt = built.systemPrompt;
         }
-      );
+      } catch (e) {
+        logger.warn('分层上下文装配失败，回退单层学科指令:', e);
+      }
+
+      // 调用 AI 服务
+      const reply = layeredSystemPrompt
+        ? await aiServiceManager.callAI(prompt, {
+            maxTokens: 1000,
+            temperature: 0.7,
+            systemPrompt: layeredSystemPrompt,
+          })
+        : await aiServiceManager.callAIWithSubject(subject, prompt, {
+            maxTokens: 1000,
+            temperature: 0.7,
+          });
 
       // 保存 AI 回复
       await prisma.aIConversation.create({

@@ -22,6 +22,9 @@ interface Report {
     learningAdvice: string;
   };
   generatedAt: string;
+  subject?: string | null;
+  category?: 'SUBJECT_MAIN' | 'SPECIAL' | string;
+  specialType?: string | null;
   task: {
     id: string;
     title: string;
@@ -57,6 +60,10 @@ const TaskReportCenter: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'all' | 'completed' | 'in_progress'>('all');
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  // P4 双轨：报告按大类（总任务/专项）+ 学科过滤
+  const [category, setCategory] = useState<'all' | 'SUBJECT_MAIN' | 'SPECIAL'>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string>('');
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
@@ -81,6 +88,13 @@ const TaskReportCenter: React.FC = () => {
       if (selectedStudent) {
         params.studentId = selectedStudent;
       }
+      // P4 双轨：大类 + 学科过滤
+      if (category !== 'all') {
+        params.category = category;
+      }
+      if (subjectFilter) {
+        params.subject = subjectFilter;
+      }
 
       const response = await request.get('/parent/reports', { params });
 
@@ -94,11 +108,26 @@ const TaskReportCenter: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, selectedStudent]);
+  }, [page, limit, selectedStudent, category, subjectFilter]);
 
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  // 拉取该学员已生成学情的学科列表，供报告按学科过滤
+  useEffect(() => {
+    if (!selectedStudent) {
+      setSubjects([]);
+      return;
+    }
+    request
+      .get(`/parent/children/${selectedStudent}/learning-state`)
+      .then((res: any) => {
+        const list: any[] = res?.data ?? [];
+        setSubjects(list.map((s) => s.subject).filter(Boolean));
+      })
+      .catch(() => setSubjects([]));
+  }, [selectedStudent]);
 
   /**
    * 查看报告详情
@@ -286,6 +315,42 @@ const TaskReportCenter: React.FC = () => {
                     进行中
                   </button>
                 </div>
+                {/* P4 双轨：总任务报告 / 专项报告 双区切换 + 学科筛选 */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    {([
+                      { key: 'all', label: '全部报告' },
+                      { key: 'SUBJECT_MAIN', label: '学科总任务' },
+                      { key: 'SPECIAL', label: '专项攻克' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setCategory(opt.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+                          category === opt.key
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-primary'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {subjects.length > 0 && (
+                    <select
+                      value={subjectFilter}
+                      onChange={(e) => setSubjectFilter(e.target.value)}
+                      className="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs"
+                    >
+                      <option value="">全部学科</option>
+                      {subjects.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -310,6 +375,20 @@ const TaskReportCenter: React.FC = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             {getStatusBadge(report.task.status)}
+                            {report.subject && (
+                              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700/40 text-slate-500 dark:text-slate-300 text-xs">
+                                {report.subject}
+                              </span>
+                            )}
+                            {report.category === 'SPECIAL' ? (
+                              <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300 text-xs font-medium">
+                                专项报告
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-xs font-medium">
+                                总任务报告
+                              </span>
+                            )}
                             <h3 className="text-slate-900 dark:text-white font-bold text-lg">
                               {report.task.title}
                             </h3>

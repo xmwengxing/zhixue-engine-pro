@@ -39,6 +39,58 @@ export const getCurrentTask = async (
 };
 
 /**
+ * P3 双轨：获取学员任务列表（学科总任务 / 专项攻克双区）
+ * GET /api/student/tasks?category=SUBJECT_MAIN|SPECIAL&subject=&status=&page=&limit=
+ */
+export const getTasks = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: '未授权访问',
+        },
+      });
+      return;
+    }
+
+    const { category, subject, status, page, limit } = req.query;
+
+    if (category && !['SUBJECT_MAIN', 'SPECIAL'].includes(String(category))) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_PARAMETER',
+          message: '无效的任务大类',
+        },
+      });
+      return;
+    }
+
+    const result = await studentTrainingService.getTasks(userId, {
+      category: category as 'SUBJECT_MAIN' | 'SPECIAL' | undefined,
+      subject: subject ? String(subject) : undefined,
+      status: status ? String(status) : undefined,
+      page: page ? parseInt(String(page)) : undefined,
+      limit: limit ? parseInt(String(limit)) : undefined,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('获取学员任务列表失败:', error);
+    next(error);
+  }
+};
+
+/**
  * 开始训练
  * POST /api/student/training/start/:taskId
  */

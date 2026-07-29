@@ -9,6 +9,10 @@ interface Task {
   mode: string;
   status: string;
   createdAt: string;
+  // P3 双轨字段
+  category?: 'SUBJECT_MAIN' | 'SPECIAL';
+  subject?: string | null;
+  specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | null;
   student: {
     username: string;
     status?: string; // 添加学员状态字段
@@ -17,6 +21,13 @@ interface Task {
     };
   };
 }
+
+/** P3 双轨：专项类型中文标签 */
+const SPECIAL_TYPE_LABELS: Record<string, string> = {
+  UNIT: '单元专项',
+  KNOWLEDGE_POINT: '知识点专项',
+  ERROR_BOOK: '错题本专项',
+};
 
 interface Child {
   id: string;
@@ -38,6 +49,9 @@ export default function TaskList() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
+
+  // P3 双轨：任务大类 Tab（学科总任务 / 专项攻克，隔离查询）
+  const [category, setCategory] = useState<'SUBJECT_MAIN' | 'SPECIAL'>('SUBJECT_MAIN');
 
   // AI 智能派单相关状态
   const [children, setChildren] = useState<Child[]>([]);
@@ -62,6 +76,7 @@ export default function TaskList() {
         params: {
           page,
           limit,
+          category,
         },
       });
 
@@ -72,7 +87,7 @@ export default function TaskList() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit]);
+  }, [page, limit, category]);
 
   useEffect(() => {
     loadTasks();
@@ -261,6 +276,36 @@ export default function TaskList() {
           </button>
         </div>
 
+        {/* P3 双轨：任务大类 Tab */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => {
+              setCategory('SUBJECT_MAIN');
+              setPage(1);
+            }}
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+              category === 'SUBJECT_MAIN'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            学科总任务
+          </button>
+          <button
+            onClick={() => {
+              setCategory('SPECIAL');
+              setPage(1);
+            }}
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+              category === 'SPECIAL'
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            专项攻克任务
+          </button>
+        </div>
+
         {/* AI 智能派单工具条 */}
         <div className="mb-6 flex flex-wrap items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">
@@ -308,7 +353,9 @@ export default function TaskList() {
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden border border-slate-200 dark:border-slate-700">
           {tasks.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-slate-500 dark:text-slate-400 mb-4">还没有创建任何任务</p>
+              <p className="text-slate-500 dark:text-slate-400 mb-4">
+                {category === 'SPECIAL' ? '还没有发布过专项攻克任务' : '还没有创建学科总任务'}
+              </p>
               <button
                 onClick={() => navigate('/parent/tasks/create')}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -328,7 +375,7 @@ export default function TaskList() {
                       学员
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      模式
+                      学科 / 类型
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       状态
@@ -353,7 +400,20 @@ export default function TaskList() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-500 dark:text-slate-400">{getModeText(task.mode)}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                          {task.subject && (
+                            <span className="mr-1.5 px-2 py-0.5 text-xs rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                              {task.subject}
+                            </span>
+                          )}
+                          {task.category === 'SPECIAL' ? (
+                            <span className="px-2 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                              {SPECIAL_TYPE_LABELS[task.specialType || ''] || '专项攻克'}
+                            </span>
+                          ) : (
+                            getModeText(task.mode)
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

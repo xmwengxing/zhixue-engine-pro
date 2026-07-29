@@ -7,8 +7,10 @@ import * as studentErrorController from '../controllers/studentErrorController';
 import { studentPointsController } from '../controllers/studentPointsController';
 import { studentWishController } from '../controllers/studentWishController';
 import { reportStatusController } from '../controllers/reportStatusController';
+import * as answerZoneController from '../controllers/answerZoneController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
+import { subjectLearningStateService } from '../services/subjectLearningStateService';
 
 const router = Router();
 
@@ -60,10 +62,48 @@ router.get('/profile/history', studentProfileController.getProfileHistory);
 
 /**
  * @route   GET /api/student/tasks/current
- * @desc    获取当前任务
+ * @desc    获取当前任务（仅学科总任务）
  * @access  Private (Student)
  */
 router.get('/tasks/current', studentTrainingController.getCurrentTask);
+
+// ============ P4 学科学情档案 ============
+
+/**
+ * @route   GET /api/student/learning-state?subject=
+ * @desc    获取本人学科学情档案；带 subject 返回单科，否则返回全部学科数组
+ * @access  Student
+ */
+router.get('/learning-state', async (req, res, next) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未认证' } });
+      return;
+    }
+    const subject = req.query.subject ? String(req.query.subject) : undefined;
+    if (subject) {
+      const state = await subjectLearningStateService.getSubjectState(studentId, subject);
+      res.json({ success: true, data: state });
+      return;
+    }
+    const list = await subjectLearningStateService.listSubjects(studentId);
+    res.json({ success: true, data: list });
+    return;
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route   GET /api/student/tasks
+ * @desc    获取任务列表（P3 双轨：category=SUBJECT_MAIN 学科总任务 / SPECIAL 专项攻克）
+ * @access  Private (Student)
+ * @query   category - 任务大类（可选）
+ * @query   subject - 学科（可选）
+ * @query   status - 状态（可选）
+ */
+router.get('/tasks', studentTrainingController.getTasks);
 
 /**
  * @route   POST /api/student/training/start/:taskId
@@ -71,6 +111,20 @@ router.get('/tasks/current', studentTrainingController.getCurrentTask);
  * @access  Private (Student)
  */
 router.post('/training/start/:taskId', studentTrainingController.startTraining);
+
+/**
+ * @route   GET /api/student/answer-zone/:taskId
+ * @desc    进入组卷任务，获取题目内容（不含答案）
+ * @access  Private (Student)
+ */
+router.get('/answer-zone/:taskId', answerZoneController.loadExamPaper);
+
+/**
+ * @route   POST /api/student/answer-zone/:sessionId/submit
+ * @desc    提交并批改整卷（EXAM_PAPER 模式）
+ * @access  Private (Student)
+ */
+router.post('/answer-zone/:sessionId/submit', answerZoneController.submitExamPaper);
 
 /**
  * @route   GET /api/student/training/next-question/:sessionId

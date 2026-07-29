@@ -12,6 +12,8 @@ const ErrorBook = lazy(() => import('./ErrorBook'));
 const ErrorRetry = lazy(() => import('./ErrorRetry'));
 const PointsWishMall = lazy(() => import('./PointsWishMall'));
 const TaskCenter = lazy(() => import('./TaskCenter'));
+const AnswerZone = lazy(() => import('./AnswerZone'));
+const SubjectLearningState = lazy(() => import('./SubjectLearningState'));
 
 /**
  * 学员仪表盘页面
@@ -108,6 +110,18 @@ export const StudentDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[24px]">assignment_late</span>
                 <span className="text-sm font-medium leading-normal">错题本</span>
+              </Link>
+
+              <Link
+                to="/student/learning-state"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/student/learning-state')
+                    ? 'bg-primary text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">menu_book</span>
+                <span className="text-sm font-medium leading-normal">学科档案</span>
               </Link>
 
               <Link
@@ -289,8 +303,10 @@ export const StudentDashboard = () => {
             <Route path="/profile" element={<ProfileManagement />} />
             <Route path="/self-assessment" element={<SelfAssessment />} />
             <Route path="/tasks" element={<TaskCenter />} />
+            <Route path="/answer-zone/:taskId" element={<AnswerZone />} />
             <Route path="/training/:taskId" element={<TrainingCabin />} />
             <Route path="/errors" element={<ErrorBook />} />
+            <Route path="/learning-state" element={<SubjectLearningState />} />
             <Route path="/error-retry/:sessionId" element={<ErrorRetry />} />
             <Route path="/points-wish" element={<PointsWishMall />} />
             <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">页面未找到</h1></div>} />

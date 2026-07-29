@@ -99,13 +99,17 @@ export const createRetrySession = async (errorId: string, studentId: string) => 
   // 获取错题信息
   const error = await getErrorDetail(errorId, studentId);
 
-  // 为错题重做创建一个临时任务
+  // 为错题重做创建一个临时任务（P3 双轨：统一收编为 SPECIAL + ERROR_BOOK 专项）
   const task = await prisma.task.create({
     data: {
       studentId,
       createdBy: studentId,
       title: `错题重做：${error.question.materialNode?.name || '练习'}`,
       mode: 'CUSTOM',
+      category: 'SPECIAL',
+      subject: error.subject,
+      specialType: 'ERROR_BOOK',
+      targetRef: { errorQuestionIds: [error.id] },
       config: {
         materialNodeIds: [error.question.materialNodeId],
         questionCount: 1,

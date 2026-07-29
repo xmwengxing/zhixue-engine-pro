@@ -19,12 +19,16 @@ export class ParentReportService {
     parentId: string,
     filters: {
       studentId?: string;
+      /** P3 双轨：报告大类过滤（SUBJECT_MAIN=总任务报告 / SPECIAL=专项报告） */
+      category?: 'SUBJECT_MAIN' | 'SPECIAL';
+      /** P3 双轨：学科过滤 */
+      subject?: string;
       page?: number;
       limit?: number;
     }
   ) {
     try {
-      const { studentId, page = 1, limit = 10 } = filters;
+      const { studentId, category, subject, page = 1, limit = 10 } = filters;
 
       // 验证家长是否有权查看该学员的报告
       if (studentId) {
@@ -64,6 +68,14 @@ export class ParentReportService {
         };
       }
 
+      // P3 双轨：报告大类/学科过滤
+      if (category) {
+        where.category = category;
+      }
+      if (subject) {
+        where.subject = subject;
+      }
+
       // 计算分页
       const skip = (page - 1) * limit;
 
@@ -83,6 +95,9 @@ export class ParentReportService {
                 title: true,
                 mode: true,
                 status: true,
+                category: true,
+                subject: true,
+                specialType: true,
                 createdAt: true,
                 completedAt: true,
               },

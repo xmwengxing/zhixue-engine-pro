@@ -9,7 +9,9 @@ import ParentChildRelationManagement from './ParentChildRelationManagement';
 import MaterialSystemManagement from './MaterialSystemManagement';
 import AIServiceConfig from './AIServiceConfig';
 import SubjectInstructionConfig from './SubjectInstructionConfig';
+import AgentPlatformConfig from './AgentPlatformConfig';
 import APIMonitoring from './APIMonitoring';
+import QuestionBankManagement from './QuestionBankManagement';
 
 /**
  * 管理员仪表盘页面
@@ -120,6 +122,18 @@ export const AdminDashboard = () => {
                 <span className="text-sm font-medium leading-normal">教材体系</span>
               </Link>
 
+              <Link
+                to="/admin/question-bank"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/admin/question-bank')
+                    ? 'bg-primary text-white'
+                    : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">quiz</span>
+                <span className="text-sm font-medium leading-normal">题库</span>
+              </Link>
+
               <div className="my-2 h-px bg-[#324467]"></div>
 
               <Link
@@ -144,6 +158,18 @@ export const AdminDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[24px]">school</span>
                 <span className="text-sm font-medium leading-normal">科目指令配置</span>
+              </Link>
+
+              <Link
+                to="/admin/agent-platform"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/admin/agent-platform')
+                    ? 'bg-primary text-white'
+                    : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+                <span className="text-sm font-medium leading-normal">智能体平台</span>
               </Link>
 
               <Link
@@ -312,6 +338,19 @@ export const AdminDashboard = () => {
                       <span className="text-sm font-medium leading-normal">教材体系</span>
                     </Link>
 
+                    <Link
+                      to="/admin/question-bank"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                        isActive('/admin/question-bank')
+                          ? 'bg-primary text-white'
+                          : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[24px]">quiz</span>
+                      <span className="text-sm font-medium leading-normal">题库</span>
+                    </Link>
+
                     <div className="my-2 h-px bg-[#324467]"></div>
 
                     <Link
@@ -338,6 +377,19 @@ export const AdminDashboard = () => {
                     >
                       <span className="material-symbols-outlined text-[24px]">school</span>
                       <span className="text-sm font-medium leading-normal">科目指令配置</span>
+                    </Link>
+
+                    <Link
+                      to="/admin/agent-platform"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                        isActive('/admin/agent-platform')
+                          ? 'bg-primary text-white'
+                          : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+                      <span className="text-sm font-medium leading-normal">智能体平台</span>
                     </Link>
 
                     <Link
@@ -396,8 +448,10 @@ export const AdminDashboard = () => {
           <Route path="/relations" element={<ParentChildRelationManagement />} />
           <Route path="/auth-codes" element={<AuthCodeManagement />} />
           <Route path="/materials" element={<MaterialSystemManagement />} />
+          <Route path="/question-bank" element={<QuestionBankManagement />} />
           <Route path="/ai-services" element={<AIServiceConfig />} />
           <Route path="/subject-instructions" element={<SubjectInstructionConfig />} />
+          <Route path="/agent-platform" element={<AgentPlatformConfig />} />
           <Route path="/api-monitoring" element={<APIMonitoring />} />
           <Route path="/settings" element={<PlaceholderPage title="系统设置" />} />
         </Routes>

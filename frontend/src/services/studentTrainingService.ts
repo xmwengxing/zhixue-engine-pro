@@ -9,7 +9,7 @@ export interface Task {
   studentId: string;
   createdBy: string;
   title: string;
-  mode: 'PROFILE' | 'CUSTOM';
+  mode: 'PROFILE' | 'CUSTOM' | 'EXAM_PAPER';
   config: {
     materialNodeIds: string[];
     questionCount: number;
@@ -23,6 +23,10 @@ export interface Task {
     id: string;
     username: string;
   };
+  // P3 双轨字段
+  category?: 'SUBJECT_MAIN' | 'SPECIAL';
+  subject?: string | null;
+  specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | null;
 }
 
 export interface Question {
@@ -89,6 +93,27 @@ export const getCurrentTask = async (): Promise<Task | null> => {
   const response = await request.get('/student/tasks/current');
   // 修复：直接返回 response.task，而不是 response.data.task
   return response.task || null;
+};
+
+/**
+ * P3 双轨：获取任务列表（学科总任务 / 专项攻克双区）
+ */
+export const getStudentTasks = async (params?: {
+  category?: 'SUBJECT_MAIN' | 'SPECIAL';
+  subject?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ tasks: Task[]; total: number; page: number; limit: number }> => {
+  const query = new URLSearchParams();
+  if (params?.category) query.set('category', params.category);
+  if (params?.subject) query.set('subject', params.subject);
+  if (params?.status) query.set('status', params.status);
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.limit) query.set('limit', String(params.limit));
+  const qs = query.toString();
+  const response = await request.get(`/student/tasks${qs ? `?${qs}` : ''}`);
+  return response.data || { tasks: [], total: 0, page: 1, limit: 20 };
 };
 
 /**

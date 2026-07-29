@@ -53,29 +53,49 @@ class OpenAIAdapter {
 
   async generate(prompt: string, options: AIOptions): Promise<AIResponse> {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-    
+
     if (options.systemPrompt) {
       messages.push({
         role: 'system',
         content: options.systemPrompt,
       });
     }
-    
+
     messages.push({
       role: 'user',
       content: prompt,
     });
 
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages,
-      max_tokens: options.maxTokens || 2000,
-      temperature: options.temperature || 0.7,
-    });
+    // 部分「推理模型」（如 sensenova-*-flash-lite）在显式 max_tokens 偏小时，
+    // 推理过程会耗尽预算、content 为空、答案落在 reasoning 字段。
+    // 策略：首调用 options.maxTokens；若 content 为空，则最多再放大到 4096 重试一次
+    // （不再继续放大——更大的 max_tokens 对这类慢模型会触发上层超时，得不偿失）。
+    // 若仍为空，则回退到 reasoning_content / reasoning（思维链兜底，保证不整体失败）。
+    const budgets = [options.maxTokens || 2000];
+    if (budgets[0] < 4096) budgets.push(4096);
 
-    const text = response.choices[0]?.message?.content || '';
-    const requestTokens = response.usage?.prompt_tokens || 0;
-    const responseTokens = response.usage?.completion_tokens || 0;
+    let response: OpenAI.Chat.ChatCompletion;
+    let text = '';
+    for (const mt of budgets) {
+      response = await this.client.chat.completions.create({
+        model: this.model,
+        messages,
+        max_tokens: mt,
+        temperature: options.temperature || 0.7,
+      });
+      const rawMsg = response.choices[0]?.message as any;
+      text =
+        rawMsg?.content?.trim() ||
+        rawMsg?.reasoning_content?.trim() ||
+        rawMsg?.reasoning?.trim() ||
+        '';
+      // content 有实质内容即视为拿到最终答案，停止重试
+      const contentHasAnswer = !!rawMsg?.content?.trim() && rawMsg.content.trim().length > 5;
+      if (contentHasAnswer) break;
+    }
+
+    const requestTokens = response!.usage?.prompt_tokens || 0;
+    const responseTokens = response!.usage?.completion_tokens || 0;
 
     return {
       text,

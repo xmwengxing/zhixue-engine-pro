@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  // 使用 class 策略：项目未实现主题切换功能，避免系统深色模式下
+  // dark: 变体被动激活导致「深色背景 + 深色文字」看不清的问题
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -9,6 +12,7 @@ export default {
       // 颜色主题 - 蓝白色调（基于设计稿）
       colors: {
         primary: {
+          DEFAULT: '#3b82f6', // 使 bg-primary / text-primary / border-primary 等裸类生效
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',

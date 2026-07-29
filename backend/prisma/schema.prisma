@@ -156,12 +156,68 @@ model Question {
   knowledgePoints String[] @map("knowledge_points")
   createdAt       DateTime @default(now()) @map("created_at")
 
+  // 题库扩展字段
+  answerType   String? @map("answer_type")   // 归一化题型键，驱动输入/批改组件
+  answerConfig Json?   @map("answer_config")  // 选项/正确答案/expectedLatex/几何预设等
+
   // 关联关系
   materialNode   MaterialNode    @relation(fields: [materialNodeId], references: [id])
   answers        Answer[]
   errorQuestions ErrorQuestion[]
+  paperItems     QuestionPaperItem[]
 
+  // 教材/单元关联（题库分类与任务调用）
+  grade    String?  @map("grade")
+  term     String?  @map("term")     // 学期：UP=上, DOWN=下
+  version  String?  @map("version")  // 教材版本，如 人教版
+  unitIds  String[] @map("unit_ids") // 关联单元节点 id（多选；materialNodeId 为首选单元）
+
+  // ===== AI 难度归类元数据 =====
+  difficultyMeta Json?   @map("difficulty_meta") // { reason, confidence:0-1, classifiedAt, standardVersion, needsReview:boolean, measuredP?:number }
+  source         String? @default("IMPORT")      // IMPORT=导入 | MANUAL=手动创建 | AI_GENERATED=AI补齐入库
+
+  @@index([grade, term, difficulty])
   @@map("questions")
+}
+
+// 试卷表（一套卷，归属某科目）
+model QuestionPaper {
+  id         String      @id @default(uuid())
+  subject    String                         // 复用 SubjectInstruction.subject
+  title      String
+  grade      String?
+  sourceFile String?     @map("source_file") // 上传原件路径
+  status     PaperStatus @default(DRAFT)    // DRAFT -> NORMALIZED -> PUBLISHED
+  createdBy  String      @map("created_by")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  // 教材关联与试卷类型（分类 / 任务调用）
+  term       String?   @map("term")       // 学期：UP=上, DOWN=下
+  version    String?   @map("version")    // 教材版本，如 人教版
+  paperType  PaperType @default(UNIT) @map("paper_type") // 单元练习/期中/期末/中考/高考
+  unitIds    String[]  @map("unit_ids")   // 关联单元节点 id（多选）
+  textbookId String?   @map("textbook_id") // 关联教材(教材体系 TEXTBOOK 节点) id
+
+  items QuestionPaperItem[]
+  importJobs QuestionImportJob[]
+
+  @@map("question_papers")
+}
+
+// 卷内题目（带顺序与分值）
+model QuestionPaperItem {
+  id         String   @id @default(uuid())
+  paperId    String   @map("paper_id")
+  questionId String   @map("question_id")
+  order      Int      @default(0)
+  score      Int      @default(0)
+
+  paper    QuestionPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  question Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([paperId, questionId])
+  @@map("question_paper_items")
 }
 
 // ============ 任务和训练相关表 ============
@@ -179,12 +235,19 @@ model Task {
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
 
+  // ===== 任务双轨制字段 =====
+  category    TaskCategory     @default(SUBJECT_MAIN) // 学科总任务 / 专项攻克
+  subject     String?                                  // 学科（一级字段，从 config 提升）
+  specialType SpecialTaskType? @map("special_type")    // 专项类型（仅 SPECIAL）
+  targetRef   Json?            @map("target_ref")      // 专项目标 {unitIds:[]}|{knowledgePoints:[]}|{errorQuestionIds:[]}
+
   // 关联关系
   student          User              @relation("TaskAssignee", fields: [studentId], references: [id])
   creator          User              @relation("TaskCreator", fields: [createdBy], references: [id])
   trainingSessions TrainingSession[]
   reports          Report[]
 
+  @@index([studentId, category, subject])
   @@map("tasks")
 }
 
@@ -230,6 +293,10 @@ model Answer {
   attemptCount  Int      @default(1) @map("attempt_count")
   answeredAt    DateTime @default(now()) @map("answered_at")
 
+  // 电子答题扩展字段
+  answerData  Json?   @map("answer_data")  // 结构化答案（按 answerType 组织）
+  inputMethod String? @map("input_method") // click|keyboard|formula|geogebra|desmos|handwriting|photo
+
   // 关联关系
   session        TrainingSession @relation(fields: [sessionId], references: [id])
   question       Question        @relation(fields: [questionId], references: [id])
@@ -262,10 +329,16 @@ model Report {
   content     Json     @db.JsonB // 报告内容（JSON 格式）
   generatedAt DateTime @default(now()) @map("generated_at")
 
+  // ===== 学科化报告字段 =====
+  subject     String?                                  // 学科（可回溯标"综合"）
+  category    TaskCategory     @default(SUBJECT_MAIN)  // 总任务报告 / 专项报告
+  specialType SpecialTaskType? @map("special_type")    // 专项类型（仅 SPECIAL）
+
   // 关联关系
   session TrainingSession @relation(fields: [sessionId], references: [id])
   task    Task            @relation(fields: [taskId], references: [id])
 
+  @@index([studentId, subject, category])
   @@map("reports")
 }
 
@@ -335,6 +408,95 @@ model PointsTransaction {
   student User @relation(fields: [studentId], references: [id])
 
   @@map("points_transactions")
+}
+
+// ============ 学科学情与智能体平台 ============
+
+// 学科学情档案（每生每科一条，持续滚动更新）
+model SubjectLearningState {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  subject     String
+  irtTheta    Float?   @map("irt_theta")      // 能力估计值（从会话 IRT 汇聚）
+  masteryMap  Json     @default("{}") @map("mastery_map")  // { 知识点: {score:0-100, trend:'up'|'down'|'flat', lastAt, source?:'main'|'special'} }
+  weakPoints  Json     @default("[]") @map("weak_points")  // 薄弱点排序列表 [{point, score, priority}]
+  errorStats  Json     @default("{}") @map("error_stats")  // 错题分布快照 { total, byMastery, byKnowledgePoint }
+  taskHistory Json     @default("[]") @map("task_history") // 总任务履历摘要 [{taskId, title, completedAt, completion, score}]
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([studentId, subject])
+  @@index([studentId])
+  @@map("subject_learning_states")
+}
+
+// 智能体文档类型
+enum AgentDocType {
+  FLOW          // 系统化流程（训练舱各阶段该怎么走）
+  INSTRUCTION   // 内部指令（角色设定、教学法、语气）
+  CONSTRAINT    // 约束（红线：不代答、不超纲、不讨论无关话题）
+  STANDARD      // 判定标准（如题目难度归类标准）
+  MEMORY_SPEC   // 记忆文档撰写规范（AI 写记忆时遵循的格式）
+}
+
+// 智能体文档（管理端 CRUD，训练舱 AI 上下文装配来源）
+model AgentDocument {
+  id        String       @id @default(uuid())
+  type      AgentDocType
+  subject   String?      // null=全局通用，非空=学科专属（学科覆盖全局）
+  title     String
+  content   String       @db.Text // Markdown
+  version   Int          @default(1)
+  enabled   Boolean      @default(true)
+  priority  Int          @default(100) // 注入顺序，越小越靠前
+  updatedBy String       @map("updated_by")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([type, subject, enabled])
+  @@map("agent_documents")
+}
+
+// 学员记忆文档（AI 维护；家长只读可见，学员不可见）
+model StudentMemory {
+  id        String   @id @default(uuid())
+  studentId String   @map("student_id")
+  subject   String?  // null=全局记忆（学习习惯/性格），非空=学科记忆
+  content   String   @db.Text // Markdown，AI 维护，限长 4000 字
+  version   Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  logs StudentMemoryLog[]
+
+  @@unique([studentId, subject])
+  @@index([studentId])
+  @@map("student_memories")
+}
+
+// 学员记忆修订快照（审计/回滚）
+model StudentMemoryLog {
+  id        String   @id @default(uuid())
+  memoryId  String   @map("memory_id")
+  sessionId String?  @map("session_id") // 触发本次修订的训练会话
+  content   String   @db.Text           // 修订后的完整内容快照
+  summary   String?                     // 本次增量摘要
+  createdAt DateTime @default(now()) @map("created_at")
+
+  memory StudentMemory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+
+  @@index([memoryId, createdAt])
+  @@map("student_memory_logs")
+}
+
+// 平台配置（键值对：如 AI 补题开关）
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
 }
 
 // ============ AI 服务相关表 ============
@@ -425,17 +587,81 @@ enum MaterialNodeType {
   SUBJECT
   UNIT
   CHAPTER
+  TEXTBOOK
 }
 
 enum QuestionType {
   CHOICE
   FILL
   ESSAY
+  JUDGE
+  MULTIPLE_CHOICE
+  FORMULA
+  GEOMETRY
+  GRAPHING
+  PROOF
+  SORTING
+  MATCHING
+}
+
+enum PaperStatus {
+  DRAFT
+  NORMALIZED
+  PUBLISHED
+}
+
+// 试卷范围/类型：单元练习 / 期中 / 期末 / 中考 / 高考
+enum PaperType {
+  UNIT
+  MIDTERM
+  FINAL
+  ZHONGKAO
+  GAOKAO
+}
+
+enum ImportJobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+// 试卷导入任务（OCR/解析 -> LLM 归一化 -> 审核）
+model QuestionImportJob {
+  id        String          @id @default(uuid())
+  subject   String
+  fileName  String          @map("file_name")
+  status    ImportJobStatus @default(PENDING)
+  rawText   String?         @map("raw_text")  // OCR/解析提取的原文
+  result    Json?                                   // 归一化后的标准题元数组
+  error     String?
+  paperId   String?         @map("paper_id")        // 审核发布后关联的试卷
+  createdBy String          @map("created_by")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  paper QuestionPaper? @relation(fields: [paperId], references: [id])
+
+  @@map("question_import_jobs")
 }
 
 enum TaskMode {
   PROFILE
   CUSTOM
+  EXAM_PAPER
+}
+
+// 任务大类：学科总任务（长期存档，计入学情）/ 专项攻克任务（独立区域与报告）
+enum TaskCategory {
+  SUBJECT_MAIN
+  SPECIAL
+}
+
+// 专项攻克任务类型
+enum SpecialTaskType {
+  UNIT             // 单元专项
+  KNOWLEDGE_POINT  // 知识点专项
+  ERROR_BOOK       // 错题集专项
 }
 
 enum TaskStatus {

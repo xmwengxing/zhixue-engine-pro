@@ -234,6 +234,293 @@ export const importMaterials = async (materials: CreateMaterialNodeData[]) => {
   return results;
 };
 
+// ============ 教材（TEXTBOOK）专有服务 ============
+// 教材 = 一个学科+版本+年级+学期的组合；其下子节点 UNIT 为各单元。
+
+export interface TextbookUnitInput {
+  seq: number;
+  name: string;
+}
+
+export interface CreateTextbookData {
+  subject: string;
+  version: string;
+  grade: string; // "7" | "8" | "9" ...
+  term: 'UP' | 'DOWN';
+  description?: string;
+  notes?: string;
+  keywords?: string[];
+  units: TextbookUnitInput[];
+  order?: number;
+}
+
+export interface UpdateTextbookData {
+  subject?: string;
+  version?: string;
+  grade?: string;
+  term?: 'UP' | 'DOWN';
+  description?: string;
+  notes?: string;
+  keywords?: string[];
+  units?: TextbookUnitInput[];
+  order?: number;
+}
+
+export interface TextbookFilter {
+  subject?: string;
+  version?: string;
+  grade?: string;
+  term?: string;
+}
+
+export function gradeLabel(grade?: string | null): string {
+  if (!grade) return '';
+  const map: Record<string, string> = {
+    '1': '一年级', '2': '二年级', '3': '三年级', '4': '四年级',
+    '5': '五年级', '6': '六年级', '7': '七年级', '8': '八年级', '9': '九年级',
+  };
+  return map[grade] || `${grade}年级`;
+}
+
+export function termLabel(term?: string | null): string {
+  if (term === 'UP') return '上';
+  if (term === 'DOWN') return '下';
+  return '';
+}
+
+function textbookName(d: { subject: string; version: string; grade?: string | null; term?: string | null }): string {
+  return `${d.subject}-${d.version}-${gradeLabel(d.grade)}${termLabel(d.term)}`;
+}
+
+async function getTextbookDetail(id: string) {
+  const n = await prisma.materialNode.findUnique({
+    where: { id },
+    include: { children: { where: { type: 'UNIT' }, orderBy: { order: 'asc' } } },
+  });
+  if (!n) throw new Error('教材不存在');
+  const m = n.metadata as any;
+  const units = (n.children || []).map((c: any) => ({
+    id: c.id,
+    seq: (c.metadata as any)?.seq,
+    name: (c.metadata as any)?.name ?? c.name,
+  }));
+  return {
+    id: n.id,
+    name: n.name,
+    order: n.order,
+    subject: m.subject,
+    version: m.version,
+    grade: m.grade,
+    term: m.term,
+    description: m.description || '',
+    notes: m.notes || '',
+    keywords: m.keywords || [],
+    unitCount: units.length,
+    units,
+  };
+}
+
+/**
+ * 扁平列出所有教材（教材体系表格用），支持筛选
+ */
+export const listTextbooks = async (filter?: TextbookFilter) => {
+  const where: any = { type: 'TEXTBOOK' };
+  const and: any[] = [];
+  if (filter?.subject) and.push({ metadata: { path: ['subject'], equals: filter.subject } });
+  if (filter?.version) and.push({ metadata: { path: ['version'], equals: filter.version } });
+  if (filter?.grade) and.push({ metadata: { path: ['grade'], equals: filter.grade } });
+  if (filter?.term) and.push({ metadata: { path: ['term'], equals: filter.term } });
+  if (and.length) where.AND = and;
+
+  const nodes = await prisma.materialNode.findMany({
+    where,
+    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+    include: { children: { where: { type: 'UNIT' }, orderBy: { order: 'asc' } } },
+  });
+
+  return nodes.map((n) => {
+    const m = n.metadata as any;
+    const units = (n.children || []).map((c: any) => ({
+      id: c.id,
+      seq: (c.metadata as any)?.seq,
+      name: (c.metadata as any)?.name ?? c.name,
+    }));
+    return {
+      id: n.id,
+      name: n.name,
+      order: n.order,
+      subject: m.subject,
+      version: m.version,
+      grade: m.grade,
+      term: m.term,
+      description: m.description || '',
+      notes: m.notes || '',
+      keywords: m.keywords || [],
+      unitCount: units.length,
+      units,
+    };
+  });
+};
+
+/**
+ * 获取某教材下的单元节点（单元多选下拉用）
+ */
+export const getUnitsByTextbook = async (textbookId: string) => {
+  const tb = await prisma.materialNode.findUnique({ where: { id: textbookId } });
+  if (!tb) throw new Error('教材不存在');
+  const units = await prisma.materialNode.findMany({
+    where: { parentId: textbookId, type: 'UNIT' },
+    orderBy: { order: 'asc' },
+  });
+  return units.map((u) => ({
+    id: u.id,
+    seq: (u.metadata as any)?.seq,
+    name: (u.metadata as any)?.name ?? u.name,
+    textbookId,
+  }));
+};
+
+/**
+ * 创建教材：建 TEXTBOOK 节点 + 子 UNIT 节点（单元）
+ */
+export const createTextbook = async (data: CreateTextbookData) => {
+  if (!data.subject || !data.version || !data.grade || !data.term) {
+    throw new Error('缺少必填字段：subject / version / grade / term');
+  }
+  if (!data.units || data.units.length === 0) {
+    throw new Error('教材至少需要一个单元');
+  }
+  const textbook = await prisma.materialNode.create({
+    data: {
+      name: textbookName(data),
+      type: 'TEXTBOOK',
+      order: data.order ?? 0,
+      metadata: {
+        subject: data.subject,
+        version: data.version,
+        grade: data.grade,
+        term: data.term,
+        description: data.description || '',
+        notes: data.notes || '',
+        keywords: data.keywords || [],
+      },
+    },
+  });
+  for (const u of data.units) {
+    await prisma.materialNode.create({
+      data: {
+        name: `${u.seq}. ${u.name}`,
+        type: 'UNIT',
+        parentId: textbook.id,
+        order: u.seq,
+        metadata: {
+          seq: u.seq,
+          name: u.name,
+          subject: data.subject,
+          version: data.version,
+          grade: data.grade,
+          term: data.term,
+        },
+      },
+    });
+  }
+  return getTextbookDetail(textbook.id);
+};
+
+/**
+ * 更新教材：同步元信息 + 子单元（增/改/删）
+ */
+export const updateTextbook = async (id: string, data: UpdateTextbookData) => {
+  const existing = await prisma.materialNode.findUnique({
+    where: { id },
+    include: { children: { where: { type: 'UNIT' }, orderBy: { order: 'asc' } } },
+  });
+  if (!existing || existing.type !== 'TEXTBOOK') throw new Error('教材不存在');
+
+  const subject = data.subject ?? (existing.metadata as any).subject;
+  const version = data.version ?? (existing.metadata as any).version;
+  const grade = data.grade ?? (existing.metadata as any).grade;
+  const term = data.term ?? (existing.metadata as any).term;
+
+  await prisma.materialNode.update({
+    where: { id },
+    data: {
+      name: textbookName({ subject, version, grade, term }),
+      order: data.order ?? existing.order,
+      metadata: {
+        subject,
+        version,
+        grade,
+        term,
+        description: (data.description ?? (existing.metadata as any).description) || '',
+        notes: (data.notes ?? (existing.metadata as any).notes) || '',
+        keywords: (data.keywords ?? (existing.metadata as any).keywords) || [],
+      },
+    },
+  });
+
+  if (data.units) {
+    const existingUnits = existing.children;
+    const incomingSeqs = new Set(data.units.map((u) => u.seq));
+    // 删除被移除的单元（仅当无题目引用）
+    for (const cu of existingUnits) {
+      const seq = (cu.metadata as any)?.seq;
+      if (!incomingSeqs.has(seq)) {
+        const ref = await prisma.question.count({ where: { materialNodeId: cu.id } });
+        if (ref > 0) {
+          throw new Error(`单元「${cu.name}」已被 ${ref} 道题目引用，无法删除，请先处理相关题目`);
+        }
+        await prisma.materialNode.delete({ where: { id: cu.id } });
+      }
+    }
+    // 新增或更新
+    for (const u of data.units) {
+      const found = existingUnits.find((c) => (c.metadata as any)?.seq === u.seq);
+      if (found) {
+        await prisma.materialNode.update({
+          where: { id: found.id },
+          data: {
+            name: `${u.seq}. ${u.name}`,
+            order: u.seq,
+            metadata: { seq: u.seq, name: u.name, subject, version, grade, term },
+          },
+        });
+      } else {
+        await prisma.materialNode.create({
+          data: {
+            name: `${u.seq}. ${u.name}`,
+            type: 'UNIT',
+            parentId: id,
+            order: u.seq,
+            metadata: { seq: u.seq, name: u.name, subject, version, grade, term },
+          },
+        });
+      }
+    }
+  }
+
+  return getTextbookDetail(id);
+};
+
+/**
+ * 删除教材：级联删除子单元（若子单元被题目引用则拒绝）
+ */
+export const deleteTextbook = async (id: string) => {
+  const tb = await prisma.materialNode.findUnique({
+    where: { id },
+    include: { children: { where: { type: 'UNIT' }, include: { questions: true } } },
+  });
+  if (!tb || tb.type !== 'TEXTBOOK') throw new Error('教材不存在');
+  for (const c of tb.children) {
+    if (c.questions.length > 0) {
+      throw new Error(`教材下单元「${c.name}」被 ${c.questions.length} 道题目引用，请先处理相关题目`);
+    }
+  }
+  await prisma.materialNode.deleteMany({ where: { parentId: id } });
+  await prisma.materialNode.delete({ where: { id } });
+  return { success: true, message: '教材已删除' };
+};
+
 /**
  * 从Excel数据批量导入教材
  */

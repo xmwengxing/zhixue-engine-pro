@@ -77,8 +77,18 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       const { status, data } = error.response;
 
+      // 判断是否为认证类接口（登录/注册本身返回 401 时不应触发全局跳转）
+      const requestUrl = error.config?.url ?? '';
+      const isAuthRequest = /\/auth\/(login|register)/.test(requestUrl);
+      const isOnLoginPage = window.location.pathname === '/login';
+
       switch (status) {
         case 401:
+          // 登录/注册接口的 401 属于"账号或密码错误"等业务错误，
+          // 交给页面自行展示提示，不做登出与强制跳转（否则错误提示会一闪而过、页面被刷新）
+          if (isAuthRequest || isOnLoginPage) {
+            break;
+          }
           // 未认证或 token 过期
           // TODO: 实现token刷新机制（需要后端支持 /api/auth/refresh 端点）
           // const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };

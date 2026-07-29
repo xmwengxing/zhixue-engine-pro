@@ -6,6 +6,8 @@ import { adminRelationController } from '../controllers/adminRelationController'
 import * as adminMaterialController from '../controllers/adminMaterialController';
 import * as adminAIController from '../controllers/adminAIController';
 import { authenticate, requireAdmin } from '../middlewares/auth';
+import * as questionBankController from '../controllers/questionBankController';
+import * as adminAgentController from '../controllers/adminAgentController';
 
 const router = Router();
 
@@ -309,6 +311,54 @@ router.get('/materials', (req, res) =>
   adminMaterialController.getMaterials(req, res)
 );
 
+// ============ 教材（TEXTBOOK）专有路由 ============
+// 注意：以下更具体的路径必须定义在 /materials/:id 之前，避免被参数路由捕获。
+
+/**
+ * @route   GET /api/admin/materials/textbooks
+ * @desc    扁平列出教材（教材体系表格 / 题库选单）
+ * @access  Admin
+ */
+router.get('/materials/textbooks', (req, res) =>
+  adminMaterialController.listTextbooks(req, res)
+);
+
+/**
+ * @route   POST /api/admin/materials/textbooks
+ * @desc    创建教材（含子单元）
+ * @access  Admin
+ */
+router.post('/materials/textbooks', (req, res) =>
+  adminMaterialController.createTextbook(req, res)
+);
+
+/**
+ * @route   GET /api/admin/materials/textbooks/:id/units
+ * @desc    获取教材下单元
+ * @access  Admin
+ */
+router.get('/materials/textbooks/:id/units', (req, res) =>
+  adminMaterialController.getTextbookUnits(req, res)
+);
+
+/**
+ * @route   PUT /api/admin/materials/textbooks/:id
+ * @desc    更新教材（同步单元）
+ * @access  Admin
+ */
+router.put('/materials/textbooks/:id', (req, res) =>
+  adminMaterialController.updateTextbook(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/materials/textbooks/:id
+ * @desc    删除教材（级联删子单元）
+ * @access  Admin
+ */
+router.delete('/materials/textbooks/:id', (req, res) =>
+  adminMaterialController.deleteTextbook(req, res)
+);
+
 /**
  * @route   GET /api/admin/materials/:id
  * @desc    根据 ID 获取教材节点
@@ -517,5 +567,215 @@ router.get('/rate-limiter/status', (req, res) =>
 router.post('/rate-limiter/clear-queue', (req, res) => 
   adminAIController.clearRequestQueue(req, res)
 );
+
+// ============ 题库管理路由 ============
+
+/**
+ * @route   GET /api/admin/question-bank/subjects
+ * @desc    获取所有已配置科目
+ * @access  Admin
+ */
+router.get('/question-bank/subjects', (req, res) =>
+  questionBankController.listSubjects(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/textbooks
+ * @desc    教材列表（题库选单 / 分类用）
+ * @access  Admin
+ */
+router.get('/question-bank/textbooks', (req, res) =>
+  adminMaterialController.listTextbooks(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/papers
+ * @desc    试卷列表（分页）
+ * @access  Admin
+ */
+router.get('/question-bank/papers', (req, res) =>
+  questionBankController.listPapers(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/papers
+ * @desc    创建试卷
+ * @access  Admin
+ */
+router.post('/question-bank/papers', (req, res) =>
+  questionBankController.createPaper(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/papers/:id
+ * @desc    试卷详情（含题目）
+ * @access  Admin
+ */
+router.get('/question-bank/papers/:id', (req, res) =>
+  questionBankController.getPaper(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/question-bank/papers/:id
+ * @desc    删除试卷
+ * @access  Admin
+ */
+router.delete('/question-bank/papers/:id', (req, res) =>
+  questionBankController.deletePaper(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/papers/:id/publish
+ * @desc    发布试卷
+ * @access  Admin
+ */
+router.post('/question-bank/papers/:id/publish', (req, res) =>
+  questionBankController.publishPaper(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/papers/:id/items
+ * @desc    向试卷添加题目
+ * @access  Admin
+ */
+router.post('/question-bank/papers/:id/items', (req, res) =>
+  questionBankController.addPaperItem(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/question-bank/paper-items/:id
+ * @desc    从试卷移除题目
+ * @access  Admin
+ */
+router.delete('/question-bank/paper-items/:id', (req, res) =>
+  questionBankController.removePaperItem(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/questions
+ * @desc    题目列表（分页）
+ * @access  Admin
+ */
+router.get('/question-bank/questions', (req, res) =>
+  questionBankController.listQuestions(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/questions
+ * @desc    手动创建题目
+ * @access  Admin
+ */
+router.post('/question-bank/questions', (req, res) =>
+  questionBankController.createQuestion(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/questions/:id
+ * @desc    题目详情
+ * @access  Admin
+ */
+router.get('/question-bank/questions/:id', (req, res) =>
+  questionBankController.getQuestion(req, res)
+);
+
+/**
+ * @route   PUT /api/admin/question-bank/questions/:id
+ * @desc    编辑题目（审核）
+ * @access  Admin
+ */
+router.put('/question-bank/questions/:id', (req, res) =>
+  questionBankController.updateQuestion(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/import
+ * @desc    上传试卷文件并启动导入（OCR+LLM 归一化）
+ * @access  Admin
+ * @body    file - 试卷文件；subject - 科目
+ */
+router.post('/question-bank/import', questionBankController.uploadAndImport);
+
+/**
+ * @route   GET /api/admin/question-bank/import/:id
+ * @desc    查询导入任务进度与结果
+ * @access  Admin
+ */
+router.get('/question-bank/import/:id', (req, res) =>
+  questionBankController.getImportJob(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/classify
+ * @desc    启动 AI 难度一键归类后台任务（依据 STANDARD 判定标准文档）
+ * @access  Admin
+ * @body    scope - ALL（全量）/ UNLABELED（仅未标注）/ PAPER（按试卷）
+ * @body    subject - 限定学科（可选）；paperId - scope=PAPER 必填
+ */
+router.post('/question-bank/classify', (req, res) =>
+  questionBankController.startDifficultyClassify(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/classify
+ * @desc    归类任务列表
+ * @access  Admin
+ */
+router.get('/question-bank/classify', (req, res) =>
+  questionBankController.listDifficultyClassifyJobs(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/classify/:id
+ * @desc    归类任务进度与结果
+ * @access  Admin
+ */
+router.get('/question-bank/classify/:id', (req, res) =>
+  questionBankController.getDifficultyClassifyJob(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/needs-review
+ * @desc    低置信度难度复核列表
+ * @access  Admin
+ */
+router.get('/question-bank/needs-review', (req, res) =>
+  questionBankController.listDifficultyNeedsReview(req, res)
+);
+
+// ============ P5 智能体平台配置 ============
+
+/**
+ * @route   GET/POST /api/admin/agent-docs
+ * @desc    智能体文档（FLOW/INSTRUCTION/CONSTRAINT/STANDARD/MEMORY_SPEC）列表与创建
+ * @access  Admin
+ */
+router.get('/agent-docs', (req, res, next) => adminAgentController.listAgentDocs(req, res, next));
+router.post('/agent-docs', (req, res, next) => adminAgentController.createAgentDoc(req, res, next));
+
+/**
+ * @route   PUT/DELETE /api/admin/agent-docs/:id
+ * @desc    智能体文档编辑（内容变更版本自增）/删除
+ * @access  Admin
+ */
+router.put('/agent-docs/:id', (req, res, next) => adminAgentController.updateAgentDoc(req, res, next));
+router.delete('/agent-docs/:id', (req, res, next) => adminAgentController.deleteAgentDoc(req, res, next));
+
+/**
+ * @route   /api/admin/student-memories
+ * @desc    学员记忆管理（查看/人工修订/删除，含修订历史）
+ * @access  Admin
+ */
+router.get('/student-memories', (req, res, next) => adminAgentController.listStudentMemories(req, res, next));
+router.get('/student-memories/:id', (req, res, next) => adminAgentController.getStudentMemory(req, res, next));
+router.put('/student-memories/:id', (req, res, next) => adminAgentController.updateStudentMemory(req, res, next));
+router.delete('/student-memories/:id', (req, res, next) => adminAgentController.deleteStudentMemory(req, res, next));
+
+/**
+ * @route   /api/admin/platform-settings
+ * @desc    平台开关（如 aiSupplementQuestions AI 补题开关）
+ * @access  Admin
+ */
+router.get('/platform-settings', (req, res, next) => adminAgentController.listPlatformSettings(req, res, next));
+router.put('/platform-settings/:key', (req, res, next) => adminAgentController.updatePlatformSetting(req, res, next));
 
 export default router;

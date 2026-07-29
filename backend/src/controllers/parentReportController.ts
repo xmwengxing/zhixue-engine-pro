@@ -8,7 +8,7 @@ import { logger } from '../middlewares/logger';
  */
 export const getReports = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { studentId, page = '1', limit = '10' } = req.query;
+    const { studentId, page = '1', limit = '10', category, subject } = req.query;
 
     if (!studentId) {
       return res.status(400).json({
@@ -19,12 +19,25 @@ export const getReports = async (req: Request, res: Response, _next: NextFunctio
       });
     }
 
-    // TODO: 验证家长与学员的亲子关系
+    // P3 双轨：报告大类过滤校验
+    let reportCategory: 'SUBJECT_MAIN' | 'SPECIAL' | undefined;
+    if (category) {
+      if (!['SUBJECT_MAIN', 'SPECIAL'].includes(category as string)) {
+        return res.status(400).json({
+          error: { code: 'INVALID_PARAMETER', message: '无效的报告大类' },
+        });
+      }
+      reportCategory = category as 'SUBJECT_MAIN' | 'SPECIAL';
+    }
 
     const result = await reportGenerationService.getStudentReports(
       studentId as string,
       parseInt(page as string),
-      parseInt(limit as string)
+      parseInt(limit as string),
+      {
+        category: reportCategory,
+        subject: subject ? String(subject) : undefined,
+      }
     );
 
     return res.json(result);

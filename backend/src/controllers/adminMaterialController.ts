@@ -463,3 +463,86 @@ export const uploadAndImport = [
     }
   },
 ];
+
+// ============ 教材（TEXTBOOK）专有接口 ============
+
+export const listTextbooks = async (req: Request, res: Response) => {
+  try {
+    const { subject, version, grade, term } = req.query;
+    const textbooks = await materialService.listTextbooks({
+      subject: typeof subject === 'string' ? subject : undefined,
+      version: typeof version === 'string' ? version : undefined,
+      grade: typeof grade === 'string' ? grade : undefined,
+      term: typeof term === 'string' ? term : undefined,
+    });
+    return res.json({ success: true, data: textbooks });
+  } catch (error: any) {
+    console.error('获取教材列表失败:', error);
+    return res.status(500).json({ success: false, message: error.message || '获取教材列表失败' });
+  }
+};
+
+export const createTextbook = async (req: Request, res: Response) => {
+  try {
+    const { subject, version, grade, term, description, notes, keywords, units, order } = req.body;
+    const textbook = await materialService.createTextbook({
+      subject,
+      version,
+      grade,
+      term,
+      description,
+      notes,
+      keywords: Array.isArray(keywords) ? keywords : (keywords ? String(keywords).split(',').map((k: string) => k.trim()).filter(Boolean) : []),
+      units: Array.isArray(units) ? units : [],
+      order,
+    });
+    return res.status(201).json({ success: true, message: '教材创建成功', data: textbook });
+  } catch (error: any) {
+    console.error('创建教材失败:', error);
+    return res.status(400).json({ success: false, message: error.message || '创建教材失败' });
+  }
+};
+
+export const updateTextbook = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const { subject, version, grade, term, description, notes, keywords, units, order } = req.body;
+    const textbook = await materialService.updateTextbook(id, {
+      subject,
+      version,
+      grade,
+      term,
+      description,
+      notes,
+      keywords: Array.isArray(keywords) ? keywords : (keywords ? String(keywords).split(',').map((k: string) => k.trim()).filter(Boolean) : undefined),
+      units: Array.isArray(units) ? units : undefined,
+      order,
+    });
+    return res.json({ success: true, message: '教材更新成功', data: textbook });
+  } catch (error: any) {
+    console.error('更新教材失败:', error);
+    return res.status(400).json({ success: false, message: error.message || '更新教材失败' });
+  }
+};
+
+export const deleteTextbook = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const result = await materialService.deleteTextbook(id);
+    return res.json({ success: true, message: result.message });
+  } catch (error: any) {
+    console.error('删除教材失败:', error);
+    return res.status(400).json({ success: false, message: error.message || '删除教材失败' });
+  }
+};
+
+export const getTextbookUnits = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const units = await materialService.getUnitsByTextbook(id);
+    return res.json({ success: true, data: units });
+  } catch (error: any) {
+    console.error('获取教材单元失败:', error);
+    return res.status(404).json({ success: false, message: error.message || '获取教材单元失败' });
+  }
+};
