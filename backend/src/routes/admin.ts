@@ -700,6 +700,25 @@ router.patch('/question-bank/papers/:id', (req, res) =>
 );
 
 /**
+ * @route   GET /api/admin/question-bank/knowledge-points?subject=
+ * @desc    知识点先修图谱（C2：聚合该学科题目的 prerequisites）
+ * @access  Admin
+ */
+router.get('/question-bank/knowledge-points', (req, res) =>
+  questionBankController.listKnowledgePoints(req, res)
+);
+
+/**
+ * @route   PUT /api/admin/question-bank/knowledge-points/prerequisites
+ * @desc    维护知识点先修清单（全量替换写回该学科含该知识点的题目）
+ * @access  Admin
+ * @body    subject, point, prerequisites: string[]
+ */
+router.put('/question-bank/knowledge-points/prerequisites', (req, res) =>
+  questionBankController.updateKnowledgePointPrerequisites(req, res)
+);
+
+/**
  * @route   POST /api/admin/question-bank/papers/:id/items
  * @desc    向试卷添加题目
  * @access  Admin

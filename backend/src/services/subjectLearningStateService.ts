@@ -285,6 +285,27 @@ export async function updateFromSession(sessionId: string): Promise<void> {
       }
     }
 
+    // 1.5) 知识点先修依赖图（C2）：该学科题目的 prerequisites → { 知识点: [前置] }
+    //      用于 blocks_followup 判定（任一前置掌握度 <60 → 阻塞后续）
+    const prereqGraph = new Map<string, string[]>();
+    try {
+      const graphRows = await prisma.question.findMany({
+        where: { materialNode: { name: subject, type: 'SUBJECT' } },
+        select: { knowledgePoints: true, prerequisites: true },
+      });
+      for (const r of graphRows) {
+        const prereqs = Array.isArray(r.prerequisites) ? (r.prerequisites as string[]) : [];
+        if (prereqs.length === 0) continue;
+        for (const kp of r.knowledgePoints) {
+          const acc = prereqGraph.get(kp) ?? [];
+          prereqs.forEach((p) => p && !acc.includes(p) && acc.push(p));
+          prereqGraph.set(kp, acc);
+        }
+      }
+    } catch {
+      /* 图谱读取失败不影响学情更新 */
+    }
+
     // 2) 读取现有档案
     const existing = await prisma.subjectLearningState.findUnique({
       where: { studentId_subject: { studentId, subject } },
@@ -314,7 +335,15 @@ export async function updateFromSession(sessionId: string): Promise<void> {
       const errorCount = (prev?.errorCount ?? 0) + (st.total - st.correct);
       const errorRate = attemptCount > 0 ? errorCount / attemptCount : 0;
       const gapLevel = calcGapLevel(errorRate);
-      const blocksFollowup = prev?.blocks_followup === true;
+      // 先修依赖阻塞判定（C2）：任一前置知识点已进入档案且掌握度 <60 → 阻塞后续
+      let blocksFollowup = prev?.blocks_followup === true;
+      if (!blocksFollowup) {
+        const prereqs = prereqGraph.get(kp) ?? [];
+        blocksFollowup = prereqs.some((p) => {
+          const ps = prevMastery[p]?.score;
+          return typeof ps === 'number' && ps < 60; // 前置已学但未掌握 → 阻塞
+        });
+      }
       const priorityScore = gapLevel * 1.0 + (blocksFollowup ? 1 : 0);
       masteryMap[kp] = {
         score: blended,

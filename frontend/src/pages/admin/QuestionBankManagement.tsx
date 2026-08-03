@@ -194,6 +194,16 @@ const QuestionBankManagement = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // 知识点先修关系（C2：edu-learning-path 方法论）
+  const [kpModalOpen, setKpModalOpen] = useState(false);
+  const [kpPoints, setKpPoints] = useState<
+    Array<{ point: string; prerequisites: string[]; questionCount: number }>
+  >([]);
+  const [kpLoading, setKpLoading] = useState(false);
+  const [kpEdit, setKpEdit] = useState<{ point: string; prereqs: string[] } | null>(null);
+  const [kpSaving, setKpSaving] = useState(false);
+  const [kpError, setKpError] = useState('');
+
   // 试卷列表
   const [papers, setPapers] = useState<Paper[]>([]);
   const [paperTotal, setPaperTotal] = useState(0);
@@ -232,6 +242,59 @@ const QuestionBankManagement = () => {
   const flash = (msg: string) => {
     setNotice(msg);
     setTimeout(() => setNotice(null), 3000);
+  };
+
+  // ---------- 知识点先修关系（C2） ----------
+
+  const loadKpPoints = async () => {
+    if (!activeSubject) return;
+    setKpLoading(true);
+    setKpError('');
+    try {
+      const res = await request.get<ApiResponse<{ points: typeof kpPoints }>>(
+        `/admin/question-bank/knowledge-points?subject=${encodeURIComponent(activeSubject)}`
+      );
+      setKpPoints(res.data?.points || []);
+    } catch (e) {
+      setKpError(getErrorMessage(e, '加载知识点图谱失败'));
+    } finally {
+      setKpLoading(false);
+    }
+  };
+
+  const openKpModal = () => {
+    setKpModalOpen(true);
+    setKpEdit(null);
+    void loadKpPoints();
+  };
+
+  const toggleKpPrereq = (p: string) => {
+    if (!kpEdit) return;
+    const has = kpEdit.prereqs.includes(p);
+    setKpEdit({
+      ...kpEdit,
+      prereqs: has ? kpEdit.prereqs.filter((x) => x !== p) : [...kpEdit.prereqs, p],
+    });
+  };
+
+  const saveKpPrereqs = async () => {
+    if (!kpEdit) return;
+    setKpSaving(true);
+    setKpError('');
+    try {
+      await request.put<ApiResponse>('/admin/question-bank/knowledge-points/prerequisites', {
+        subject: activeSubject,
+        point: kpEdit.point,
+        prerequisites: kpEdit.prereqs,
+      });
+      flash(`「${kpEdit.point}」先修关系已保存`);
+      setKpEdit(null);
+      void loadKpPoints();
+    } catch (e) {
+      setKpError(getErrorMessage(e, '保存先修关系失败'));
+    } finally {
+      setKpSaving(false);
+    }
   };
 
   // ---------- 数据加载 ----------
@@ -573,6 +636,15 @@ const QuestionBankManagement = () => {
               </button>
             ))}
             <div className="flex-1" />
+            {/* 知识点先修关系（C2：edu-learning-path 方法论） */}
+            {activeSubject && (
+              <button
+                onClick={openKpModal}
+                className="px-4 py-2 text-xs font-medium rounded-lg bg-[#232f48] border border-[#324467] text-[#92a4c9] hover:text-white hover:border-primary/60 transition-colors"
+              >
+                知识点先修关系
+              </button>
+            )}
             {/* 视图切换 */}
             <div className="flex mb-1 rounded-lg bg-[#232f48] p-1">
               <button
@@ -997,6 +1069,154 @@ const QuestionBankManagement = () => {
             void loadPapers();
           }}
         />
+      )}
+
+      {/* 知识点先修关系弹窗（C2） */}
+      {kpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-w-2xl w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-white">知识点先修关系</h3>
+                  <p className="text-sm text-[#5b6b8c] mt-0.5">
+                    {activeSubject} · 前置未掌握（掌握度 &lt;60）时，该知识点会被标记为「阻塞后续」，出题/组卷优先补前置
+                  </p>
+                </div>
+                <button
+                  onClick={() => setKpModalOpen(false)}
+                  className="text-[#5b6b8c] hover:text-white text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              {kpError && (
+                <div className="mb-3 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-sm text-red-300">
+                  {kpError}
+                </div>
+              )}
+
+              {kpLoading ? (
+                <div className="py-10 text-center text-[#92a4c9]">加载中...</div>
+              ) : kpPoints.length === 0 ? (
+                <div className="py-10 text-center text-[#5b6b8c]">
+                  该学科题库暂无知识点，请先导入/创建题目
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto mb-4">
+                  <table className="min-w-full divide-y divide-[#324467]">
+                    <thead className="bg-[#1a2332]">
+                      <tr>
+                        {['知识点', '题量', '前置知识点', ''].map((h) => (
+                          <th
+                            key={h}
+                            className="px-3 py-2 text-left text-xs font-medium text-[#92a4c9]"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#324467]">
+                      {kpPoints.map((p) => (
+                        <tr key={p.point} className="text-sm">
+                          <td className="px-3 py-2 text-white whitespace-nowrap">{p.point}</td>
+                          <td className="px-3 py-2 text-[#92a4c9]">{p.questionCount}</td>
+                          <td className="px-3 py-2 text-[#92a4c9]">
+                            {p.prerequisites.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {p.prerequisites.map((pr) => (
+                                  <span
+                                    key={pr}
+                                    className="px-1.5 py-0.5 text-xs rounded bg-amber-500/15 text-amber-300"
+                                  >
+                                    {pr}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[#5b6b8c]">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              onClick={() =>
+                                setKpEdit({ point: p.point, prereqs: [...p.prerequisites] })
+                              }
+                              className="px-2 py-1 text-xs bg-[#1a2332] border border-[#324467] rounded text-[#92a4c9] hover:text-white hover:border-primary/60"
+                            >
+                              编辑
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 编辑子面板：多选该学科其他知识点作为先修 */}
+              {kpEdit && (
+                <div className="p-4 bg-[#1a2332] rounded-lg border border-[#324467] mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-white">
+                      配置「{kpEdit.point}」的先修知识点
+                    </p>
+                    <button
+                      onClick={() => setKpEdit(null)}
+                      className="text-[#5b6b8c] hover:text-white text-sm"
+                    >
+                      收起
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {kpPoints
+                      .filter((p) => p.point !== kpEdit.point)
+                      .map((p) => {
+                        const checked = kpEdit.prereqs.includes(p.point);
+                        return (
+                          <button
+                            key={p.point}
+                            onClick={() => toggleKpPrereq(p.point)}
+                            className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                              checked
+                                ? 'border-amber-500 bg-amber-500/15 text-amber-300'
+                                : 'border-[#324467] text-[#92a4c9] hover:bg-[#232f48]'
+                            }`}
+                          >
+                            {checked ? '☑ ' : '☐ '}
+                            {p.point}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-[#5b6b8c]">
+                      已选 {kpEdit.prereqs.length} 个 · 保存将覆盖该知识点相关题目的前置配置
+                    </p>
+                    <button
+                      onClick={() => void saveKpPrereqs()}
+                      disabled={kpSaving}
+                      className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-blue-600 disabled:opacity-50"
+                    >
+                      {kpSaving ? '保存中...' : '保存先修关系'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-right">
+                <button
+                  onClick={() => setKpModalOpen(false)}
+                  className="px-4 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:text-white hover:border-primary/60"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {showImport && (
         <ImportModal

@@ -609,6 +609,50 @@ async function main() {
     bad('新学期带初测创建', g3b);
   }
 
+  // ───────── H. 知识点先修依赖（C2） ─────────
+  console.log('\n════════ H. 知识点先修依赖（Question.prerequisites + 管理端维护） ════════');
+  const subjForKp = pickTb.subject || SUBJECT;
+  const kg = await api(admin, 'GET', `/admin/question-bank/knowledge-points?subject=${encodeURIComponent(subjForKp)}`);
+  if (kg.status === 200 && Array.isArray(kg.body?.data?.points)) {
+    ok('知识点图谱接口可用', `${kg.body.data.points.length} 个知识点`);
+    if (kg.body.data.points.length > 0) {
+      const kp = kg.body.data.points[0];
+      // 写入一个前置（用第二个知识点，若存在）→ 断言写回 → 还原为空（不污染题库）
+      const prereqCandidates = kg.body.data.points
+        .map((p) => p.point)
+        .filter((p) => p !== kp.point);
+      if (prereqCandidates.length > 0) {
+        const setRes = await api(admin, 'PUT', '/admin/question-bank/knowledge-points/prerequisites', {
+          subject: subjForKp,
+          point: kp.point,
+          prerequisites: [prereqCandidates[0]],
+        });
+        if (setRes.status === 200 && setRes.body?.success) {
+          ok('写回先修依赖成功', `「${kp.point}」→ 前置 ${prereqCandidates[0]}（更新 ${setRes.body.data?.updated} 题）`);
+          const kg2 = await api(admin, 'GET', `/admin/question-bank/knowledge-points?subject=${encodeURIComponent(subjForKp)}`);
+          const kp2 = (kg2.body?.data?.points || []).find((p) => p.point === kp.point);
+          if (kp2?.prerequisites?.includes(prereqCandidates[0]))
+            ok('图谱反映先修已写入');
+          else bad('图谱反映先修', JSON.stringify(kp2));
+          // 还原
+          await api(admin, 'PUT', '/admin/question-bank/knowledge-points/prerequisites', {
+            subject: subjForKp,
+            point: kp.point,
+            prerequisites: [],
+          });
+        } else {
+          bad('写回先修依赖', `status=${setRes.status} ${JSON.stringify(setRes.body).slice(0, 200)}`);
+        }
+      } else {
+        console.log('  ⚠️  仅 1 个知识点，跳过写回用例');
+      }
+    } else {
+      console.log('  ⚠️  学科无知识点，跳过写回用例');
+    }
+  } else {
+    bad('知识点图谱接口', `status=${kg.status} ${JSON.stringify(kg.body).slice(0, 200)}`);
+  }
+
   // ───────── 清理 ─────────
   console.log('\n════════ 清理测试数据 ════════');
   for (const id of cleanup.taskIds) {

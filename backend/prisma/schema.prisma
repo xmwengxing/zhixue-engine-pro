@@ -183,6 +183,12 @@ model Question {
   reviewedBy   String?   @map("reviewed_by")
   reviewNote   String?   @map("review_note")
 
+  // ===== 知识点先修依赖（edu-learning-path 方法论，P1-3）=====
+  // 该题目知识点树的前置依赖：["有理数运算","代数式"]，表示掌握这些前置知识点后再做本题更合理。
+  // 用途：① 学情 blocks_followup 判定（前置未掌握→阻塞后续）；② 出题/组卷排序优先补前置。
+  // 维护入口：管理端题库「知识点先修关系」（按学科批量写回该学科含对应知识点的题目）。
+  prerequisites Json? // { "知识点": ["先修1","先修2"] } 或 ["先修1","先修2"]
+
   @@index([grade, term, difficulty])
   @@index([reviewStatus])
   @@map("questions")

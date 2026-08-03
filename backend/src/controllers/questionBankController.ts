@@ -217,6 +217,43 @@ export const removePaperItem = async (req: Request, res: Response) => {
   }
 };
 
+// ============ 知识点先修依赖（C2：edu-learning-path 方法论） ============
+
+/** GET /admin/question-bank/knowledge-points?subject= —— 学科知识点先修图谱 */
+export const listKnowledgePoints = async (req: Request, res: Response) => {
+  try {
+    const subject = one(req.query.subject);
+    if (!subject) {
+      return res.status(400).json({ success: false, message: '缺少 subject 参数' });
+    }
+    const points = await questionBankService.getKnowledgePointGraph(subject);
+    return res.json({ success: true, data: { points, subject } });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/** PUT /admin/question-bank/knowledge-points/prerequisites —— 维护某知识点的先修清单（全量替换写回该学科相关题目） */
+export const updateKnowledgePointPrerequisites = async (req: Request, res: Response) => {
+  try {
+    const { subject, point, prerequisites } = req.body ?? {};
+    if (!subject || !point) {
+      return res.status(400).json({ success: false, message: '缺少 subject 或 point 参数' });
+    }
+    if (!Array.isArray(prerequisites)) {
+      return res.status(400).json({ success: false, message: 'prerequisites 必须是数组' });
+    }
+    const updated = await questionBankService.updateKnowledgePointPrerequisites(
+      String(subject),
+      String(point),
+      prerequisites.map((p: any) => String(p))
+    );
+    return res.json({ success: true, data: { updated, point } });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 // ============ 题目 ============
 export const listQuestions = async (req: Request, res: Response) => {
   try {

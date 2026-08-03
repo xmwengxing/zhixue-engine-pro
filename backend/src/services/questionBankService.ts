@@ -156,6 +156,61 @@ export async function listPapers(query: PaperQuery) {
   return { items: itemsWithName, total, page, limit };
 }
 
+// ============ 知识点先修依赖（edu-learning-path 方法论，P1-3） ============
+
+/**
+ * 获取某学科的知识点先修图谱：聚合该学科题库中所有题目的 prerequisites，
+ * 输出 [{ point, prerequisites, questionCount }]（按题目数降序）。
+ */
+export async function getKnowledgePointGraph(
+  subject: string
+): Promise<Array<{ point: string; prerequisites: string[]; questionCount: number }>> {
+  const questions = await prisma.question.findMany({
+    where: { materialNode: { name: subject, type: 'SUBJECT' } },
+    select: { knowledgePoints: true, prerequisites: true },
+  });
+  const map = new Map<string, { prereqs: Set<string>; count: number }>();
+  for (const q of questions) {
+    const prereqs = Array.isArray(q.prerequisites) ? (q.prerequisites as string[]) : [];
+    for (const kp of q.knowledgePoints) {
+      if (!map.has(kp)) map.set(kp, { prereqs: new Set(), count: 0 });
+      const entry = map.get(kp)!;
+      entry.count += 1;
+      prereqs.forEach((p) => p && entry.prereqs.add(p));
+    }
+  }
+  return [...map.entries()]
+    .map(([point, v]) => ({ point, prerequisites: [...v.prereqs], questionCount: v.count }))
+    .sort((a, b) => b.questionCount - a.questionCount);
+}
+
+/**
+ * 维护知识点先修依赖：将该学科所有含 point 的题目的 prerequisites 全量替换为清单。
+ * 返回更新的题目数。语义为「替换」：管理端按知识点维护的清单即该知识点题目的最终前置。
+ */
+export async function updateKnowledgePointPrerequisites(
+  subject: string,
+  point: string,
+  prerequisites: string[]
+): Promise<number> {
+  const clean = [...new Set((prerequisites ?? []).map((p) => String(p).trim()).filter(Boolean))].filter(
+    (p) => p !== point // 不允许自依赖
+  );
+  const questions = await prisma.question.findMany({
+    where: { materialNode: { name: subject, type: 'SUBJECT' }, knowledgePoints: { has: point } },
+    select: { id: true },
+  });
+  let updated = 0;
+  for (const q of questions) {
+    await prisma.question.update({
+      where: { id: q.id },
+      data: { prerequisites: clean as any },
+    });
+    updated += 1;
+  }
+  return updated;
+}
+
 export async function getPaper(id: string) {
   const paper = await prisma.questionPaper.findUnique({
     where: { id },
