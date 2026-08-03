@@ -135,7 +135,12 @@ export class StudentTrainingService {
       }
 
       if (task.status === 'COMPLETED') {
-        throw new Error('任务已完成');
+        // 学期延续模式：归档后的总任务不可继续训练，新学期由家长发布新任务并重新初测
+        throw new Error(
+          task.archivedAt
+            ? '该学科总任务已归档，新学期训练请等待家长发布新任务'
+            : '任务已完成'
+        );
       }
 
       // 检查是否已有活跃会话

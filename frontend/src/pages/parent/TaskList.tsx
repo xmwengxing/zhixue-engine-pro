@@ -13,6 +13,16 @@ interface Task {
   category?: 'SUBJECT_MAIN' | 'SPECIAL';
   subject?: string | null;
   specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | null;
+  // 学期延续模式字段
+  config?: any; // 含 textbookId / unitIds / units / goalScore
+  lastTrainedAt?: string | null; // 最近一次训练时间
+  archivedAt?: string | null; // 归档时间
+  archive?: {
+    id: string;
+    semesterLabel: string;
+    summaryText: string;
+    archivedAt: string;
+  } | null;
   student: {
     username: string;
     status?: string; // 学员状态字段
@@ -27,6 +37,7 @@ const SPECIAL_TYPE_LABELS: Record<string, string> = {
   UNIT: '单元专项',
   KNOWLEDGE_POINT: '知识点专项',
   ERROR_BOOK: '错题本专项',
+  PAPER: '题库组卷',
 };
 
 interface Child {
@@ -67,6 +78,21 @@ export default function TaskList() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // ===== 学期延续模式状态 =====
+  // 调整单元弹窗
+  const [unitModalTask, setUnitModalTask] = useState<Task | null>(null);
+  const [unitOptions, setUnitOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
+  const [unitModalLoading, setUnitModalLoading] = useState(false);
+  const [unitSaving, setUnitSaving] = useState(false);
+  const [unitModalError, setUnitModalError] = useState('');
+  // 归档确认弹窗
+  const [archiveModalTask, setArchiveModalTask] = useState<Task | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveModalError, setArchiveModalError] = useState('');
+  // 归档总结查看弹窗
+  const [summaryTask, setSummaryTask] = useState<Task | null>(null);
 
   /**
    * 加载任务列表
@@ -216,6 +242,102 @@ export default function TaskList() {
       setDeleting(false);
     }
   };
+
+  // ===== 学期延续模式：调整单元 / 归档 =====
+
+  /** 距今天数（取整） */
+  const daysSince = (dateStr?: string | null) => {
+    if (!dateStr) return null;
+    const diff = Date.now() - new Date(dateStr).getTime();
+    return Math.max(0, Math.floor(diff / 86400000));
+  };
+
+  /** 最近训练提示：返回 { text, overdue } */
+  const lastTrainedInfo = (task: Task) => {
+    const days = daysSince(task.lastTrainedAt);
+    if (days === null) return null;
+    if (days === 0) return { text: '今日训练过', overdue: false };
+    if (days < 14) return { text: `${days} 天前训练`, overdue: false };
+    return { text: `已 ${days} 天未训练`, overdue: true };
+  };
+
+  /** 打开调整单元弹窗：加载任务教材的单元列表，预填当前勾选 */
+  const openUnitModal = async (task: Task) => {
+    setUnitModalTask(task);
+    setUnitModalError('');
+    setUnitModalLoading(true);
+    setSelectedUnitIds(Array.isArray(task.config?.unitIds) ? [...task.config.unitIds] : []);
+    try {
+      const res = await request.get('/parent/question-bank/textbooks');
+      const textbooks: any[] = res.data || [];
+      const tb = textbooks.find((t: any) => t.id === task.config?.textbookId);
+      const units = tb?.units || [];
+      setUnitOptions(units.map((u: any) => ({ id: u.id, name: u.name })));
+      if (units.length === 0) setUnitModalError('未找到该任务绑定的教材单元，请先确认教材已添加');
+    } catch (err) {
+      setUnitModalError(getErrorMessage(err, '加载教材单元失败'));
+    } finally {
+      setUnitModalLoading(false);
+    }
+  };
+
+  const toggleUnit = (id: string) => {
+    setSelectedUnitIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const saveUnits = async () => {
+    if (!unitModalTask) return;
+    if (selectedUnitIds.length === 0) {
+      setUnitModalError('请至少勾选一个单元');
+      return;
+    }
+    try {
+      setUnitSaving(true);
+      setUnitModalError('');
+      await request.patch(`/parent/tasks/${unitModalTask.id}/units`, {
+        unitIds: selectedUnitIds,
+      });
+      setUnitModalTask(null);
+      await loadTasks();
+    } catch (err) {
+      setUnitModalError(getErrorMessage(err, '调整单元失败'));
+    } finally {
+      setUnitSaving(false);
+    }
+  };
+
+  const openArchiveModal = (task: Task) => {
+    setArchiveModalTask(task);
+    setArchiveModalError('');
+  };
+
+  const confirmArchive = async () => {
+    if (!archiveModalTask) return;
+    try {
+      setArchiving(true);
+      setArchiveModalError('');
+      await request.post(`/parent/tasks/${archiveModalTask.id}/archive`);
+      setArchiveModalTask(null);
+      await loadTasks();
+    } catch (err) {
+      setArchiveModalError(getErrorMessage(err, '归档失败'));
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  /** 是否展示「调整单元」（学科总任务、未归档、可继续训练） */
+  const canAdjustUnits = (task: Task) =>
+    task.category === 'SUBJECT_MAIN' &&
+    !task.archivedAt &&
+    task.status !== 'COMPLETED' &&
+    Boolean(task.config?.textbookId);
+
+  /** 是否展示「归档本学期」（学科总任务、进行中、未归档；需期末考完成由后端校验） */
+  const canArchive = (task: Task) =>
+    task.category === 'SUBJECT_MAIN' && !task.archivedAt && task.status === 'IN_PROGRESS';
 
   const selectClass =
     'px-3 py-2 rounded-lg border border-[#324467] bg-[#1a2332] text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/60';
@@ -416,13 +538,34 @@ export default function TaskList() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                              task.status
-                            )}`}
-                          >
-                            {getStatusText(task.status)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                                task.status
+                              )}`}
+                            >
+                              {getStatusText(task.status)}
+                            </span>
+                            {task.archivedAt && (
+                              <span className="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                已归档
+                              </span>
+                            )}
+                          </div>
+                          {(() => {
+                            const info = lastTrainedInfo(task);
+                            if (!info) return null;
+                            return (
+                              <div
+                                className={`mt-1 text-xs ${
+                                  info.overdue ? 'text-red-400 font-medium' : 'text-[#5b6b8c]'
+                                }`}
+                              >
+                                {info.overdue ? '⚠ ' : ''}
+                                {info.text}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-[#92a4c9]">
                           {new Date(task.createdAt).toLocaleDateString('zh-CN')}
@@ -438,6 +581,42 @@ export default function TaskList() {
                             >
                               查看详情
                             </button>
+                            {canAdjustUnits(task) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void openUnitModal(task);
+                                }}
+                                className="text-amber-400 hover:text-amber-300 cursor-pointer"
+                                title="学员在校学完新单元后，勾选新单元发起继续训练（支持随时调整）"
+                              >
+                                调整单元
+                              </button>
+                            )}
+                            {canArchive(task) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openArchiveModal(task);
+                                }}
+                                className="text-purple-400 hover:text-purple-300 cursor-pointer"
+                                title="期末考训练完成并达成分数目标后，归档本学期并生成学期总结"
+                              >
+                                归档
+                              </button>
+                            )}
+                            {task.archivedAt && task.archive && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSummaryTask(task);
+                                }}
+                                className="text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                                title="查看本学期归档总结"
+                              >
+                                学期总结
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -538,6 +717,209 @@ export default function TaskList() {
                     ) : (
                       '确认删除'
                     )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 调整单元弹窗（学期延续模式：勾选新单元 → 继续训练） */}
+        {unitModalTask && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-w-lg w-full mx-4">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-white">调整单元范围</h3>
+                  <button
+                    onClick={() => setUnitModalTask(null)}
+                    className="text-[#5b6b8c] hover:text-white text-xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mb-4 p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                  <p className="text-sm text-white font-medium">{unitModalTask.title}</p>
+                  <p className="text-sm text-[#92a4c9] mt-1">
+                    学员在校学完新单元后，勾选新单元发起继续训练；可随时调整（追加或移出单元），
+                    学员下一轮训练将按新的单元范围出题。
+                  </p>
+                  {Array.isArray(unitModalTask.config?.units) &&
+                    unitModalTask.config.units.length > 0 && (
+                      <p className="text-xs text-[#5b6b8c] mt-2">
+                        当前已选：{unitModalTask.config.units.join('、')}
+                      </p>
+                    )}
+                </div>
+
+                {unitModalLoading ? (
+                  <div className="py-10 text-center text-[#92a4c9]">加载单元中...</div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto mb-4">
+                    {unitOptions.length === 0 ? (
+                      <p className="text-[#92a4c9] text-sm py-4 text-center">暂无可用单元</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {unitOptions.map((u) => {
+                          const checked = selectedUnitIds.includes(u.id);
+                          return (
+                            <button
+                              key={u.id}
+                              onClick={() => toggleUnit(u.id)}
+                              className={`px-3 py-2.5 rounded-lg border text-sm text-left transition-colors ${
+                                checked
+                                  ? 'bg-primary/20 border-primary text-white'
+                                  : 'bg-[#1a2332] border-[#324467] text-[#92a4c9] hover:border-primary/60 hover:text-white'
+                              }`}
+                            >
+                              <span className="mr-1.5">{checked ? '☑' : '☐'}</span>
+                              {u.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {unitModalError && (
+                  <div className="mb-4 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-sm text-red-300">
+                    {unitModalError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[#5b6b8c]">已选 {selectedUnitIds.length} 个单元</span>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setUnitModalTask(null)}
+                      disabled={unitSaving}
+                      className="px-4 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:text-white hover:border-primary/60 disabled:opacity-50"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={() => void saveUnits()}
+                      disabled={unitSaving || unitModalLoading}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center"
+                    >
+                      {unitSaving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          保存中...
+                        </>
+                      ) : (
+                        '保存并继续训练'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 归档确认弹窗（学期延续模式：期末考完成并达标后归档） */}
+        {archiveModalTask && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-purple-500/15 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-purple-400 text-[24px]">archive</span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-white">归档本学期</h3>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-[#92a4c9] mb-2">
+                    归档后将生成本学期学习总结（AI 摘要），任务标记为已完成并释放
+                    「同学科 1 个总任务」名额；新学期需重新发布任务并进行水平评估初测。
+                  </p>
+                  <div className="mt-4 p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                    <p className="text-sm text-white font-medium">{archiveModalTask.title}</p>
+                    <p className="text-sm text-[#92a4c9] mt-1">
+                      学员：
+                      {archiveModalTask.student?.studentProfile?.realName ||
+                        archiveModalTask.student?.username}
+                    </p>
+                    {typeof archiveModalTask.config?.goalScore === 'number' && (
+                      <p className="text-sm text-[#92a4c9] mt-1">
+                        期末目标正确率：{archiveModalTask.config.goalScore}%（未达标将无法归档）
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {archiveModalError && (
+                  <div className="mb-4 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-sm text-red-300">
+                    {archiveModalError}
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setArchiveModalTask(null)}
+                    disabled={archiving}
+                    className="px-4 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:text-white hover:border-primary/60 disabled:opacity-50"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={() => void confirmArchive()}
+                    disabled={archiving}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 flex items-center"
+                  >
+                    {archiving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        归档中...
+                      </>
+                    ) : (
+                      '确认归档'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 学期总结查看弹窗 */}
+        {summaryTask && summaryTask.archive && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-w-lg w-full mx-4">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-white">
+                      {summaryTask.archive.semesterLabel} · 学习总结
+                    </h3>
+                    <p className="text-sm text-[#5b6b8c] mt-1">{summaryTask.title}</p>
+                  </div>
+                  <button
+                    onClick={() => setSummaryTask(null)}
+                    className="text-[#5b6b8c] hover:text-white text-xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                  <p className="text-sm text-[#92a4c9] whitespace-pre-wrap leading-relaxed">
+                    {summaryTask.archive.summaryText || '（暂无总结内容）'}
+                  </p>
+                </div>
+
+                <div className="mt-4 text-right">
+                  <button
+                    onClick={() => setSummaryTask(null)}
+                    className="px-4 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:text-white hover:border-primary/60"
+                  >
+                    关闭
                   </button>
                 </div>
               </div>

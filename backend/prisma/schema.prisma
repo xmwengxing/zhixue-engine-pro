@@ -253,14 +253,40 @@ model Task {
   specialType SpecialTaskType? @map("special_type")    // 专项类型（仅 SPECIAL）
   targetRef   Json?            @map("target_ref")      // 专项目标 {unitIds:[]}|{knowledgePoints:[]}|{errorQuestionIds:[]}
 
+  // ===== 学期延续模式字段 =====
+  archivedAt DateTime? @map("archived_at") // 学期归档时间（归档后置位，学科总任务即告一段落）
+
   // 关联关系
   student          User              @relation("TaskAssignee", fields: [studentId], references: [id])
   creator          User              @relation("TaskCreator", fields: [createdBy], references: [id])
   trainingSessions TrainingSession[]
   reports          Report[]
+  archive          TaskArchive?      // 学期归档（外键在 TaskArchive.taskId）
 
   @@index([studentId, category, subject])
   @@map("tasks")
+}
+
+// ===== 学期归档表（学科总任务延续模式：一学期一归档）=====
+// 归档节点：该学期期末考训练完成并达成分数目标后，由家长手动触发。
+// summaryText 为压缩后的学期总结（供新学期 AI 读取，替代全量历史，降低 token 消耗）。
+model TaskArchive {
+  id               String   @id @default(uuid())
+  taskId           String   @unique @map("task_id")
+  studentId        String   @map("student_id")
+  subject          String
+  semesterLabel    String   @map("semester_label")      // 如 "2026-08 学期"
+  summaryText      String   @map("summary_text") @db.Text // AI 学期总结（失败降级为统计文本）
+  summaryJson      Json     @map("summary_json") @db.JsonB // 结构化统计 { initialTestAccuracy, rounds, avgAccuracy, finalExamAccuracy, totalQuestions, correctCount, weakPoints, masteredPoints }
+  goalScore        Int?     @map("goal_score")          // 期末目标正确率 %
+  finalExamAccuracy Float?  @map("final_exam_accuracy") // 期末实际正确率 %
+  archivedAt       DateTime @default(now()) @map("archived_at")
+
+  // 关联关系
+  task Task @relation(fields: [taskId], references: [id])
+
+  @@index([studentId, subject, archivedAt])
+  @@map("task_archives")
 }
 
 // 训练会话表

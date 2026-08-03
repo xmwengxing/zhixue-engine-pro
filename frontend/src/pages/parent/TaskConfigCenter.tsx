@@ -168,12 +168,16 @@ export default function TaskConfigCenter() {
     // 水平评估（初测）：NONE 不设 / PAPER 选卷 / AI 自动组卷
     assessmentSource: 'NONE' as 'NONE' | 'PAPER' | 'AI',
     assessmentPaperId: '',
+    // 期末目标正确率（%）：学期归档达标线，可选
+    goalScore: 70,
   });
 
   // 自定义模式：从管理员已添加教材派生下拉选项（学科/版本/单元）
   const [customTextbooks, setCustomTextbooks] = useState<TextbookWithUnits[]>([]);
   // 自定义模式：水平评估可选手动试卷（初测与水平评估库）
   const [assessmentPapers, setAssessmentPapers] = useState<ExamPaperItem[]>([]);
+  // 学期延续模式：新学期强制初测提示
+  const [semesterNotice, setSemesterNotice] = useState('');
 
   // 档案模式表单数据
   const [profileForm, setProfileForm] = useState({
@@ -476,6 +480,45 @@ export default function TaskConfigCenter() {
   }, [taskCategory, customForm.assessmentSource, customForm.subject]);
 
   /**
+   * 学期延续模式：新学期强制初测
+   * 该学员该学科存在已结束/归档的历史总任务 → 提示并默认勾选「AI 自动组卷」初测，
+   * 后端 createTask 也会对未配置初测的延续场景做 409 拦截。
+   */
+  useEffect(() => {
+    if (
+      taskCategory !== 'SUBJECT_MAIN' ||
+      !customForm.studentId ||
+      !customForm.subject
+    ) {
+      setSemesterNotice('');
+      return;
+    }
+    (async () => {
+      try {
+        const res = await request.get(
+          `/parent/tasks?category=SUBJECT_MAIN&studentId=${encodeURIComponent(customForm.studentId)}` +
+            `&subject=${encodeURIComponent(customForm.subject)}&status=COMPLETED&limit=1`
+        );
+        const hasHistory = (res.data?.tasks || []).length > 0;
+        if (hasHistory) {
+          setSemesterNotice(
+            `该学员「${customForm.subject}」已有结束的历史总任务，新学期开始需先进行水平评估初测（已默认选择 AI 自动组卷，可改为手动选卷）`
+          );
+          setCustomForm((prev) =>
+            prev.assessmentSource === 'NONE'
+              ? { ...prev, assessmentSource: 'AI' }
+              : prev
+          );
+        } else {
+          setSemesterNotice('');
+        }
+      } catch (err) {
+        console.error('检测历史总任务失败:', err);
+      }
+    })();
+  }, [taskCategory, customForm.studentId, customForm.subject]);
+
+  /**
    * P3 双轨·专项：加载子女薄弱知识点（知识点专项候选）
    */
   useEffect(() => {
@@ -655,6 +698,7 @@ export default function TaskConfigCenter() {
           goal: customForm.goal,
           personality: customForm.personality || undefined,
           assessment,
+          goalScore: customForm.goalScore,
         };
       } else if (mode === 'EXAM_PAPER') {
         // 组卷模式
@@ -1032,6 +1076,11 @@ export default function TaskConfigCenter() {
                   <label className="block text-sm font-medium text-[#92a4c9] mb-3">
                     水平评估试卷（任务初测）
                   </label>
+                  {semesterNotice && (
+                    <div className="mb-3 p-3 rounded-lg border border-purple-500/40 bg-purple-500/10 text-sm text-purple-200">
+                      {semesterNotice}
+                    </div>
+                  )}
                   <div className="flex flex-col gap-2">
                     {([
                       { v: 'NONE', label: '不设（按教材自动出题）' },
@@ -1107,6 +1156,30 @@ export default function TaskConfigCenter() {
                     rows={4}
                     className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                </div>
+
+                {/* 期末目标正确率（学期归档达标线，选填） */}
+                <div>
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                    期末目标正确率 % (选填)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={customForm.goalScore}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      setCustomForm({
+                        ...customForm,
+                        goalScore: Number.isNaN(value) ? 70 : Math.min(100, Math.max(1, value)),
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="mt-1 text-xs text-[#5b6b8c]">
+                    学期末综合考试正确率达到该目标后，方可归档本学期并生成学期总结（默认 70%）
+                  </p>
                 </div>
 
                 {/* 性格特征(选填) */}

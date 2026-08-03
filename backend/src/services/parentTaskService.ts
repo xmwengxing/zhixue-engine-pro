@@ -26,6 +26,11 @@ export interface CustomConfig {
    * - null/undefined 不设置，按教材自动出题
    */
   assessment?: { source: 'PAPER' | 'AI'; paperId?: string } | null;
+  /**
+   * 期末目标正确率（%）：学科总任务延续模式的归档达标线。
+   * 归档时校验最近一次期末考正确率 ≥ goalScore，未设置则仅要求期末考完成。
+   */
+  goalScore?: number;
 }
 
 /**
@@ -226,13 +231,31 @@ export class ParentTaskService {
                 },
               },
             },
+            // 学期延续模式：最近一次训练时间（防中断提示用）
+            trainingSessions: {
+              select: { startedAt: true, status: true },
+              orderBy: { startedAt: 'desc' },
+              take: 1,
+            },
+            archive: {
+              select: { id: true, semesterLabel: true, summaryText: true, archivedAt: true },
+            },
           },
         }),
         prisma.task.count({ where }),
       ]);
 
+      // 压缩为列表返回结构：仅带最近训练时间与归档摘要，不暴露 session 明细
+      const list = tasks.map((t: any) => {
+        const { trainingSessions, ...rest } = t;
+        return {
+          ...rest,
+          lastTrainedAt: trainingSessions?.[0]?.startedAt ?? null,
+        };
+      });
+
       return {
-        tasks,
+        tasks: list,
         total,
         page,
         limit,
@@ -350,6 +373,8 @@ export class ParentTaskService {
       let taskConfig: any;
       let aiInstruction: string;
       let taskSubject: string | null = null; // P3 双轨：任务归属学科
+      // 学期延续模式：水平评估（初测）配置，函数级声明（CUSTOM 分支内赋值，Q1/新学期校验复用）
+      let assessmentConfig: { source: 'PAPER' | 'AI'; paperId?: string } | null = null;
 
       if (data.mode === 'EXAM_PAPER') {
         // 组卷模式：整卷发布 或 随机抽题
@@ -376,6 +401,7 @@ export class ParentTaskService {
           goal,
           personality,
           assessment,
+          goalScore,
         } = data.customConfig;
 
         // 验证 AI 科目老师是否存在
@@ -414,12 +440,19 @@ export class ParentTaskService {
           .filter(Boolean);
 
         // 校验水平评估配置（若有）
-        let assessmentConfig: { source: 'PAPER' | 'AI'; paperId?: string } | null = null;
+        assessmentConfig = null;
         if (assessment && (assessment.source === 'PAPER' || assessment.source === 'AI')) {
           if (assessment.source === 'PAPER' && !assessment.paperId) {
             throw new Error('水平评估选卷模式需要提供 paperId');
           }
           assessmentConfig = { source: assessment.source, paperId: assessment.paperId };
+        }
+
+        // 期末目标正确率（0-100，可选）
+        if (goalScore !== undefined && goalScore !== null) {
+          if (typeof goalScore !== 'number' || goalScore < 1 || goalScore > 100) {
+            throw new Error('期末目标正确率必须在 1-100 之间');
+          }
         }
 
         // 组装任务配置
@@ -437,6 +470,7 @@ export class ParentTaskService {
           units: unitNames,
           goal,
           personality,
+          goalScore: goalScore ?? null, // 期末归档达标线（可空）
           // 兼容：题目 materialNodeId 指向 SUBJECT 节点，generateQuestions 按此 + unitIds 取题
           materialNodeIds: [subjectNodeId],
           assessment: assessmentConfig,
@@ -574,6 +608,54 @@ export class ParentTaskService {
               '同一学科同时只允许 1 个学科总任务。请先完成或删除现有任务，或改为发布专项攻克任务。',
             { existingTaskId: existingMain.id, subject: taskSubject }
           );
+        }
+      }
+
+      // ===== 学期延续模式：新学期重新初测 + 归档总结注入 AI 指令 =====
+      if (taskCategory === 'SUBJECT_MAIN' && taskSubject && data.mode === 'CUSTOM') {
+        const prevArchive = await prisma.taskArchive.findFirst({
+          where: { studentId: data.studentId, subject: taskSubject },
+          orderBy: { archivedAt: 'desc' },
+          select: { id: true, summaryText: true, semesterLabel: true, archivedAt: true },
+        });
+        // 存在历史归档/已完成总任务 → 新学期必须重新初测评估（避免中断超过一学期仍无评估）
+        if (prevArchive) {
+          if (!assessmentConfig) {
+            throw new ConflictError(
+              `该学员的「${taskSubject}」已有 ${prevArchive.semesterLabel} 学期的归档记录，` +
+                '新学期开始需要先进行水平评估初测（可选 AI 自动组卷或手动选卷），请配置「水平评估试卷」后再发布。',
+              { prevArchiveId: prevArchive.id, subject: taskSubject }
+            );
+          }
+        } else {
+          const prevCompleted = await prisma.task.findFirst({
+            where: {
+              studentId: data.studentId,
+              category: 'SUBJECT_MAIN',
+              subject: taskSubject,
+              status: 'COMPLETED',
+            },
+            select: { id: true, completedAt: true },
+          });
+          // 历史任务已结束但未归档 → 同样视为需要重新初测的延续场景
+          if (prevCompleted && !assessmentConfig) {
+            throw new ConflictError(
+              `该学员的「${taskSubject}」学科已有结束的历史总任务，新学期开始需要先进行水平评估初测，` +
+                '请配置「水平评估试卷」（AI 自动组卷或手动选卷）后再发布。',
+              { prevTaskId: prevCompleted.id, subject: taskSubject }
+            );
+          }
+        }
+        // 有上期归档 → 把压缩后的学期总结注入 AI 指令，替代全量历史（降 token）
+        if (prevArchive) {
+          const summarySnippet = (prevArchive.summaryText || '').trim().slice(0, 800);
+          if (summarySnippet) {
+            aiInstruction =
+              (aiInstruction || '') +
+              `\n\n【上学期归档总结（${prevArchive.semesterLabel}）】\n${summarySnippet}\n` +
+              '请结合上学期归档总结评估学员既有掌握情况，避免重复讲解已掌握知识点。';
+          }
+          taskConfig.prevArchiveId = prevArchive.id;
         }
       }
 
@@ -1115,6 +1197,360 @@ export class ParentTaskService {
     }
 
     return instruction;
+  }
+
+  /**
+   * 学期延续模式：家长调整学科总任务的单元范围（全量替换勾选）
+   *
+   * 学员在校学完新单元后，家长勾选新单元发起「继续训练」；支持随时调整
+   * （追加新单元或移出已学单元）。仅 SUBJECT_MAIN 的 PENDING/IN_PROGRESS 任务可调整。
+   * 当前进行中的 session 题集已固定不受影响，学员下一轮训练按新单元范围出题。
+   */
+  async updateTaskUnits(taskId: string, parentId: string, unitIds: string[]) {
+    try {
+      const task = await prisma.task.findUnique({ where: { id: taskId } });
+      if (!task) throw new Error('任务不存在');
+
+      // 权限：亲子关系 或 本人创建
+      const boundStudentIds = await this.getBoundStudentIds(parentId);
+      if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
+        throw new Error('无权调整该任务');
+      }
+
+      if (task.category !== 'SUBJECT_MAIN') {
+        throw new ConflictError('仅学科总任务支持调整单元范围，专项任务请直接发布新任务');
+      }
+      if (task.status === 'COMPLETED' || task.archivedAt) {
+        throw new ConflictError('任务已结束/归档，无法调整单元，请发布新学期任务');
+      }
+
+      const config = (task.config ?? {}) as any;
+      const textbookId = config.textbookId;
+      if (!textbookId) {
+        throw new Error('该任务未绑定教材，无法调整单元');
+      }
+      if (!Array.isArray(unitIds) || unitIds.length === 0) {
+        throw new Error('请至少勾选一个单元');
+      }
+
+      // 校验单元属于该任务绑定的教材（TEXTBOOK 节点的 UNIT 子节点）
+      const textbook = await prisma.materialNode.findUnique({
+        where: { id: textbookId },
+        include: { children: true },
+      });
+      if (!textbook || textbook.type !== 'TEXTBOOK') {
+        throw new Error('任务绑定的教材不存在');
+      }
+      const validUnitIds = unitIds.filter((id) =>
+        textbook.children.some((c: any) => c.id === id && c.type === 'UNIT')
+      );
+      if (validUnitIds.length === 0) {
+        throw new Error('请选择该教材下有效的单元');
+      }
+      const unitNames = validUnitIds
+        .map((id) => (textbook.children.find((c: any) => c.id === id)?.metadata as any)?.name)
+        .filter(Boolean);
+
+      // 记录单元追加历史（unitHistory），供家长端展示「第 N 轮加入」
+      const prevUnits = Array.isArray(config.unitIds) ? config.unitIds : [];
+      const newlyAdded = validUnitIds.filter((id) => !prevUnits.includes(id));
+      const unitHistory = Array.isArray(config.unitHistory)
+        ? config.unitHistory
+        : prevUnits.map((id: string) => ({ unitId: id, addedAt: task.createdAt.toISOString() }));
+      if (newlyAdded.length > 0) {
+        const now = new Date().toISOString();
+        newlyAdded.forEach((id) => unitHistory.push({ unitId: id, addedAt: now }));
+      }
+
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          config: {
+            ...config,
+            unitIds: validUnitIds,
+            units: unitNames,
+            unitHistory,
+          } as any,
+        },
+      });
+
+      logger.info(
+        `任务 ${taskId} 单元范围调整：${prevUnits.length} → ${validUnitIds.length}（新增 ${newlyAdded.length}）`
+      );
+
+      return { unitIds: validUnitIds, units: unitNames, newlyAdded };
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
+      logger.error('调整任务单元失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 学期延续模式：归档学科总任务（一学期总结归档一次）
+   *
+   * 归档节点：该学期期末考训练结束并达成分数目标后，由家长手动触发。
+   * - 校验：任务属于 SUBJECT_MAIN；无进行中训练会话；至少完成一次期末考（FINAL_EXAM）；
+   *   若配置了期末目标正确率(goalScore)，最近一次期末正确率须达标。
+   * - 落库：先写结构化统计归档（同步，保证归档即时可用），再异步生成 AI 学期总结
+   *   （读取压缩后的会话统计而非全量题目，失败降级为规则文本）。
+   * - 归档后任务置为 COMPLETED，释放「同学科 1 个进行中总任务」名额，
+   *   新学期需重新创建任务并配置水平评估初测。
+   */
+  async archiveTask(taskId: string, parentId: string) {
+    try {
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: {
+          trainingSessions: {
+            select: { id: true, phase: true, status: true, startedAt: true, completedAt: true, finalExamData: true },
+          },
+        },
+      });
+      if (!task) throw new Error('任务不存在');
+
+      const boundStudentIds = await this.getBoundStudentIds(parentId);
+      if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
+        throw new Error('无权归档该任务');
+      }
+
+      if (task.category !== 'SUBJECT_MAIN') {
+        throw new ConflictError('仅学科总任务支持学期归档');
+      }
+      if (task.archivedAt) {
+        throw new ConflictError('该任务已归档，无需重复归档');
+      }
+      if (task.status === 'PENDING') {
+        throw new ConflictError('任务尚未开始训练，无法归档');
+      }
+
+      // 无进行中的训练会话才可归档
+      const activeSession = task.trainingSessions.find(
+        (s) => s.status === 'ACTIVE' || s.status === 'PAUSED'
+      );
+      if (activeSession) {
+        throw new ConflictError('学员有进行中的训练会话，请先完成或中断后再归档');
+      }
+
+      // 至少完成一次期末考训练（归档节点判定）
+      const examSessions = task.trainingSessions.filter(
+        (s) => s.phase === 'FINAL_EXAM' && s.status === 'COMPLETED' && (s.finalExamData as any)?.results
+      );
+      if (examSessions.length === 0) {
+        throw new ConflictError('尚未完成期末考训练，无法归档。请先让学员完成综合考试训练');
+      }
+
+      const config = (task.config ?? {}) as any;
+      const goalScore = typeof config.goalScore === 'number' ? config.goalScore : null;
+
+      // 取最近一次期末考成绩
+      const lastExam = examSessions[examSessions.length - 1];
+      const finalExamResults = (lastExam.finalExamData as any).results;
+      const finalExamAccuracy =
+        typeof finalExamResults?.accuracy === 'number' ? finalExamResults.accuracy : null;
+
+      // 达成分数目标校验（配置了目标才强制）
+      if (goalScore !== null && (finalExamAccuracy === null || finalExamAccuracy < goalScore)) {
+        throw new ConflictError(
+          `期末考正确率 ${finalExamAccuracy ?? '--'}% 未达到目标 ${goalScore}%，暂不能归档。` +
+            '请先完成达标训练，或调整任务目标后重试。',
+          { finalExamAccuracy, goalScore }
+        );
+      }
+
+      // ===== 聚合学期统计（结构化，供 AI 总结与新学期读取） =====
+      const stats = await this.collectSemesterStats(task, config, examSessions);
+
+      // 学期标签：按归档时间推算（上半年→春季学期，下半年→秋季学期）
+      const semesterLabel = this.buildSemesterLabel(new Date());
+
+      // 规则兜底总结（AI 失败时使用；先落库保证归档即时可用）
+      const fallbackSummary = this.buildFallbackSummary(stats, semesterLabel, goalScore);
+
+      const archive = await prisma.taskArchive.create({
+        data: {
+          taskId: task.id,
+          studentId: task.studentId,
+          subject: task.subject ?? '综合',
+          semesterLabel,
+          summaryText: fallbackSummary,
+          summaryJson: stats as any,
+          goalScore,
+          finalExamAccuracy,
+        },
+      });
+
+      // 任务归档：置 COMPLETED，释放名额
+      await prisma.task.update({
+        where: { id: task.id },
+        data: { status: 'COMPLETED', completedAt: new Date(), archivedAt: new Date() },
+      });
+
+      // 异步 AI 生成学期总结（失败保持规则兜底文本，不阻断归档）
+      this.enrichArchiveSummaryAsync(archive.id, task, stats, semesterLabel, goalScore).catch(
+        (e) => logger.error('异步生成学期总结失败:', e)
+      );
+
+      logger.info(
+        `任务 ${task.id} 已归档（${semesterLabel}），期末正确率 ${finalExamAccuracy ?? '--'}%，目标 ${goalScore ?? '未设置'}%`
+      );
+
+      return {
+        archiveId: archive.id,
+        semesterLabel,
+        finalExamAccuracy,
+        goalScore,
+        summaryText: fallbackSummary,
+        stats,
+      };
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
+      logger.error('归档任务失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 聚合学期统计：初测正确率、训练轮次、各轮正确率、错题知识点、已掌握点等
+   */
+  private async collectSemesterStats(
+    task: any,
+    config: any,
+    examSessions: any[]
+  ): Promise<Record<string, unknown>> {
+    const sessions = task.trainingSessions;
+    const completed = sessions.filter((s: any) => s.status === 'COMPLETED');
+    const examResults = examSessions.map((s: any) => (s.finalExamData as any).results);
+    const lastExamResults = examResults[examResults.length - 1] || null;
+
+    // 初测正确率：优先取 PRE_TEST 阶段 session 首段；CUSTOM 模式初测题在题集头部
+    let initialTestAccuracy: number | null = null;
+    const preTestSession = sessions.find((s: any) => s.phase === 'PRE_TEST');
+    if (preTestSession) {
+      const answers = await prisma.answer.findMany({
+        where: { sessionId: preTestSession.id },
+        select: { isCorrect: true },
+      });
+      if (answers.length > 0) {
+        initialTestAccuracy =
+          Math.round((answers.filter((a) => a.isCorrect).length / answers.length) * 1000) / 10;
+      }
+    }
+
+    // 各轮次正确率：按会话聚合（含期末考）
+    const rounds: { sessionId: string; startedAt: string; accuracy: number }[] = [];
+    let totalAnswers = 0;
+    for (const s of completed) {
+      const answers = await prisma.answer.findMany({
+        where: { sessionId: s.id },
+        select: { isCorrect: true },
+      });
+      totalAnswers += answers.length;
+      if (answers.length > 0) {
+        rounds.push({
+          sessionId: s.id,
+          startedAt: s.startedAt.toISOString(),
+          accuracy: Math.round((answers.filter((a) => a.isCorrect).length / answers.length) * 1000) / 10,
+        });
+      }
+    }
+    const avgAccuracy =
+      rounds.length > 0
+        ? Math.round((rounds.reduce((sum, r) => sum + r.accuracy, 0) / rounds.length) * 10) / 10
+        : null;
+
+    // 错题知识点 TOP5（从最近 3 轮答错的题取知识点，经 Question 关联）
+    const recentSessions = [...completed].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime()).slice(0, 3);
+    const kpMiss = new Map<string, number>();
+    for (const s of recentSessions) {
+      const wrongAnswers = await prisma.answer.findMany({
+        where: { sessionId: s.id, isCorrect: false },
+        include: { question: { select: { knowledgePoints: true } } },
+        take: 200,
+      });
+      for (const a of wrongAnswers) {
+        const kps = (a.question as any)?.knowledgePoints;
+        if (Array.isArray(kps)) {
+          kps.forEach((kp: string) => kpMiss.set(kp, (kpMiss.get(kp) || 0) + 1));
+        }
+      }
+    }
+    const weakPoints = [...kpMiss.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([kp]) => kp);
+
+    const stats: Record<string, unknown> = {
+      semesterLabel: this.buildSemesterLabel(new Date()),
+      initialTestAccuracy,
+      rounds: rounds.length,
+      avgAccuracy,
+      totalQuestions: totalAnswers,
+      finalExamAccuracy: lastExamResults?.accuracy ?? null,
+      finalExamCorrectCount: lastExamResults?.correctCount ?? null,
+      finalExamTotalQuestions: lastExamResults?.totalQuestions ?? null,
+      weakPoints,
+      masteredPoints: (config as any).masteredPoints ?? [],
+      units: Array.isArray(config.units) ? config.units : [],
+    };
+    return stats;
+  }
+
+  /** 学期标签：上半年→春季学期，下半年→秋季学期 */
+  private buildSemesterLabel(date: Date): string {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    return m <= 7 ? `${y} 春季学期` : `${y} 秋季学期`;
+  }
+
+  /** 规则兜底总结（AI 失败/未配置时使用） */
+  private buildFallbackSummary(
+    stats: Record<string, unknown>,
+    semesterLabel: string,
+    goalScore: number | null
+  ): string {
+    const acc = (v: unknown) => (typeof v === 'number' ? `${v}%` : '--');
+    return (
+      `【${semesterLabel}学期总结】\n` +
+      `初测正确率：${acc(stats.initialTestAccuracy)}\n` +
+      `训练轮次：${stats.rounds} 轮，平均正确率：${acc(stats.avgAccuracy)}\n` +
+      `期末考正确率：${acc(stats.finalExamAccuracy)}${goalScore ? `（目标 ${goalScore}%）` : ''}\n` +
+      `薄弱知识点：${(stats.weakPoints as string[]).length ? (stats.weakPoints as string[]).join('、') : '暂无'}\n` +
+      `覆盖单元：${(stats.units as string[]).length ? (stats.units as string[]).join('、') : '--'}`
+    );
+  }
+
+  /** 异步 AI 生成学期总结：读压缩统计而非全量题目，失败保持规则兜底文本 */
+  private async enrichArchiveSummaryAsync(
+    archiveId: string,
+    task: any,
+    stats: Record<string, unknown>,
+    semesterLabel: string,
+    goalScore: number | null
+  ): Promise<void> {
+    try {
+      const { aiServiceManager } = await import('./aiServiceManager');
+      const prompt =
+        `请为一名 K12 学员撰写「${task.subject ?? ''}」学科的学期学习总结（${semesterLabel}），` +
+        `面向家长与学员，语气鼓励、简明（300 字内）${goalScore ? `，学期目标正确率 ${goalScore}%` : ''}。` +
+        '基于以下结构化数据，突出进步与下学期建议：\n' +
+        JSON.stringify(stats, null, 2);
+      const text = await aiServiceManager.callAIWithSubject(task.subject ?? '综合', prompt, {
+        maxTokens: 800,
+        temperature: 0.7,
+      });
+      const clean = String(text || '').trim();
+      if (clean) {
+        await prisma.taskArchive.update({
+          where: { id: archiveId },
+          data: { summaryText: clean },
+        });
+        logger.info(`学期总结 AI 生成完成：${archiveId}`);
+      }
+    } catch (error) {
+      // 保持规则兜底文本，不抛出
+      logger.error('AI 学期总结生成失败，保留规则兜底:', error);
+    }
   }
 
   /**

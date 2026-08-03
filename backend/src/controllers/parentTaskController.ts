@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { parentTaskService } from '../services/parentTaskService';
 import { logger } from '../middlewares/logger';
+import { ConflictError } from '../middlewares/errorHandler';
 import { TaskStatus } from '@prisma/client';
 
 /**
@@ -427,6 +428,11 @@ class ParentTaskController {
     } catch (error: any) {
       logger.error('创建任务失败:', error);
 
+      // 业务约束冲突（同学科唯一、新学期需初测等）→ 409，优先于下方关键词兜底分支
+      if (error instanceof ConflictError) {
+        return next(error);
+      }
+
       if (error.message === '学员不存在') {
         return res.status(404).json({
           error: {
@@ -550,6 +556,75 @@ class ParentTaskController {
         });
       }
 
+      return next(error);
+    }
+  }
+
+  /**
+   * 学期延续模式：调整学科总任务的单元范围（继续训练）
+   * PATCH /api/parent/tasks/:id/units
+   */
+  async updateTaskUnits(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user?.userId;
+      if (!parentId) {
+        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未认证' } });
+      }
+
+      const { id: taskId } = req.params;
+      const { unitIds } = req.body;
+
+      if (!taskId || typeof taskId !== 'string') {
+        return res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '任务 ID 不能为空' } });
+      }
+      if (!Array.isArray(unitIds) || unitIds.length === 0) {
+        return res.status(400).json({ error: { code: 'INVALID_INPUT', message: '请至少勾选一个单元' } });
+      }
+
+      const result = await parentTaskService.updateTaskUnits(taskId, parentId, unitIds);
+
+      return res.json({ success: true, data: result });
+    } catch (error: any) {
+      logger.error('调整任务单元失败:', error);
+
+      if (error.message === '任务不存在') {
+        return res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      }
+      if (error.message === '无权调整该任务') {
+        return res.status(403).json({ error: { code: 'FORBIDDEN', message: '无权调整该任务' } });
+      }
+      return next(error);
+    }
+  }
+
+  /**
+   * 学期延续模式：归档学科总任务（学期总结）
+   * POST /api/parent/tasks/:id/archive
+   */
+  async archiveTask(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user?.userId;
+      if (!parentId) {
+        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未认证' } });
+      }
+
+      const { id: taskId } = req.params;
+      if (!taskId || typeof taskId !== 'string') {
+        return res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '任务 ID 不能为空' } });
+      }
+
+      const result = await parentTaskService.archiveTask(taskId, parentId);
+
+      return res.json({ success: true, data: result });
+    } catch (error: any) {
+      logger.error('归档任务失败:', error);
+
+      if (error.message === '任务不存在') {
+        return res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      }
+      if (error.message === '无权归档该任务') {
+        return res.status(403).json({ error: { code: 'FORBIDDEN', message: '无权归档该任务' } });
+      }
       return next(error);
     }
   }

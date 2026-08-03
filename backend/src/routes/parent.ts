@@ -384,6 +384,27 @@ router.delete('/tasks/:id', taskOwnership, (req, res, next) =>
 );
 
 /**
+ * @route   PATCH /api/parent/tasks/:id/units
+ * @desc    学期延续模式：调整学科总任务的单元范围（全量替换勾选，支持随时调整）
+ * @access  Parent
+ * @param   id - 任务 ID
+ * @body    unitIds - 单元节点 id 列表（必填，至少 1 个，须属于任务绑定教材）
+ */
+router.patch('/tasks/:id/units', taskOwnership, (req, res, next) =>
+  parentTaskController.updateTaskUnits(req, res, next)
+);
+
+/**
+ * @route   POST /api/parent/tasks/:id/archive
+ * @desc    学期延续模式：归档学科总任务（期末考完成并达标后触发，生成学期总结）
+ * @access  Parent
+ * @param   id - 任务 ID
+ */
+router.post('/tasks/:id/archive', taskOwnership, (req, res, next) =>
+  parentTaskController.archiveTask(req, res, next)
+);
+
+/**
  * @route   PUT /api/parent/tasks/:id/encouragement
  * @desc    设置家长激励寄语
  * @access  Parent

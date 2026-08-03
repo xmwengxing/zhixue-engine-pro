@@ -408,6 +408,175 @@ async function main() {
     }
   }
 
+  // ───────── G. 学期延续模式：调整单元 / 归档 / 新学期强制初测 ─────────
+  console.log('\n════════ G. 学期延续模式（调整单元/归档/新学期初测） ════════');
+  // C 段任务仍 IN_PROGRESS（有活跃会话），先把其置为 COMPLETED 释放「同学科 1 个总任务」名额
+  if (customTaskId) {
+    const p0 = new (await import('@prisma/client')).PrismaClient();
+    await p0.task.update({
+      where: { id: customTaskId },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
+    await p0.trainingSession.updateMany({
+      where: { taskId: customTaskId, status: { in: ['ACTIVE', 'PAUSED'] } },
+      data: { status: 'COMPLETED' },
+    });
+    await p0.$disconnect();
+    console.log('     （C 段任务已置 COMPLETED，释放名额）');
+  }
+  const semBody = {
+    mode: 'CUSTOM',
+    studentId,
+    customConfig: {
+      title: `冒烟·学期延续 ${Date.now()}`,
+      aiTeacher,
+      subject: pickTb.subject || SUBJECT,
+      textbookId: pickTb.id,
+      unitIds: units.slice(0, 2).map((u) => u.id),
+      goal: '冒烟：学期延续模式验证',
+      assessment: { source: 'AI' },
+      goalScore: 70,
+    },
+  };
+  const g1 = await api(parent, 'POST', '/parent/tasks', semBody);
+  let semTaskId = null;
+  if (g1.status === 201 || g1.status === 200) {
+    const task = g1.body.data?.task || g1.body.data;
+    semTaskId = task.id;
+    cleanup.taskIds.push(task.id);
+    ok('学期延续·创建任务(含期末目标 70%)', `taskId=${task.id}`);
+    if (task.config?.goalScore === 70) ok('config.goalScore 落库');
+    else bad('config.goalScore 落库', JSON.stringify(task.config?.goalScore));
+  } else {
+    bad('学期延续·创建任务', g1);
+  }
+
+  if (semTaskId) {
+    // ── G1 调整单元（全量替换勾选） ──
+    const newUnitIds =
+      units.length >= 3 ? [units[0].id, units[2].id] : [units[0].id];
+    const gp = await api(parent, 'PATCH', `/parent/tasks/${semTaskId}/units`, {
+      unitIds: newUnitIds,
+    });
+    if (gp.status === 200 && gp.body?.success) {
+      ok('调整单元(PATCH) 成功');
+      const gt = await api(parent, 'GET', `/parent/tasks/${semTaskId}`);
+      const t = gt.body.data?.task || gt.body.data || gt.body;
+      const cfg = t.config || {};
+      const got = (cfg.unitIds || []).slice().sort();
+      const want = [...newUnitIds].sort();
+      if (JSON.stringify(got) === JSON.stringify(want))
+        ok('config.unitIds 已按新勾选全量替换');
+      else bad('config.unitIds 全量替换', JSON.stringify({ got, want }));
+      if (Array.isArray(cfg.unitHistory) && cfg.unitHistory.length > 0)
+        ok('unitHistory 单元追加历史已记录');
+      else bad('unitHistory 记录', JSON.stringify(cfg.unitHistory));
+      if (t.status === 'PENDING') ok('调整后任务状态不变(PENDING，可继续训练)');
+    } else {
+      bad('调整单元(PATCH)', gp);
+    }
+
+    // ── G2 归档校验：PENDING → 无期末考 → 未达标 → 达标 ──
+    const ar1 = await api(parent, 'POST', `/parent/tasks/${semTaskId}/archive`);
+    if (ar1.status === 409 && /尚未开始|未完成期末考/.test(ar1.body?.error?.message || ''))
+      ok('PENDING 任务归档被拒 (409)', ar1.body?.error?.message);
+    else bad('PENDING 归档应 409', `status=${ar1.status} ${JSON.stringify(ar1.body).slice(0, 200)}`);
+
+    const prisma = new (await import('@prisma/client')).PrismaClient();
+    await prisma.task.update({
+      where: { id: semTaskId },
+      data: { status: 'IN_PROGRESS' },
+    });
+    const ar2 = await api(parent, 'POST', `/parent/tasks/${semTaskId}/archive`);
+    if (ar2.status === 409 && /期末考/.test(ar2.body?.error?.message || ''))
+      ok('未完成期末考不可归档 (409)', ar2.body?.error?.message);
+    else bad('无期末考归档应 409', `status=${ar2.status} ${JSON.stringify(ar2.body).slice(0, 200)}`);
+
+    // 模拟：补一条 FINAL_EXAM COMPLETED 会话（正确率 40 < 目标 70）
+    const sess = await prisma.trainingSession.create({
+      data: {
+        taskId: semTaskId,
+        studentId,
+        phase: 'FINAL_EXAM',
+        currentStep: 0,
+        totalSteps: 10,
+        progress: 100,
+        questions: [],
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        finalExamData: {
+          questions: [],
+          answers: {},
+          results: { accuracy: 40, correctCount: 4, totalQuestions: 10 },
+        },
+      },
+    });
+    const ar3 = await api(parent, 'POST', `/parent/tasks/${semTaskId}/archive`);
+    if (ar3.status === 409 && /未达到目标/.test(ar3.body?.error?.message || ''))
+      ok('期末未达目标(40<70)归档被拒 (409)', ar3.body?.error?.message);
+    else bad('未达标归档应 409', `status=${ar3.status} ${JSON.stringify(ar3.body).slice(0, 200)}`);
+
+    // 改达标（85 >= 70）→ 归档成功
+    await prisma.trainingSession.update({
+      where: { id: sess.id },
+      data: {
+        finalExamData: {
+          questions: [],
+          answers: {},
+          results: { accuracy: 85, correctCount: 9, totalQuestions: 10 },
+        },
+      },
+    });
+    const ar4 = await api(parent, 'POST', `/parent/tasks/${semTaskId}/archive`);
+    if (ar4.status === 200 && ar4.body?.success) {
+      ok('达标后归档成功', `archiveId=${ar4.body.data?.archiveId}, 期末=${ar4.body.data?.finalExamAccuracy}%`);
+      if (ar4.body.data?.semesterLabel) ok('semesterLabel 已生成', ar4.body.data.semesterLabel);
+      if (ar4.body.data?.summaryText) ok('学期总结已生成(规则兜底)', ar4.body.data.summaryText.split('\n')[0]);
+      const gta = await api(parent, 'GET', `/parent/tasks/${semTaskId}`);
+      const tAfter = gta.body.data?.task || gta.body.data || gta.body;
+      if (tAfter.status === 'COMPLETED' && tAfter.archivedAt)
+        ok('归档后任务置 COMPLETED + archivedAt');
+      else bad('归档后任务状态', JSON.stringify({ status: tAfter.status, archivedAt: tAfter.archivedAt }));
+    } else {
+      bad('达标后归档', `status=${ar4.status} ${JSON.stringify(ar4.body).slice(0, 300)}`);
+    }
+    await prisma.$disconnect();
+  }
+
+  // ── G3 新学期强制初测（上一步已产生归档任务） ──
+  const g3a = await api(parent, 'POST', '/parent/tasks', {
+    mode: 'CUSTOM',
+    studentId,
+    customConfig: {
+      ...semBody.customConfig,
+      title: '冒烟·新学期无初测',
+      assessment: null,
+    },
+  });
+  if (g3a.status === 409 && /初测/.test(g3a.body?.error?.message || ''))
+    ok('新学期不配初测被拒 (409)', g3a.body?.error?.message);
+  else bad('新学期无初测应 409', `status=${g3a.status} ${JSON.stringify(g3a.body).slice(0, 200)}`);
+
+  const g3b = await api(parent, 'POST', '/parent/tasks', {
+    mode: 'CUSTOM',
+    studentId,
+    customConfig: {
+      ...semBody.customConfig,
+      title: '冒烟·新学期带初测',
+      assessment: { source: 'AI' },
+    },
+  });
+  if (g3b.status === 201 || g3b.status === 200) {
+    const task3 = g3b.body.data?.task || g3b.body.data;
+    cleanup.taskIds.push(task3.id);
+    ok('新学期带初测创建成功', `taskId=${task3.id}`);
+    if (task3.config?.prevArchiveId)
+      ok('config.prevArchiveId 已注入（AI 读归档总结省 token）');
+    else bad('config.prevArchiveId 注入', JSON.stringify(task3.config));
+  } else {
+    bad('新学期带初测创建', g3b);
+  }
+
   // ───────── 清理 ─────────
   console.log('\n════════ 清理测试数据 ════════');
   for (const id of cleanup.taskIds) {
@@ -445,8 +614,12 @@ async function hardCleanupTasks(taskIds) {
     const sIds = sessions.map((s) => s.id);
     if (sIds.length) {
       await prisma.answer.deleteMany({ where: { sessionId: { in: sIds } } });
+      await prisma.aIConversation.deleteMany({ where: { sessionId: { in: sIds } } });
       await prisma.trainingSession.deleteMany({ where: { id: { in: sIds } } });
     }
+    // 学期延续模式：归档表/报告表外键引用任务，先删
+    await prisma.taskArchive.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.report.deleteMany({ where: { taskId: { in: taskIds } } });
     const del = await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
     console.log(`     DB 硬清理：会话 ${sIds.length} 个、任务 ${del.count} 个`);
     await prisma.$disconnect();
