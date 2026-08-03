@@ -355,6 +355,38 @@ async function main() {
     console.log('  ⚠️  无 EXERCISE 已发布卷，跳过「整卷专项」用例');
   }
 
+  // 组卷蓝图（双向细目表）：难度分布 50:30:20 + 目标知识点，验证配额抽题路径
+  const spBlue = await api(parent, 'POST', '/parent/tasks/special', {
+    studentId,
+    subject: pickTb.subject || SUBJECT,
+    specialType: 'PAPER',
+    title: `冒烟·专项组卷-蓝图 ${Date.now()}`,
+    questionCount: 8,
+    examConfig: {
+      source: 'RANDOM',
+      subject: pickTb.subject || SUBJECT,
+      questionCount: 8,
+      blueprint: {
+        difficultyDist: { easy: 50, medium: 30, hard: 20 },
+        estimatedMinutes: 45,
+      },
+    },
+  });
+  if (spBlue.status === 201 || spBlue.status === 200) {
+    const stb = spBlue.body.data?.task || spBlue.body.data;
+    cleanup.taskIds.push(stb.id);
+    const ql = stb.config?.questionIds?.length;
+    ok('专项-蓝图组卷创建', `id=${stb.id}, 题数=${ql}`);
+    if (ql === 8) ok('蓝图配额抽题题量达标(8/8)');
+    else bad('蓝图配额抽题题量', `实际 ${ql}`);
+    const bp = stb.config?.randomFilter?.blueprint;
+    if (bp?.difficultyDist?.easy === 50 && bp?.estimatedMinutes === 45)
+      ok('config.randomFilter.blueprint 落库');
+    else bad('blueprint 落库', JSON.stringify(bp));
+  } else {
+    bad('专项-蓝图组卷创建', spBlue);
+  }
+
   // 非法 specialType 兜底
   const spBad = await api(parent, 'POST', '/parent/tasks/special', {
     studentId,

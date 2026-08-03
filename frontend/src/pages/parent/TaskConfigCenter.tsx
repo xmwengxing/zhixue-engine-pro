@@ -225,7 +225,18 @@ export default function TaskConfigCenter() {
     difficultyMax: 5,
     knowledgePoints: [] as string[],
     title: '',
+    // 组卷蓝图（双向细目表）：难度分布 易:中:难（百分比）+ 预估时长
+    blueprint: {
+      difficultyDist: { easy: 40, medium: 40, hard: 20 },
+      estimatedMinutes: 60,
+    },
+    // 目标知识点覆盖（多选，候选来自子女薄弱点接口）
+    blueprintKps: [] as string[],
   });
+  // 组卷蓝图：目标知识点候选（薄弱点优先级列表，来自学情档案）
+  const [blueprintKpOptions, setBlueprintKpOptions] = useState<
+    Array<{ point: string; urgency?: string; gap_level?: number }>
+  >([]);
 
   // 组卷模式支撑数据
   const [papers, setPapers] = useState<ExamPaperItem[]>([]);
@@ -414,6 +425,37 @@ export default function TaskConfigCenter() {
     examForm.source,
     examForm.subject,
   ]);
+
+  /**
+   * 组卷蓝图：目标知识点候选（子女薄弱点优先级，来自学情档案）
+   * 仅在专项组卷（SPECIAL+PAPER）且选了学员+科目时加载
+   */
+  useEffect(() => {
+    const isSpecialPaper =
+      taskCategory === 'SPECIAL' && specialForm.specialType === 'PAPER';
+    if (!isSpecialPaper || !specialForm.studentId || !specialForm.subject) {
+      setBlueprintKpOptions([]);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await request.get(
+          `/parent/children/${specialForm.studentId}/weak-points?subject=${encodeURIComponent(specialForm.subject)}`
+        );
+        const list: any[] = res.data?.points || res.data?.weakPoints || res.data || [];
+        setBlueprintKpOptions(
+          list.map((w: any) => ({
+            point: w.point || w.knowledgePoint,
+            urgency: w.urgency,
+            gap_level: w.gap_level,
+          })).filter((w: any) => !!w.point)
+        );
+      } catch (err) {
+        console.error('加载薄弱点候选失败:', err);
+        setBlueprintKpOptions([]);
+      }
+    })();
+  }, [taskCategory, specialForm.specialType, specialForm.studentId, specialForm.subject]);
 
   /**
    * P3 双轨·专项：按科目加载教材列表（含单元，单元专项用）
@@ -654,6 +696,18 @@ export default function TaskConfigCenter() {
             if (examForm.difficultyMin != null) examConfig.difficultyMin = examForm.difficultyMin;
             if (examForm.difficultyMax != null) examConfig.difficultyMax = examForm.difficultyMax;
             if (examForm.knowledgePoints.length > 0) examConfig.knowledgePoints = examForm.knowledgePoints;
+            // 组卷蓝图：难度分布 + 目标知识点覆盖 + 预估时长（双向细目表）
+            examConfig.blueprint = {
+              difficultyDist: {
+                easy: examForm.blueprint.difficultyDist.easy,
+                medium: examForm.blueprint.difficultyDist.medium,
+                hard: examForm.blueprint.difficultyDist.hard,
+              },
+              ...(examForm.blueprintKps.length > 0
+                ? { knowledgePoints: examForm.blueprintKps }
+                : {}),
+              estimatedMinutes: examForm.blueprint.estimatedMinutes,
+            };
           }
           specialBody.examConfig = examConfig;
         }
@@ -731,6 +785,18 @@ export default function TaskConfigCenter() {
           if (examForm.difficultyMin != null) examConfig.difficultyMin = examForm.difficultyMin;
           if (examForm.difficultyMax != null) examConfig.difficultyMax = examForm.difficultyMax;
           if (examForm.knowledgePoints.length > 0) examConfig.knowledgePoints = examForm.knowledgePoints;
+          // 组卷蓝图：难度分布 + 目标知识点覆盖 + 预估时长（双向细目表）
+          examConfig.blueprint = {
+            difficultyDist: {
+              easy: examForm.blueprint.difficultyDist.easy,
+              medium: examForm.blueprint.difficultyDist.medium,
+              hard: examForm.blueprint.difficultyDist.hard,
+            },
+            ...(examForm.blueprintKps.length > 0
+              ? { knowledgePoints: examForm.blueprintKps }
+              : {}),
+            estimatedMinutes: examForm.blueprint.estimatedMinutes,
+          };
         }
         requestBody.examConfig = examConfig;
       } else {
@@ -1784,6 +1850,115 @@ export default function TaskConfigCenter() {
                         className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <p className="mt-1 text-sm text-[#5b6b8c]">仅抽取包含这些知识点的题目（为空则不限）</p>
+                    </div>
+
+                    {/* 组卷蓝图（双向细目表）：难度分布 + 预估时长 */}
+                    <div className="p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-3">
+                        组卷蓝图（难度分布）
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {(
+                          [
+                            { key: 'easy', label: '易(1-2星)' },
+                            { key: 'medium', label: '中(3星)' },
+                            { key: 'hard', label: '难(4-5星)' },
+                          ] as const
+                        ).map(({ key, label }) => (
+                          <div key={key}>
+                            <label className="block text-xs text-[#5b6b8c] mb-1">{label} %</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={examForm.blueprint.difficultyDist[key]}
+                              onChange={(e) => {
+                                const v = Math.max(0, Math.min(100, parseInt(e.target.value) || 0));
+                                setExamForm({
+                                  ...examForm,
+                                  blueprint: {
+                                    ...examForm.blueprint,
+                                    difficultyDist: {
+                                      ...examForm.blueprint.difficultyDist,
+                                      [key]: v,
+                                    },
+                                  },
+                                });
+                              }}
+                              className="w-full px-3 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="block text-xs text-[#5b6b8c] mb-1">预估时长(分)</label>
+                          <input
+                            type="number"
+                            min={5}
+                            max={180}
+                            value={examForm.blueprint.estimatedMinutes}
+                            onChange={(e) => {
+                              const v = Math.max(5, Math.min(180, parseInt(e.target.value) || 60));
+                              setExamForm({
+                                ...examForm,
+                                blueprint: { ...examForm.blueprint, estimatedMinutes: v },
+                              });
+                            }}
+                            className="w-full px-3 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-[#5b6b8c]">
+                        按占比分桶抽题（自动归一化），保证难度梯度；题库不足时自动兜底补齐
+                      </p>
+                    </div>
+
+                    {/* 目标知识点覆盖（候选来自学员薄弱点优先级） */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                        目标知识点覆盖（选填，按薄弱点优先级抽取）
+                      </label>
+                      {taskCategory === 'SPECIAL' && blueprintKpOptions.length > 0 ? (
+                        <>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {blueprintKpOptions.map((w) => {
+                              const checked = examForm.blueprintKps.includes(w.point);
+                              return (
+                                <button
+                                  type="button"
+                                  key={w.point}
+                                  onClick={() =>
+                                    setExamForm({
+                                      ...examForm,
+                                      blueprintKps: checked
+                                        ? examForm.blueprintKps.filter((p) => p !== w.point)
+                                        : [...examForm.blueprintKps, w.point],
+                                    })
+                                  }
+                                  className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                                    checked
+                                      ? 'border-purple-500 bg-purple-500/15 text-purple-300'
+                                      : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
+                                  }`}
+                                >
+                                  {w.point}
+                                  {w.urgency && (
+                                    <span className="ml-1 text-xs opacity-80">({w.urgency})</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-xs text-[#5b6b8c]">
+                            已选 {examForm.blueprintKps.length} 个，组卷按知识点轮转抽取，覆盖率不足 80% 会提示
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-[#5b6b8c]">
+                          {taskCategory === 'SPECIAL'
+                            ? '暂无薄弱点候选（需先完成训练产生学情数据），可在上方「知识点」框手动填写'
+                            : '在下方「知识点」框手动填写目标知识点'}
+                        </p>
+                      )}
                     </div>
                   </>
                 )}

@@ -72,6 +72,8 @@ export interface ExamPaperConfig {
   term?: string;
   /** source=RANDOM 可选：按单元节点 id 过滤（多选） */
   unitIds?: string[];
+  /** source=RANDOM 可选：组卷蓝图（难度分布/知识点覆盖/题型配额，双向细目表） */
+  blueprint?: import('./questionBankService').ExamBlueprint;
   /** 可选：任务标题（默认取试卷名或自动生成） */
   title?: string;
 }
@@ -1055,11 +1057,13 @@ export class ParentTaskService {
         grade: exam.grade,
         term: exam.term,
         unitIds: exam.unitIds,
+        blueprint: exam.blueprint,
       });
       if (questionIds.length === 0) {
         throw new Error('题库中没有符合条件的题目，请调整筛选条件或先在题库中导入题目');
       }
-      title = exam.title || `${subject}随机练习卷（${questionIds.length} 题）`;
+      const mins = exam.blueprint?.estimatedMinutes;
+      title = exam.title || `${subject}随机练习卷（${questionIds.length} 题${mins ? `，约 ${mins} 分钟` : ''}）`;
     }
 
     // 组装 AI 批改指令（若配置了对应科目老师则叠加其系统提示）
@@ -1092,6 +1096,7 @@ export class ParentTaskService {
                 grade: exam.grade,
                 term: exam.term,
                 unitIds: exam.unitIds,
+                blueprint: exam.blueprint, // 组卷蓝图（难度分布/知识点覆盖/题型配额）
               }
             : undefined,
       },

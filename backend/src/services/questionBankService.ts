@@ -4,6 +4,7 @@ import {
   PaperStatus,
   Prisma,
 } from '@prisma/client';
+import { logger } from '../middlewares/logger';
 
 const prisma = new PrismaClient();
 
@@ -620,11 +621,154 @@ export interface RandomPickInput {
   grade?: string;
   term?: string;
   unitIds?: string[];
+  /**
+   * 组卷蓝图（借鉴 edu-paper-builder 双向细目表方法论）：
+   * 按 难度分布 + 知识点覆盖 + 题型配额 分桶抽题，替代纯随机洗牌。
+   */
+  blueprint?: ExamBlueprint;
+}
+
+/** 组卷蓝图：难度分布（易:中:难 百分比，默认 40:40:20）+ 目标知识点 + 题型配额 + 预估时长 */
+export interface ExamBlueprint {
+  /** 易(1-2) / 中(3) / 难(4-5) 占比（百分比，和不必为 100，自动归一化） */
+  difficultyDist?: { easy?: number; medium?: number; hard?: number };
+  /** 目标知识点覆盖（多选；缺省则最大化题库自然覆盖） */
+  knowledgePoints?: string[];
+  /** 题型配额：{ "CHOICE": 8, "FILL": 4, "ESSAY": 8 }（键为 QuestionType 枚举名） */
+  typeDist?: Record<string, number>;
+  /** 预估时长（分钟，仅展示） */
+  estimatedMinutes?: number;
+}
+
+/** 按难度分桶：1-2 易 / 3 中 / 4-5 难 */
+function difficultyBand(d: number): 'easy' | 'medium' | 'hard' {
+  if (d <= 2) return 'easy';
+  if (d === 3) return 'medium';
+  return 'hard';
+}
+
+/** Fisher-Yates 洗牌 */
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * 按蓝图配额抽题：难度分桶 → 知识点轮转（已选最少者优先，尽量覆盖目标知识点）→ 题型约束。
+ * 数量不足时自动放宽（同桶内任意题 → 全量兜底），并打 warn 日志便于定位题库标注缺失。
+ */
+function pickByBlueprint(
+  cands: { id: string; difficulty: number; type: QuestionType; knowledgePoints: string[] }[],
+  input: RandomPickInput
+): string[] {
+  const { count, blueprint } = input;
+  if (!blueprint) return [];
+  const dist = blueprint.difficultyDist ?? { easy: 40, medium: 40, hard: 20 };
+  const total = (dist.easy ?? 0) + (dist.medium ?? 0) + (dist.hard ?? 0);
+  const safeTotal = total > 0 ? total : 100;
+  const tEasy = Math.round((count * (dist.easy ?? 0)) / safeTotal);
+  const tMed = Math.round((count * (dist.medium ?? 0)) / safeTotal);
+  const clamp = (t: number) => Math.max(0, Math.min(count, t));
+  const targets = {
+    easy: clamp(tEasy),
+    medium: clamp(tMed),
+    hard: clamp(count - tEasy - tMed),
+  };
+
+  const requestedKPs = blueprint.knowledgePoints?.length
+    ? new Set(blueprint.knowledgePoints)
+    : null;
+  const typeSet = blueprint.typeDist
+    ? new Set(Object.keys(blueprint.typeDist).map((t) => t.toUpperCase()))
+    : null;
+
+  const pools: Record<'easy' | 'medium' | 'hard', typeof cands> = { easy: [], medium: [], hard: [] };
+  for (const c of cands) pools[difficultyBand(c.difficulty)].push(c);
+
+  const pickedIds = new Set<string>();
+  const picked: string[] = [];
+  const kpPick = new Map<string, number>();
+  const firstKp = (kps: string[]) => (kps && kps.length > 0 ? kps[0] : '');
+
+  for (const band of ['easy', 'medium', 'hard'] as const) {
+    let pool = pools[band];
+    if (typeSet) {
+      const typed = pool.filter((c) => typeSet.has(String(c.type).toUpperCase()));
+      if (typed.length > 0) pool = typed; // 有指定题型的题才收窄，否则保持全量兜底
+    }
+    if (pool.length === 0) continue;
+    let need = targets[band];
+    let guard = 0;
+    while (need > 0 && guard++ < 500) {
+      const usable = pool.filter((c) => !pickedIds.has(c.id));
+      if (usable.length === 0) break;
+      // 轮转：优先取「已选次数最少的目标知识点」的随机一题，最大化覆盖
+      let best: (typeof usable)[number] | null = null;
+      let bestCount = Infinity;
+      for (const c of usable) {
+        const kp = firstKp(c.knowledgePoints);
+        if (requestedKPs && !requestedKPs.has(kp)) continue;
+        const cnt = kpPick.get(kp) ?? 0;
+        if (cnt < bestCount) {
+          bestCount = cnt;
+          best = c;
+        }
+      }
+      if (!best) best = shuffle(usable)[0]; // 目标知识点取尽 → 同桶内任意题兜底
+      pickedIds.add(best.id);
+      picked.push(best.id);
+      const kp = firstKp(best.knowledgePoints);
+      if (kp) kpPick.set(kp, (kpPick.get(kp) ?? 0) + 1);
+      need--;
+    }
+  }
+
+  // 全量兜底：配额未满时从剩余候选中补齐（打 warn 便于定位题库缺口）
+  if (picked.length < count) {
+    const rest = shuffle(cands.filter((c) => !pickedIds.has(c.id)));
+    for (const c of rest) {
+      if (picked.length >= count) break;
+      pickedIds.add(c.id);
+      picked.push(c.id);
+    }
+    if (rest.length > 0) {
+      logger.warn(
+        `[组卷蓝图] 配额未满，已全量兜底补齐: subject=${input.subject} count=${count} picked=${picked.length} (请求 ${
+          requestedKPs?.size ?? 0
+        } 个知识点)`
+      );
+    }
+  }
+
+  // 目标知识点覆盖率检查（<80% 打 warn，便于定位题库标注缺失）
+  if (requestedKPs && requestedKPs.size > 0) {
+    const covered = new Set<string>();
+    for (const id of picked) {
+      const c = cands.find((x) => x.id === id);
+      if (c?.knowledgePoints) {
+        for (const kp of c.knowledgePoints) {
+          if (requestedKPs.has(kp)) covered.add(kp);
+        }
+      }
+    }
+    const coverage = covered.size / requestedKPs.size;
+    if (coverage < 0.8) {
+      logger.warn(
+        `[组卷蓝图] 目标知识点覆盖率 ${Math.round(coverage * 100)}% (<80%): 覆盖 ${covered.size}/${requestedKPs.size}，题库标注可能不足`
+      );
+    }
+  }
+
+  return picked.slice(0, count);
 }
 
 /**
  * 按条件随机抽题（随机组卷）。返回题目 ID 列表（随机顺序）。
  * 支持按 教材/年级/学期/单元 过滤，便于"按某教材某单元抽题"的任务调用。
+ * 若传入 blueprint，则按 难度分布+知识点覆盖+题型配额 分桶抽题（双向细目表）。
  */
 export async function pickRandomQuestions(input: RandomPickInput): Promise<string[]> {
   const where: Prisma.QuestionWhereInput = {
@@ -637,8 +781,14 @@ export async function pickRandomQuestions(input: RandomPickInput): Promise<strin
       lte: input.difficultyMax ?? 5,
     };
   }
-  if (input.knowledgePoints && input.knowledgePoints.length > 0) {
-    where.knowledgePoints = { hasSome: input.knowledgePoints };
+  // 知识点过滤：显式 knowledgePoints 优先，其次 blueprint.knowledgePoints
+  const kpFilter = input.knowledgePoints?.length
+    ? input.knowledgePoints
+    : input.blueprint?.knowledgePoints?.length
+      ? input.blueprint.knowledgePoints
+      : undefined;
+  if (kpFilter && kpFilter.length > 0) {
+    where.knowledgePoints = { hasSome: kpFilter };
   }
   if (input.grade) where.grade = input.grade;
   if (input.term) where.term = input.term;
@@ -646,8 +796,19 @@ export async function pickRandomQuestions(input: RandomPickInput): Promise<strin
     where.OR = [{ materialNodeId: { in: input.unitIds } }, { unitIds: { hasSome: input.unitIds } }];
   }
 
-  const candidates = await prisma.question.findMany({ where, select: { id: true } });
-  // Fisher-Yates 洗牌后取前 count 个
+  const candidates = await prisma.question.findMany({
+    where,
+    select: { id: true, difficulty: true, type: true, knowledgePoints: true },
+  });
+
+  // 蓝图配额抽题（双向细目表）
+  if (input.blueprint) {
+    const ids = pickByBlueprint(candidates, input);
+    if (ids.length > 0) return ids;
+    logger.warn(`[组卷蓝图] 配额抽题返回空，回退纯随机: subject=${input.subject}`);
+  }
+
+  // 纯随机（原有逻辑）：Fisher-Yates 洗牌后取前 count 个
   const ids = candidates.map((c) => c.id);
   for (let i = ids.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
