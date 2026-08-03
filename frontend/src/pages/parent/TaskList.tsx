@@ -252,13 +252,21 @@ export default function TaskList() {
     return Math.max(0, Math.floor(diff / 86400000));
   };
 
-  /** 最近训练提示：返回 { text, overdue } */
+  /** 最近训练提示：返回 { text, overdue, advice } */
   const lastTrainedInfo = (task: Task) => {
     const days = daysSince(task.lastTrainedAt);
     if (days === null) return null;
-    if (days === 0) return { text: '今日训练过', overdue: false };
-    if (days < 14) return { text: `${days} 天前训练`, overdue: false };
-    return { text: `已 ${days} 天未训练`, overdue: true };
+    if (days === 0) return { text: '今日训练过', overdue: false, advice: '' };
+    if (days < 14) return { text: `${days} 天前训练`, overdue: false, advice: '' };
+    // 学习路径方法论（edu-learning-path）：超期时给「本周建议量」引导恢复节奏
+    const baseCount =
+      typeof task.config?.questionCount === 'number' ? task.config.questionCount : 10;
+    const weekly = Math.max(10, baseCount * 2);
+    return {
+      text: `已 ${days} 天未训练`,
+      overdue: true,
+      advice: `建议本周完成约 ${weekly} 题（可在任务详情调整单元范围后再训练）`,
+    };
   };
 
   /** 打开调整单元弹窗：加载任务教材的单元列表，预填当前勾选 */
@@ -556,13 +564,20 @@ export default function TaskList() {
                             const info = lastTrainedInfo(task);
                             if (!info) return null;
                             return (
-                              <div
-                                className={`mt-1 text-xs ${
-                                  info.overdue ? 'text-red-400 font-medium' : 'text-[#5b6b8c]'
-                                }`}
-                              >
-                                {info.overdue ? '⚠ ' : ''}
-                                {info.text}
+                              <div className="mt-1">
+                                <div
+                                  className={`text-xs ${
+                                    info.overdue ? 'text-red-400 font-medium' : 'text-[#5b6b8c]'
+                                  }`}
+                                >
+                                  {info.overdue ? '⚠ ' : ''}
+                                  {info.text}
+                                </div>
+                                {info.advice && (
+                                  <div className="text-xs text-amber-400/90 mt-0.5">
+                                    {info.advice}
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}

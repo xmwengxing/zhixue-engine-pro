@@ -486,6 +486,10 @@ export class ParentTaskService {
           null
         );
 
+        // 学习路径方法论（edu-learning-path）：把文字目标拆解为分阶段目标（phasedGoals）。
+        // 具体异步调用在任务创建后触发（见 createTask 末尾），失败降级保持 null 不阻塞发布
+        taskConfig.phasedGoals = null;
+
       } else {
         // 档案提取模式
         if (!data.profileConfig) {
@@ -695,6 +699,18 @@ export class ParentTaskService {
       });
 
       logger.info(`任务创建成功: ${task.id}, 学员: ${data.studentId}, 模式: ${data.mode}`);
+
+      // 学习路径方法论（edu-learning-path）：CUSTOM 任务把文字目标异步拆解为分阶段目标，
+      // 失败降级保持 null 不阻塞发布；学员端训练舱按 20%/80% 切分点映射展示当前阶段目标
+      if (taskCategory === 'SUBJECT_MAIN' && data.mode === 'CUSTOM' && taskSubject) {
+        const customCfg = data.customConfig as CustomConfig;
+        const goalText = customCfg?.goal;
+        if (goalText) {
+          this.enrichPhasedGoalsAsync(task.id, taskSubject, goalText).catch((e) =>
+            logger.error(`分阶段目标拆解失败（保持降级）: task=${task.id}`, e)
+          );
+        }
+      }
 
       return task;
     } catch (error) {
@@ -1521,6 +1537,71 @@ export class ParentTaskService {
     const y = date.getFullYear();
     const m = date.getMonth() + 1;
     return m <= 7 ? `${y} 春季学期` : `${y} 秋季学期`;
+  }
+
+  /**
+   * 学习路径方法论：把 CUSTOM 任务的文字目标异步拆解为分阶段目标（phasedGoals）。
+   * - 产出：[{ stage, goal, knowledgePoints[], criteria[] }]（2-3 阶段，完成标准可自测）
+   * - 降级：AI 失败/解析失败 → 保持 config.phasedGoals=null，不阻塞任务发布
+   */
+  private async enrichPhasedGoalsAsync(
+    taskId: string,
+    subject: string,
+    goal: string
+  ): Promise<void> {
+    try {
+      const { aiServiceManager } = await import('./aiServiceManager');
+      const prompt =
+        `请将以下 K12「${subject}」学科训练目标拆解为 2-3 个有序阶段，每阶段包含：` +
+        '阶段名、可验证的阶段目标、核心知识点(2-4 个)、完成标准(1-2 条，可自测如"正确率达 70%")。\n' +
+        `训练目标：${goal}\n` +
+        '只输出 JSON 数组，格式：' +
+        '[{"stage":"基础巩固","goal":"...","knowledgePoints":["..."],"criteria":["..."]}]';
+      const text = String(
+        await aiServiceManager.callAIWithSubject(subject, prompt, {
+          maxTokens: 800,
+          temperature: 0.5,
+        })
+      ).trim();
+      // 健壮解析：剥掉 ```json 围栏，取首个 [ 到末尾 ]
+      const start = text.indexOf('[');
+      const end = text.lastIndexOf(']');
+      if (start < 0 || end <= start) {
+        logger.warn(`[phasedGoals] AI 返回非 JSON，放弃拆解: task=${taskId}`);
+        return;
+      }
+      const parsed = JSON.parse(text.slice(start, end + 1));
+      const goals = Array.isArray(parsed)
+        ? parsed
+            .map((g: any) => ({
+              stage: String(g?.stage ?? '').slice(0, 20),
+              goal: String(g?.goal ?? '').slice(0, 200),
+              knowledgePoints: Array.isArray(g?.knowledgePoints)
+                ? g.knowledgePoints.slice(0, 6).map((k: any) => String(k).slice(0, 50))
+                : [],
+              criteria: Array.isArray(g?.criteria)
+                ? g.criteria.slice(0, 3).map((c: any) => String(c).slice(0, 100))
+                : [],
+            }))
+            .filter((g: any) => g.stage && g.goal)
+            .slice(0, 3)
+        : null;
+      if (!goals || goals.length === 0) {
+        logger.warn(`[phasedGoals] 拆解结果为空，放弃: task=${taskId}`);
+        return;
+      }
+      const task = await prisma.task.findUnique({ where: { id: taskId } });
+      if (!task) return;
+      const config = (task.config ?? {}) as any;
+      await prisma.task.update({
+        where: { id: taskId },
+        data: { config: { ...config, phasedGoals: goals } as any },
+      });
+      logger.info(`[phasedGoals] 目标拆解完成: task=${taskId}, 阶段数=${goals.length}`);
+    } catch (error) {
+      // 降级：不抛出，保持 phasedGoals=null
+      logger.error(`[phasedGoals] 拆解失败（保持降级）: task=${taskId}`, error);
+    }
   }
 
   /** 规则兜底总结（AI 失败/未配置时使用） */

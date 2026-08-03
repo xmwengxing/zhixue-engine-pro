@@ -2100,6 +2100,29 @@ export class StudentTrainingService {
     // 检查是否完成当前阶段
     const stageCompleted = stageData.currentQuestion >= stageData.totalQuestions;
 
+    // 阶段完成标准（借鉴 edu-learning-path「可验证完成标准」）：本阶段正确率 + 验收标准清单
+    let stageCriteria: string[] = [];
+    let stageAccuracy: number | null = null;
+    let remedyAdvice: string | null = null;
+    if (stageCompleted) {
+      const plan = session.trainingPlanData as any;
+      stageCriteria = plan?.stages?.[currentStage]?.criteria ?? [];
+      const records = Array.isArray(stageData.answers) ? stageData.answers : [];
+      if (records.length > 0) {
+        const correct = records.filter((r: any) => r.isCorrect).length;
+        stageAccuracy = Math.round((correct / records.length) * 1000) / 10;
+        if (stageAccuracy < 60) {
+          const stageName =
+            currentStage === 'foundation'
+              ? '基础巩固'
+              : currentStage === 'improvement'
+                ? '能力提升'
+                : '综合应用';
+          remedyAdvice = `本阶段正确率偏低（${stageAccuracy}%），建议回到「${stageName}」重做一轮巩固后再进入下一阶段`;
+        }
+      }
+    }
+
     return {
       correct: evaluation.isCorrect,
       feedback: evaluation.feedback,
@@ -2107,6 +2130,10 @@ export class StudentTrainingService {
       guidance: evaluation.guidance,
       stageCompleted: stageCompleted,
       currentStage: currentStage,
+      // 学习路径完成标准（edu-learning-path 方法论）：验收清单 + 正确率 + 回炉建议
+      stageCriteria,
+      stageAccuracy,
+      remedyAdvice,
       // IRT 自适应信息（供前端展示难度变化）
       nextDifficulty: trainingProgress.irt.lastRecommended,
       abilityTheta: trainingProgress.irt.theta,
