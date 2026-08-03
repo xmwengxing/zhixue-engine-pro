@@ -55,17 +55,18 @@ services/ocr-unlimited/model/
 CLAUDE.md
 AGENTS.md
 
-# 调试/一次性脚本（非应用代码，不入库）
+# 临时文件（一次性排查用，不入库）
 .tmp*
 backend/.tmp-*
 backend/.tmp-papers/
-backend/scripts/smoke-*.mjs
-backend/scripts/diag-*.mjs
+
+# 一次性/环境相关脚本（不入库）
+# 注意：smoke-*（冒烟回归）、diag-*（诊断）、clean-dirty-data（脏数据巡检）
+# 属于长期维护的工程工具，需入库，勿加入忽略列表。
 backend/scripts/test-*.mjs
 backend/scripts/test-*.ts
 backend/scripts/verify-fallback-plan.ts
 backend/scripts/dump-paper-text.mjs
 backend/scripts/configure-extraction-provider.ts
 backend/scripts/import-real-papers.mjs
-backend/scripts/clean-dirty-data.mjs
 

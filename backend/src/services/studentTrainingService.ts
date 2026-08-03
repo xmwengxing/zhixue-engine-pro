@@ -307,29 +307,74 @@ export class StudentTrainingService {
     unitIds?: string[]
   ) {
     try {
-      // 从指定的教材节点中随机选择题目
-      // 题目 materialNodeId 指向 SUBJECT 节点；unitIds（UNIT 节点 id）用于进一步按单元过滤
-      const where: Prisma.QuestionWhereInput = {
-        materialNodeId: {
-          in: materialNodeIds,
-        },
-        difficulty: {
-          gte: Math.max(1, difficulty - 1),
-          lte: Math.min(5, difficulty + 1),
-        },
-        ...REVIEWED_QUESTION_FILTER(), // ④ 排除待审核/已驳回的 AI 生成题
+      // 题目 materialNodeId 指向 SUBJECT 节点；unitIds（UNIT 节点 id）用于进一步按单元过滤。
+      // ⚠️ 现网大量题目 unitIds 为空（试卷导入未回填单元），若只按「单元 + 难度」严格过滤会返回 0 题，
+      // 导致自定义任务训练题为空。因此按「精确 → 放宽」逐级降级，确保始终能出题。
+      const difficultyRange = {
+        gte: Math.max(1, difficulty - 1),
+        lte: Math.min(5, difficulty + 1),
       };
-      if (unitIds && unitIds.length > 0) {
-        where.unitIds = { hasSome: unitIds };
-      }
-      const questions = await prisma.question.findMany({
-        where,
-        take: questionCount * 2, // 多取一些以便随机选择
-      });
+      const reviewed = REVIEWED_QUESTION_FILTER();
+      const hasUnits = Array.isArray(unitIds) && unitIds.length > 0;
+      const hasNodes = Array.isArray(materialNodeIds) && materialNodeIds.length > 0;
 
-      // 随机打乱并取指定数量
-      const shuffled = questions.sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, questionCount);
+      // 候选条件按优先级排列，命中即止
+      const candidates: Array<{ label: string; where: Prisma.QuestionWhereInput }> = [];
+      if (hasNodes && hasUnits) {
+        candidates.push({
+          label: '学科+单元+难度',
+          where: {
+            materialNodeId: { in: materialNodeIds },
+            unitIds: { hasSome: unitIds! },
+            difficulty: difficultyRange,
+            ...reviewed,
+          },
+        });
+        candidates.push({
+          label: '学科+单元',
+          where: {
+            materialNodeId: { in: materialNodeIds },
+            unitIds: { hasSome: unitIds! },
+            ...reviewed,
+          },
+        });
+      }
+      if (hasNodes) {
+        candidates.push({
+          label: '学科+难度',
+          where: {
+            materialNodeId: { in: materialNodeIds },
+            difficulty: difficultyRange,
+            ...reviewed,
+          },
+        });
+        candidates.push({
+          label: '学科',
+          where: { materialNodeId: { in: materialNodeIds }, ...reviewed },
+        });
+      }
+      candidates.push({ label: '全库+难度', where: { difficulty: difficultyRange, ...reviewed } });
+      candidates.push({ label: '全库兜底', where: { ...reviewed } });
+
+      for (const [idx, c] of candidates.entries()) {
+        const questions = await prisma.question.findMany({
+          where: c.where,
+          take: questionCount * 3, // 多取一些以便随机选择
+        });
+        if (questions.length > 0) {
+          if (idx > 0) {
+            logger.warn(
+              `[generateQuestions] 精确条件无题，已降级至「${c.label}」取到 ${questions.length} 题` +
+                `（nodes=${materialNodeIds.length}, units=${unitIds?.length ?? 0}, difficulty=${difficulty}）`
+            );
+          }
+          const shuffled = questions.sort(() => Math.random() - 0.5);
+          return shuffled.slice(0, questionCount);
+        }
+      }
+
+      logger.error('[generateQuestions] 全部候选条件均无可用题目，题库可能为空');
+      return [];
     } catch (error) {
       logger.error('生成题目列表失败:', error);
       throw new Error('生成题目列表失败');
