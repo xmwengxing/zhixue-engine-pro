@@ -14,7 +14,19 @@ interface SubjectState {
   subject: string;
   irtTheta: number | null;
   masteryMap: Record<string, MasteryEntry>;
-  weakPoints: { point: string; score: number; priority: number }[];
+  weakPoints: Array<{
+    point: string;
+    score: number;
+    priority: number;
+    // 薄弱点诊断结构化（edu-class-diagnosis 方法论）
+    gap_level?: number;
+    urgency?: '高' | '中' | '低';
+    priority_score?: number;
+    blocks_followup?: boolean;
+    confidence?: '高' | '中' | '低';
+    evidence?: string;
+    suggestions?: string[];
+  }>;
   errorStats: {
     total: number;
     byMastery: Record<string, number>;
@@ -169,28 +181,48 @@ export default function SubjectLearningStateView({ studentId, role, hideHeader }
 
           {/* 薄弱点 */}
           <div className={cardClass}>
-            <h2 className="mb-3 font-semibold text-white">薄弱点（掌握度升序）</h2>
+            <h2 className="mb-3 font-semibold text-white">薄弱点（按补弱优先级）</h2>
             {state.weakPoints.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {state.weakPoints.map((w) => (
-                  <li key={w.point} className="flex items-center justify-between text-sm">
-                    <span className="text-[#c7d3ea]">{w.point}</span>
-                    <span className="flex items-center gap-2">
-                      <span className={trendClass((state.masteryMap[w.point] as any)?.trend)}>
-                        {trendIcon((state.masteryMap[w.point] as any)?.trend)}
+                  <li key={w.point} className="text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#c7d3ea]">{w.point}</span>
+                      <span className="flex items-center gap-2">
+                        {w.urgency && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              w.urgency === '高'
+                                ? 'bg-red-500/15 text-red-300'
+                                : w.urgency === '中'
+                                  ? 'bg-amber-500/15 text-amber-300'
+                                  : 'bg-emerald-500/15 text-emerald-300'
+                            }`}
+                          >
+                            {w.urgency}紧迫
+                          </span>
+                        )}
+                        <span className={trendClass((state.masteryMap[w.point] as any)?.trend)}>
+                          {trendIcon((state.masteryMap[w.point] as any)?.trend)}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            w.score < 40
+                              ? 'bg-red-500/15 text-red-300'
+                              : w.score < 70
+                                ? 'bg-amber-500/15 text-amber-300'
+                                : 'bg-emerald-500/15 text-emerald-300'
+                          }`}
+                        >
+                          {w.score}分
+                        </span>
                       </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          w.score < 40
-                            ? 'bg-red-500/15 text-red-300'
-                            : w.score < 70
-                              ? 'bg-amber-500/15 text-amber-300'
-                              : 'bg-emerald-500/15 text-emerald-300'
-                        }`}
-                      >
-                        {w.score}分
-                      </span>
-                    </span>
+                    </div>
+                    {w.suggestions && w.suggestions.length > 0 && (
+                      <p className="mt-1 text-xs text-[#5b6b8c]">
+                        建议：{w.suggestions.join('；')}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

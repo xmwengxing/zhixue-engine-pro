@@ -1459,26 +1459,41 @@ export class ParentTaskService {
         ? Math.round((rounds.reduce((sum, r) => sum + r.accuracy, 0) / rounds.length) * 10) / 10
         : null;
 
-    // 错题知识点 TOP5（从最近 3 轮答错的题取知识点，经 Question 关联）
-    const recentSessions = [...completed].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime()).slice(0, 3);
-    const kpMiss = new Map<string, number>();
-    for (const s of recentSessions) {
-      const wrongAnswers = await prisma.answer.findMany({
-        where: { sessionId: s.id, isCorrect: false },
-        include: { question: { select: { knowledgePoints: true } } },
-        take: 200,
-      });
-      for (const a of wrongAnswers) {
-        const kps = (a.question as any)?.knowledgePoints;
-        if (Array.isArray(kps)) {
-          kps.forEach((kp: string) => kpMiss.set(kp, (kpMiss.get(kp) || 0) + 1));
+    // 薄弱点 TOP5：优先用结构化优先级列表（gap/priority/urgency，见 subjectLearningStateService），
+    // 无档案数据时回退为「最近 3 轮答错题的知识点频次」统计
+    let weakPoints: string[] = [];
+    try {
+      const { getSubjectState, getWeakPointPriorityList } = await import(
+        './subjectLearningStateService'
+      );
+      const stateObj = await getSubjectState(task.studentId, task.subject ?? '');
+      weakPoints = getWeakPointPriorityList(stateObj, 5).map((w) => w.point);
+    } catch {
+      /* 学情档案读取失败，走频次兜底 */
+    }
+    if (weakPoints.length === 0) {
+      const recentSessions = [...completed]
+        .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+        .slice(0, 3);
+      const kpMiss = new Map<string, number>();
+      for (const s of recentSessions) {
+        const wrongAnswers = await prisma.answer.findMany({
+          where: { sessionId: s.id, isCorrect: false },
+          include: { question: { select: { knowledgePoints: true } } },
+          take: 200,
+        });
+        for (const a of wrongAnswers) {
+          const kps = (a.question as any)?.knowledgePoints;
+          if (Array.isArray(kps)) {
+            kps.forEach((kp: string) => kpMiss.set(kp, (kpMiss.get(kp) || 0) + 1));
+          }
         }
       }
+      weakPoints = [...kpMiss.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([kp]) => kp);
     }
-    const weakPoints = [...kpMiss.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([kp]) => kp);
 
     const stats: Record<string, unknown> = {
       semesterLabel: this.buildSemesterLabel(new Date()),

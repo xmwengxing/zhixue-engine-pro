@@ -141,9 +141,6 @@ export async function aiProposeCriteria(input: ProposeInput): Promise<ProposedCr
 
   // 学员画像
   const profile = await prisma.studentProfile.findUnique({ where: { userId: input.studentId } });
-  const state = await prisma.subjectLearningState.findUnique({
-    where: { studentId_subject: { studentId: input.studentId, subject: input.subject } },
-  });
   const recentErrors = await prisma.errorQuestion.findMany({
     where: { studentId: input.studentId, subject: input.subject },
     orderBy: { collectedAt: 'desc' },
@@ -179,13 +176,37 @@ export async function aiProposeCriteria(input: ProposeInput): Promise<ProposedCr
     }
   }
 
+  // 结构化薄弱点：按 priority_score 排序（高优先级在前），喂给 AI 做选题决策
+  let weakPriority: Array<{
+    point: string;
+    score: number;
+    gap_level?: number;
+    urgency?: string;
+    priority_score?: number;
+  }> = [];
+  try {
+    const { getSubjectState, getWeakPointPriorityList } = await import(
+      './subjectLearningStateService'
+    );
+    const stateObj = await getSubjectState(input.studentId, input.subject);
+    weakPriority = getWeakPointPriorityList(stateObj, 5).map((w) => ({
+      point: w.point,
+      score: w.score,
+      gap_level: w.gap_level,
+      urgency: w.urgency,
+      priority_score: w.priority_score,
+    }));
+  } catch {
+    // 学情档案读取失败不影响选题（降级为空列表）
+  }
+
   const prompt = `你是一名${input.subject}学科的测评设计师。请根据学员情况，从下面的题库存量中设计一组"初始测试"筛题条件。
 
 ## 学员信息
 - 年级：${profile?.grade ?? '未知'}
 - 教材版本：${profile?.materialVersion ?? '未知'}
 - 学习基础：${profile?.learningFoundation ?? '未知'}
-- 学科薄弱点（学情档案）：${JSON.stringify(state?.weakPoints ?? [])}
+- 薄弱点优先级（priority_score 降序，越大越先补）：${JSON.stringify(weakPriority)}
 - 近期错题知识点分布：${JSON.stringify(errorKpCount)}
 
 ## 题库存量（单元 → 各难度可用题数，难度1-5）
