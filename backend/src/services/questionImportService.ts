@@ -5,6 +5,9 @@ import { z } from 'zod';
 import path from 'path';
 import fs from 'fs/promises';
 import { aiServiceManager } from './aiServiceManager';
+import { adminOcrService } from './adminOcrService';
+import { callVisionApi } from './ocrVisionClient';
+import type { OcrProvider } from '@prisma/client';
 import {
   createImportJob,
   updateImportJob,
@@ -28,7 +31,6 @@ const NormalizedQuestionSchema = z.object({
   knowledgePoints: z.array(z.string()),
   score: z.number().optional(),
 });
-const NormalizedListSchema = z.array(NormalizedQuestionSchema);
 
 // ============ 解析层（OCR+大模型两段式的"第一段"：提取文本/版面） ============
 
@@ -37,9 +39,14 @@ const NormalizedListSchema = z.array(NormalizedQuestionSchema);
  * - docx: mammoth 提取正文
  * - pdf(数字版): pdf-parse 提取文本层
  * - txt/md: 直接读取
- * - 图片: 走 OCR 抽象层（当前未接入视觉模型，给出可操作提示）
+ * - 图片 / 扫描版 PDF: 走 OCR 抽象层（优先使用管理端配置的 OCR 服务商，否则回退环境变量）
+ *
+ * @param provider 管理端解析出的 OCR 服务商（可为 null）。null 时回退 OCR_PROVIDER 环境变量行为。
  */
-export async function extractText(file: Express.Multer.File): Promise<string> {
+export async function extractText(
+  file: Express.Multer.File,
+  provider?: OcrProvider | null
+): Promise<string> {
   const ext = path.extname(file.originalname).toLowerCase();
 
   if (ext === '.docx') {
@@ -48,34 +55,95 @@ export async function extractText(file: Express.Multer.File): Promise<string> {
   }
   if (ext === '.pdf') {
     const data = await pdfParse(file.buffer);
-    return data.text || '';
+    const text = (data.text || '').trim();
+    // 数字版 PDF 文本层充足；文本过少视为扫描件，转 OCR
+    if (text.length < 50) {
+      return ocrFromImage(file, provider);
+    }
+    return text;
   }
   if (['.txt', '.text', '.md', '.markdown'].includes(ext)) {
     return file.buffer.toString('utf-8');
   }
   if (['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'].includes(ext)) {
-    return ocrFromImage(file);
+    return ocrFromImage(file, provider);
   }
   // 未知类型：尝试按文本读
   return file.buffer.toString('utf-8');
 }
 
+/** 未配置视觉模型时的标准报错文案（与管理端导入提示一致） */
+export const NO_VISION_MODEL_MESSAGE =
+  '未配置视觉模型，无法识别图片/扫描件。请上传 .doc/.docx/.xlsx/.md/.txt 等文本格式或数字版（PDF）试卷。';
+
 /**
  * OCR 抽象层：扫描件/图片 → 文本。
- * 当前为可插拔接口，默认实现需要配置视觉模型/商业 OCR。
- * 环境变量 OCR_PROVIDER 可用于切换实现（预留）。
+ * 1) 若传入管理端 provider，按其方式分派：
+ *    - LOCAL_SERVICE：本地 Unlimited-OCR 推理服务
+ *    - LOCAL_VISION：本地视觉模型（Ollama 原生 /api/chat）
+ *    - CUSTOM_API：自定义厂商视觉模型（OpenAI 兼容 /chat/completions）
+ * 2) 否则回退 OCR_PROVIDER 环境变量行为（兼容旧逻辑），未配置则抛出标准报错。
  */
-async function ocrFromImage(_file: Express.Multer.File): Promise<string> {
-  const provider = process.env.OCR_PROVIDER;
-  if (provider && provider !== 'none') {
-    // TODO: 接入腾讯云/百度 OCR 或视觉大模型，将图片转为文本
+async function ocrFromImage(
+  file: Express.Multer.File,
+  provider?: OcrProvider | null
+): Promise<string> {
+  if (provider) {
+    if (provider.method === 'LOCAL_SERVICE') {
+      return ocrViaLocalService(file, provider.endpoint);
+    }
+    // LOCAL_VISION / CUSTOM_API：统一走视觉对话接口
+    return callVisionApi(provider, file.buffer, file.mimetype, undefined, 1000 * 60 * 10);
+  }
+
+  // 回退环境变量行为（兼容旧逻辑）
+  const envProvider = process.env.OCR_PROVIDER;
+  if (envProvider === 'local') {
+    return ocrViaLocalService(file, process.env.OCR_ENDPOINT);
+  }
+  if (envProvider && envProvider !== 'none') {
     throw new Error(
-      `已配置 OCR_PROVIDER=${provider}，但对应实现尚未接入。请实现 ocrProvider 后重试。`
+      `已配置 OCR_PROVIDER=${envProvider}，但对应实现尚未接入。请实现后重试。`
     );
   }
-  throw new Error(
-    '图片/扫描件 OCR 暂未接入（需配置 OCR/视觉模型）。请改用 docx/PDF/纯文本导入，或在导入页粘贴题目文本。'
-  );
+  throw new Error(NO_VISION_MODEL_MESSAGE);
+}
+
+/**
+ * 调用本地 OCR 推理服务（services/ocr-unlimited）。
+ * 单图 → POST /ocr；PDF → POST /ocr-pdf。返回识别出的文本。
+ */
+async function ocrViaLocalService(
+  file: Express.Multer.File,
+  endpoint?: string
+): Promise<string> {
+  const base = (endpoint || process.env.OCR_ENDPOINT || 'http://localhost:8002').replace(/\/$/, '');
+  const isPdf = path.extname(file.originalname).toLowerCase() === '.pdf';
+  const url = `${base}${isPdf ? '/ocr-pdf' : '/ocr'}`;
+
+  const form = new FormData();
+  const blob = new Blob([file.buffer], {
+    type: file.mimetype || 'application/octet-stream',
+  });
+  form.append('file', blob, file.originalname);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1000 * 60 * 10); // OCR 最多 10 分钟
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`本地 OCR 服务调用失败 ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    const json = (await res.json()) as { text?: string; pages?: string[] };
+    return (json.pages ? json.pages.join('\n\n') : json.text) || '';
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ============ 归一化层（第二段：LLM 结构化） ============
@@ -116,21 +184,43 @@ export async function normalizeWithLLM(
   const prompt = buildNormalizePrompt(subject, text);
   const raw = await aiServiceManager.callAI(prompt, {
     temperature: 0.2,
-    maxTokens: 4000,
+    // 输出预算给足，避免推理模型把最终 JSON 截进 thinking 导致 content 为空。
+    maxTokens: 6000,
+    // 抽取走独立 provider（本地 Qwen 等指令模型，稳定输出 JSON），
+    // 与智能体对话用的推理模型解耦。该 provider 不存在时回退到默认故障转移。
+    providerName: process.env.IMPORT_EXTRACT_PROVIDER || 'Ollama-Qwen-Extract',
+    // 本地小模型（如 1080 Ti 上的 9B Q6_K）单块生成可能需 1~4 分钟，
+    // 故放大超时到 5 分钟；关闭重试（慢生成重试只会重复耗时，无意义）。
+    timeout: 300000,
+    maxRetries: 0,
     systemPrompt:
       '你是题库结构化抽取引擎，只输出符合要求的 JSON 数组，不要任何额外文字。',
   });
 
-  // 容错：剥离可能的 markdown 代码块与前后说明
+  // 容错：剥离可能的 markdown 代码块与前后说明，定位 JSON 数组
   const cleaned = extractJsonArray(raw);
-  const parsed = NormalizedListSchema.safeParse(cleaned);
-  if (!parsed.success) {
-    throw new Error('LLM 返回结构校验失败：' + parsed.error.message);
+  const list = Array.isArray(cleaned) ? cleaned : [cleaned];
+
+  // 单题级容错：逐题校验，丢弃畸形项、保留合法题，避免一道格式错误拖垮整份试卷。
+  // （推理模型偶尔会把某题输出成字符串/缺字段，整体抛错会损失其余题目。）
+  const ok: NormalizedQuestion[] = [];
+  const bad: string[] = [];
+  for (const item of list) {
+    const r = NormalizedQuestionSchema.safeParse(item);
+    if (r.success) {
+      ok.push({ ...r.data, config: buildAnswerConfig(r.data) });
+    } else {
+      bad.push(typeof item === 'string' ? item.slice(0, 40) : JSON.stringify(item).slice(0, 40));
+    }
   }
-  return parsed.data.map((q) => ({
-    ...q,
-    config: buildAnswerConfig(q),
-  }));
+
+  if (ok.length === 0) {
+    throw new Error('LLM 返回结构校验失败：' + (bad[0] || '无合法题目'));
+  }
+  if (bad.length > 0) {
+    console.warn(`[import] 归一化跳过 ${bad.length} 道畸形题，保留 ${ok.length} 道：`, bad.slice(0, 3));
+  }
+  return ok;
 }
 
 function buildAnswerConfig(q: z.infer<typeof NormalizedQuestionSchema>): Record<string, unknown> {
@@ -151,17 +241,41 @@ function extractJsonArray(raw: string): unknown {
   // 去掉 ```json ... ``` 包裹
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
-  // 截取第一个 [ 到最后一个 ]
-  const start = s.indexOf('[');
-  const end = s.lastIndexOf(']');
-  if (start >= 0 && end > start) {
-    s = s.slice(start, end + 1);
+
+  // 平衡括号扫描：从每个 '[' 出发找其匹配 ']'，尝试解析；
+  // 优先返回首个能成功 JSON.parse 的数组。这样即使推理模型的思维链里
+  // 混有 "[A]"、"选项[正确]" 之类的假括号，也能准确命中真正的题目 JSON 数组。
+  // 同时兼容答案落在 reasoning 字段（content 为空）的情况。
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] !== '[') continue;
+    let depth = 0;
+    for (let j = i; j < s.length; j++) {
+      const ch = s[j];
+      if (ch === '[') depth++;
+      else if (ch === ']') {
+        depth--;
+        if (depth === 0) {
+          const candidate = s.slice(i, j + 1);
+          try {
+            const parsed = JSON.parse(candidate);
+            if (Array.isArray(parsed)) return parsed;
+          } catch {
+            // 不是合法数组，继续往下找
+          }
+          break;
+        }
+      }
+    }
   }
+
+  // 兜底：直接整段解析
   try {
-    return JSON.parse(s);
+    const parsed = JSON.parse(s);
+    if (Array.isArray(parsed)) return parsed;
   } catch {
-    throw new Error('无法从 LLM 响应中解析出 JSON 数组');
+    /* ignore */
   }
+  throw new Error('无法从 LLM 响应中解析出 JSON 数组');
 }
 
 // ============ 导入任务编排 ============
@@ -180,7 +294,9 @@ export async function startImport(params: {
   createdBy: string;
   textbookId?: string;
   paperType?: string;
+  category?: 'EXERCISE' | 'ASSESSMENT';
   unitIds?: string[];
+  ocrProviderId?: string;
 }): Promise<StartImportResult> {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const safeName = `${Date.now()}_${params.file.originalname.replace(/[^\w.\-一-龥]/g, '_')}`;
@@ -197,7 +313,9 @@ export async function startImport(params: {
   void processImport(job.id, params.file, params.subject, {
     textbookId: params.textbookId,
     paperType: params.paperType,
+    category: params.category,
     unitIds: params.unitIds,
+    ocrProviderId: params.ocrProviderId,
   }).catch((e) => {
     console.error('试卷导入处理失败:', e);
     void updateImportJob(job.id, { status: 'FAILED', error: String(e.message || e) });
@@ -210,12 +328,21 @@ async function processImport(
   jobId: string,
   file: Express.Multer.File,
   subject: string,
-  opts?: { textbookId?: string; paperType?: string; unitIds?: string[] }
+  opts?: {
+    textbookId?: string;
+    paperType?: string;
+    category?: 'EXERCISE' | 'ASSESSMENT';
+    unitIds?: string[];
+    ocrProviderId?: string;
+  }
 ): Promise<void> {
+  // 解析管理端配置的 OCR 服务商（优先指定 id，否则取默认；无则返回 null → 回退 env 或报错）
+  const ocrProvider = await adminOcrService.resolveForImport(opts?.ocrProviderId);
+
   // 1) 解析/ OCR 提取文本
   let rawText: string;
   try {
-    rawText = await extractText(file);
+    rawText = await extractText(file, ocrProvider);
   } catch (e: any) {
     await updateImportJob(jobId, { status: 'FAILED', error: e.message });
     return;
@@ -244,6 +371,7 @@ async function processImport(
     sourceFile: (await getImportJob(jobId))?.fileName,
     textbookId: opts?.textbookId,
     paperType: (opts?.paperType as any) || 'UNIT',
+    category: opts?.category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
     unitIds: opts?.unitIds,
   });
   const created = await createQuestionsFromNormalized(

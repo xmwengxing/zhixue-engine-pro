@@ -23,10 +23,10 @@ export const PreTestReady = ({
         <span className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full mb-4">
           第一阶段：基础诊断
         </span>
-        <h1 className="text-slate-900 dark:text-white tracking-tight text-4xl font-extrabold leading-tight">
+        <h1 className="text-white tracking-tight text-4xl font-extrabold leading-tight">
           训前测试准备就绪
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-3 text-lg max-w-lg mx-auto">
+        <p className="text-[#5b6b8c] mt-3 text-lg max-w-lg mx-auto">
           我们将通过这组题目，为您构建个性化的知识图谱，锁定薄弱环节。
         </p>
       </div>
@@ -46,17 +46,17 @@ export const PreTestReady = ({
           {/* 右侧内容 */}
           <div className="flex w-full lg:w-1/2 flex-col justify-between gap-6 p-8">
             <div>
-              <h3 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-tight">
+              <h3 className="text-white text-2xl font-bold leading-tight tracking-tight">
                 {taskTitle}
               </h3>
               <div className="mt-4 flex flex-col gap-4">
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-3 text-[#92a4c9]">
                   <span className="material-symbols-outlined text-primary">
                     description
                   </span>
                   <p className="text-base font-normal">基础知识诊断性测评</p>
                 </div>
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-3 text-[#92a4c9]">
                   <span className="material-symbols-outlined text-primary">
                     psychology
                   </span>
@@ -67,19 +67,19 @@ export const PreTestReady = ({
 
             {/* 统计信息 */}
             <div className="flex gap-4">
-              <div className="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">
+              <div className="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-[#1a2332] border border-[#324467]">
+                <p className="text-[#5b6b8c] text-xs font-medium uppercase tracking-wider">
                   题目数量
                 </p>
-                <p className="text-slate-900 dark:text-white text-xl font-bold">
+                <p className="text-white text-xl font-bold">
                   {questionCount} 题
                 </p>
               </div>
-              <div className="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">
+              <div className="flex-1 flex flex-col gap-1 rounded-xl p-4 bg-[#1a2332] border border-[#324467]">
+                <p className="text-[#5b6b8c] text-xs font-medium uppercase tracking-wider">
                   预计用时
                 </p>
-                <p className="text-slate-900 dark:text-white text-xl font-bold">
+                <p className="text-white text-xl font-bold">
                   {estimatedTime} 分钟
                 </p>
               </div>
@@ -98,7 +98,7 @@ export const PreTestReady = ({
       </div>
 
       {/* 底部提示 */}
-      <div className="mt-12 flex flex-wrap items-center gap-8 text-slate-400 dark:text-slate-600 justify-center">
+      <div className="mt-12 flex flex-wrap items-center gap-8 text-[#5b6b8c] justify-center">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-sm">verified_user</span>
           <span className="text-xs uppercase tracking-widest font-bold">

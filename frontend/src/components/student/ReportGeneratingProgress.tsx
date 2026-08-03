@@ -111,19 +111,19 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
 
   if (!status) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-[#232f48] rounded-lg shadow-md p-8">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-gray-600">正在准备生成报告...</p>
+        <p className="text-[#92a4c9]">正在准备生成报告...</p>
       </div>
     );
   }
 
   if (status.status === 'FAILED') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-[#232f48] rounded-lg shadow-md p-8">
         <div className="text-red-500 text-6xl mb-4">✕</div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">报告生成失败</h3>
-        <p className="text-gray-600 mb-4">{status.error || '未知错误'}</p>
+        <h3 className="text-xl font-semibold text-[#e2e8f5] mb-2">报告生成失败</h3>
+        <p className="text-[#92a4c9] mb-4">{status.error || '未知错误'}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -136,7 +136,7 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
 
   // PENDING / GENERATING 状态
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-lg shadow-md p-8">
+    <div className="flex flex-col items-center justify-center min-h-[400px] bg-[#232f48] rounded-lg shadow-md p-8">
       {/* AI 图标动画 */}
       <div className="relative mb-8">
         <div className="animate-pulse">
@@ -167,16 +167,16 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
       </div>
 
       {/* 标题 */}
-      <h3 className="text-2xl font-semibold text-gray-800 mb-2">AI 正在生成报告</h3>
-      <p className="text-gray-600 mb-6">{status.message}</p>
+      <h3 className="text-2xl font-semibold text-[#e2e8f5] mb-2">AI 正在生成报告</h3>
+      <p className="text-[#92a4c9] mb-6">{status.message}</p>
 
       {/* 进度条 */}
       <div className="w-full max-w-md mb-4">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className="flex justify-between text-sm text-[#92a4c9] mb-2">
           <span>生成进度</span>
           <span>{status.progress}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-[#324467] rounded-full h-3 overflow-hidden">
           <div
             className="bg-blue-500 h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${status.progress}%` }}
@@ -187,7 +187,7 @@ const ReportGeneratingProgress: React.FC<ReportGeneratingProgressProps> = ({
       </div>
 
       {/* 提示文本 */}
-      <p className="text-sm text-gray-500 text-center max-w-md">
+      <p className="text-sm text-[#5b6b8c] text-center max-w-md">
         AI 正在分析您的答题数据，生成个性化学习报告。这可能需要几秒钟时间，请耐心等待...
       </p>
     </div>

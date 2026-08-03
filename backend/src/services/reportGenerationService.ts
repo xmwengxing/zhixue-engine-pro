@@ -338,22 +338,23 @@ export class ReportGenerationService {
       prompt += `共 ${reportData.errorAnswers.length} 道错题\n`;
       reportData.errorAnswers.slice(0, 5).forEach((answer: any, index: number) => {
         prompt += `\n错题 ${index + 1}:\n`;
+        // questionId 可空（AI 题沉淀失败时只有 questionSnapshot），两种来源都要能还原题面
+        const snap = answer.questionSnapshot || {};
+        const q = answer.question;
         try {
+          const raw = q ? q.content : snap.stem;
           const content =
-            typeof answer.question.content === 'string'
-              ? safeJsonParse<{ text?: string; question?: string }>(answer.question.content)
-              : answer.question.content;
-          if (content) {
-            prompt += `题目: ${content.text || content.question || '无'}\n`;
-          } else {
-            prompt += `题目: ${answer.question.content}\n`;
-          }
+            typeof raw === 'string'
+              ? safeJsonParse<{ text?: string; question?: string; stem?: string }>(raw) ?? { text: raw }
+              : raw;
+          prompt += `题目: ${content?.text || content?.question || content?.stem || snap.stem || '无'}\n`;
         } catch {
-          prompt += `题目: ${answer.question.content}\n`;
+          prompt += `题目: ${snap.stem || '无'}\n`;
         }
         prompt += `学员答案: ${answer.studentAnswer}\n`;
-        prompt += `正确答案: ${answer.question.answer}\n`;
-        prompt += `知识点: ${answer.question.knowledgePoints.join(', ')}\n`;
+        prompt += `正确答案: ${q?.answer ?? snap.correctAnswer ?? '无'}\n`;
+        const kps: string[] = q?.knowledgePoints ?? (snap.knowledgePoint ? [snap.knowledgePoint] : []);
+        prompt += `知识点: ${kps.join(', ') || '未标注'}\n`;
       });
       prompt += `\n`;
     }
@@ -460,11 +461,16 @@ export class ReportGenerationService {
     });
 
     // 生成错题分析
-    const errorAnalysis = errorAnswers.slice(0, 10).map((answer: any) => ({
-      questionId: answer.questionId,
-      reason: '答案不正确，需要复习相关知识点',
-      suggestion: `建议重点复习: ${answer.question.knowledgePoints.join('、')}`,
-    }));
+    const errorAnalysis = errorAnswers.slice(0, 10).map((answer: any) => {
+      const snap = answer.questionSnapshot || {};
+      const kps: string[] =
+        answer.question?.knowledgePoints ?? (snap.knowledgePoint ? [snap.knowledgePoint] : []);
+      return {
+        questionId: answer.questionId ?? '',
+        reason: '答案不正确，需要复习相关知识点',
+        suggestion: kps.length ? `建议重点复习: ${kps.join('、')}` : '建议回顾本题涉及的知识点',
+      };
+    });
 
     // 生成学习建议
     let learningAdvice = '';

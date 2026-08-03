@@ -176,7 +176,15 @@ model Question {
   difficultyMeta Json?   @map("difficulty_meta") // { reason, confidence:0-1, classifiedAt, standardVersion, needsReview:boolean, measuredP?:number }
   source         String? @default("IMPORT")      // IMPORT=导入 | MANUAL=手动创建 | AI_GENERATED=AI补齐入库
 
+  // ===== AI 生成题人工复核（题库自增长飞轮）=====
+  // null=无需复核（导入/手动题）；PENDING=待审核；APPROVED=已采纳；REJECTED=已驳回
+  reviewStatus String?   @map("review_status")
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewedBy   String?   @map("reviewed_by")
+  reviewNote   String?   @map("review_note")
+
   @@index([grade, term, difficulty])
+  @@index([reviewStatus])
   @@map("questions")
 }
 
@@ -198,6 +206,10 @@ model QuestionPaper {
   paperType  PaperType @default(UNIT) @map("paper_type") // 单元练习/期中/期末/中考/高考
   unitIds    String[]  @map("unit_ids")   // 关联单元节点 id（多选）
   textbookId String?   @map("textbook_id") // 关联教材(教材体系 TEXTBOOK 节点) id
+
+  // 题库分类：习题与试卷(EXERCISE) / 初测与水平评估(ASSESSMENT)
+  // ASSESSMENT 库专门用于任务初测或水平评估，不区分难度，训练舱初测可从中提取套卷或组合
+  category   QuestionPaperCategory @default(EXERCISE) @map("category")
 
   items QuestionPaperItem[]
   importJobs QuestionImportJob[]
@@ -272,6 +284,10 @@ model TrainingSession {
   finalExamData      Json?    @map("final_exam_data") @db.JsonB      // 综合考试数据：{ questions: [], answers: {}, results?: {} }
   trainingReport     String?  @map("training_report") @db.Text       // 训练报告：Markdown 格式的完整报告
 
+  // 断点续答锚点：最近一次「已下发但未提交」的题目快照
+  // { phase, questionNumber, totalQuestions, question, issuedAt }
+  lastQuestionSnapshot Json?  @map("last_question_snapshot") @db.JsonB
+
   // 关联关系
   task            Task              @relation(fields: [taskId], references: [id])
   student         User              @relation(fields: [studentId], references: [id])
@@ -286,7 +302,8 @@ model TrainingSession {
 model Answer {
   id            String   @id @default(uuid())
   sessionId     String   @map("session_id")
-  questionId    String   @map("question_id")
+  // 可空：AI 现场生成题若沉淀 Question 失败，仍需保住作答记录（用 questionSnapshot 兜底）
+  questionId    String?  @map("question_id")
   studentAnswer String   @map("student_answer")
   isCorrect     Boolean  @map("is_correct")
   timeSpent     Int      @map("time_spent") // 秒
@@ -296,10 +313,12 @@ model Answer {
   // 电子答题扩展字段
   answerData  Json?   @map("answer_data")  // 结构化答案（按 answerType 组织）
   inputMethod String? @map("input_method") // click|keyboard|formula|geogebra|desmos|handwriting|photo
+  // 题面快照：questionId 为空（或题目后续被删）时仍能还原题干做报告/错题本
+  questionSnapshot Json? @map("question_snapshot") @db.JsonB
 
   // 关联关系
   session        TrainingSession @relation(fields: [sessionId], references: [id])
-  question       Question        @relation(fields: [questionId], references: [id])
+  question       Question?       @relation(fields: [questionId], references: [id])
   errorQuestions ErrorQuestion[]
 
   @@map("answers")
@@ -511,6 +530,11 @@ model AIProvider {
   model     String
   priority  Int      @default(0) // 数字越小优先级越高
   status    ProviderStatus @default(ACTIVE)
+  // —— 模型级配置（管理员可配，用于兼容文本生成 / 推理模型并优化延迟）——
+  contextWindow    Int?     @map("context_window") // 模型最长上下文（自动探测或手动填写），用于约束 max_tokens / 注入 Ollama num_ctx
+  maxTokens        Int?     @map("max_tokens") // 单次输出最大 token（留空=各适配器官方默认）
+  streamEnabled    Boolean  @default(false) @map("stream_enabled") // 是否允许流式响应
+  supportsReasoning Boolean  @default(false) @map("supports_reasoning") // 是否为推理模型（输出可能落在 reasoning 字段）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -518,6 +542,27 @@ model AIProvider {
   apiLogs APILog[]
 
   @@map("ai_providers")
+}
+
+// OCR / 视觉识别服务商配置（管理端可配置，供试卷导入与学员/家长图片识别使用）
+// - LOCAL_SERVICE：本地 Unlimited-OCR 推理服务（仅 endpoint）
+// - LOCAL_VISION：本地视觉模型（Ollama 原生 /api/chat，需 endpoint + model）
+// - CUSTOM_API：自定义厂商视觉模型（OpenAI 兼容 /chat/completions，需 endpoint + apiKey + model）
+// enableForRecognition：是否作为学员/家长「图片→文本」识别通道（仅 CUSTOM_API 可勾选，满足非本地要求）
+model OcrProvider {
+  id                   String        @id @default(uuid())
+  name                 String
+  method               OcrMethod
+  endpoint             String
+  apiKey               String?       @map("api_key") // 仅 CUSTOM_API 需要
+  model                String?       @map("model")   // 视觉模型名（LOCAL_VISION / CUSTOM_API）
+  isDefault            Boolean       @default(false) // 管理端导入默认使用
+  enableForRecognition Boolean       @default(false) // 作为学员/家长识别通道（仅 CUSTOM_API）
+  status               ProviderStatus @default(ACTIVE)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@map("ocr_providers")
 }
 
 // 科目教学指令表
@@ -610,6 +655,12 @@ enum PaperStatus {
   PUBLISHED
 }
 
+// 试卷题库分类：习题与试卷（常规题库）/ 初测与水平评估（初测专用库，不区分难度）
+enum QuestionPaperCategory {
+  EXERCISE
+  ASSESSMENT
+}
+
 // 试卷范围/类型：单元练习 / 期中 / 期末 / 中考 / 高考
 enum PaperType {
   UNIT
@@ -662,6 +713,7 @@ enum SpecialTaskType {
   UNIT             // 单元专项
   KNOWLEDGE_POINT  // 知识点专项
   ERROR_BOOK       // 错题集专项
+  PAPER            // 题库组卷（选择试卷或随机抽题进行专项练习）
 }
 
 enum TaskStatus {
@@ -726,6 +778,14 @@ enum AIProviderType {
   DOUBAO
   WENXIN
   CUSTOM
+  OLLAMA // 本地 Ollama 原生服务（走 /api/chat，支持 think:false 关闭思维链）
+}
+
+// OCR / 视觉识别方式
+enum OcrMethod {
+  LOCAL_SERVICE // 本地 Unlimited-OCR 推理服务（仅 endpoint）
+  LOCAL_VISION  // 本地视觉模型（Ollama 原生 /api/chat，需 endpoint + model）
+  CUSTOM_API    // 自定义厂商视觉模型（OpenAI 兼容 /chat/completions，需 endpoint + apiKey + model）
 }
 
 enum ProviderStatus {

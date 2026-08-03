@@ -47,7 +47,12 @@ class ParentTaskController {
       const questionBankService = await import('../services/questionBankService');
       const subjectRaw = req.query.subject;
       const subject = Array.isArray(subjectRaw) ? String(subjectRaw[0]) : (subjectRaw as string | undefined);
-      const papers = await questionBankService.listPublishedPapers(subject || undefined);
+      const categoryRaw = req.query.category;
+      const category = (Array.isArray(categoryRaw) ? String(categoryRaw[0]) : (categoryRaw as string | undefined)) as
+        | 'EXERCISE'
+        | 'ASSESSMENT'
+        | undefined;
+      const papers = await questionBankService.listPublishedPapers(subject || undefined, category ?? 'EXERCISE');
       return res.json({ success: true, data: { papers } });
     } catch (error: any) {
       logger.error('获取试卷列表失败:', error);
@@ -282,18 +287,18 @@ class ParentTaskController {
           });
         }
 
-        const { title, aiTeacher, subject, materialVersion, units, goal } = customConfig;
+        const { title, aiTeacher, subject, textbookId, unitIds, goal } = customConfig;
 
-        if (!title || !aiTeacher || !subject || !materialVersion || !units || !goal) {
+        if (!title || !aiTeacher || !subject || !textbookId || !goal) {
           return res.status(400).json({
             error: {
               code: 'INVALID_PARAMETER',
-              message: '自定义模式缺少必填字段: title, aiTeacher, subject, materialVersion, units, goal',
+              message: '自定义模式缺少必填字段: title, aiTeacher, subject, textbookId, goal',
             },
           });
         }
 
-        if (!Array.isArray(units) || units.length === 0) {
+        if (!Array.isArray(unitIds) || unitIds.length === 0) {
           return res.status(400).json({
             error: {
               code: 'INVALID_PARAMETER',
@@ -803,17 +808,34 @@ class ParentTaskController {
         });
       }
 
-      const { studentId, subject, specialType, unitIds, knowledgePoints, errorQuestionIds, questionCount, title } =
-        req.body;
+      const {
+        studentId,
+        subject,
+        specialType,
+        unitIds,
+        knowledgePoints,
+        errorQuestionIds,
+        questionCount,
+        title,
+        examConfig,
+      } = req.body;
 
       if (!studentId || !subject) {
         return res.status(400).json({
           error: { code: 'INVALID_PARAMETER', message: 'studentId 和 subject 为必填项' },
         });
       }
-      if (!specialType || !['UNIT', 'KNOWLEDGE_POINT', 'ERROR_BOOK'].includes(specialType)) {
+      if (!specialType || !['UNIT', 'KNOWLEDGE_POINT', 'ERROR_BOOK', 'PAPER'].includes(specialType)) {
         return res.status(400).json({
-          error: { code: 'INVALID_PARAMETER', message: 'specialType 必须是 UNIT、KNOWLEDGE_POINT 或 ERROR_BOOK' },
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: 'specialType 必须是 UNIT、KNOWLEDGE_POINT、ERROR_BOOK 或 PAPER',
+          },
+        });
+      }
+      if (specialType === 'PAPER' && !examConfig) {
+        return res.status(400).json({
+          error: { code: 'INVALID_PARAMETER', message: '题库组卷专项需要提供 examConfig' },
         });
       }
 
@@ -826,6 +848,7 @@ class ParentTaskController {
         errorQuestionIds,
         questionCount: questionCount ? Number(questionCount) : undefined,
         title,
+        examConfig,
       });
 
       return res.status(201).json({

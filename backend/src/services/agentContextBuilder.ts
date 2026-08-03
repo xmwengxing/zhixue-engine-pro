@@ -5,14 +5,16 @@
  * 按 L1→L6 优先级注入，并做 token 预算裁剪：
  *
  *   L1 约束 CONSTRAINT（全局+学科）        ← 永不裁剪
- *   L2 角色指令 INSTRUCTION（学科覆盖全局）
+ *   L2 角色指令 INSTRUCTION（学科=科目指令配置唯一源；全局=智能体平台）
  *   L3 流程文档 FLOW（仅当前阶段的段落）
  *   L4 学员记忆 StudentMemory（全局+该学科）
  *   L5 学科学情摘要 SubjectLearningState（程序生成摘要，非全量）
  *   L6 任务配置与会话状态（由调用方传入）
  *
  * 文档来源：AgentDocument 表（管理端可增删改查）。
- * 学科专属文档（subject 非空）覆盖/优先于全局文档（subject=null）。
+ * 学科专属角色指令（L2 学科部分）来自 SubjectInstruction 表（「科目指令配置」，唯一权威源），
+ * 避免与智能体平台重复配置冲突；其余分层文档来自 AgentDocument 表。智能体平台中 subject 非空的
+ * INSTRUCTION 文档已被「科目指令配置」取代，不再注入 L2。
  */
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../middlewares/logger';
@@ -128,13 +130,51 @@ export async function buildAgentContext(input: AgentContextInput): Promise<Agent
     logger.warn('agentContextBuilder L1 加载失败:', e);
   }
 
-  // ---------- L2 角色指令（学科覆盖全局） ----------
+  // ---------- L2 角色指令 ----------
+  // 学科专属角色指令：唯一权威源 = 科目指令配置（subjectInstruction 表），避免与智能体平台重复配置/冲突
+  // 全局角色指令：智能体平台（agentDocument INSTRUCTION，subject=null）
+  // 注：智能体平台中 subject 非空的 INSTRUCTION 文档已被「科目指令配置」取代，不再注入（仅告警）。
   try {
-    const docs = await loadDocs('INSTRUCTION', subject, true);
-    if (docs.length > 0) {
-      const text = cap(docs.map((d) => d.content.trim()).join('\n\n'), LAYER_CAP.L2);
-      parts.push(`# 二、角色与教学指令\n${text}`);
-      meta.push({ layer: 'L2', title: docs.map((d) => d.title).join('、'), chars: text.length });
+    const blocks: string[] = [];
+    const metaTitles: string[] = [];
+    let chars = 0;
+
+    // 学科专属 AI 老师指令（科目指令配置，唯一权威源）
+    if (subject) {
+      const si = await prisma.subjectInstruction.findUnique({ where: { subject } });
+      if (si?.systemPrompt?.trim()) {
+        const text = cap(si.systemPrompt.trim(), LAYER_CAP.L2);
+        blocks.push(`【${subject}学科 AI 老师】\n${text}`);
+        metaTitles.push(`${subject}科目指令`);
+        chars += text.length;
+      }
+    }
+
+    // 全局角色指令（智能体平台，subject=null）
+    const globalCap = subject ? 1500 : LAYER_CAP.L2;
+    const globalDocs = await loadDocs('INSTRUCTION', null, false);
+    if (globalDocs.length > 0) {
+      const text = cap(globalDocs.map((d) => d.content.trim()).join('\n\n'), globalCap);
+      blocks.push(`# 全局角色与教学指令\n${text}`);
+      metaTitles.push('全局' + globalDocs.map((d) => d.title).join('、'));
+      chars += text.length;
+    }
+
+    // 告警：智能体平台存在学科级 INSTRUCTION（已被科目指令配置取代，避免冲突）
+    const conflictDocs = await prisma.agentDocument.findMany({
+      where: { type: 'INSTRUCTION' as any, subject: { not: null }, enabled: true },
+      select: { id: true, subject: true, title: true },
+    });
+    if (conflictDocs.length > 0) {
+      logger.warn(
+        'agentContextBuilder: 智能体平台存在学科级 INSTRUCTION 文档，已被「科目指令配置」取代（不再注入 L2，避免冲突）：',
+        conflictDocs.map((d) => `${d.title}(${d.subject})`)
+      );
+    }
+
+    if (blocks.length > 0) {
+      parts.push(`# 二、角色与教学指令\n${blocks.join('\n\n')}`);
+      meta.push({ layer: 'L2', title: metaTitles.join('、'), chars });
     }
   } catch (e) {
     logger.warn('agentContextBuilder L2 加载失败:', e);

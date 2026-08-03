@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as questionBankService from '../services/questionBankService';
 import * as questionImportService from '../services/questionImportService';
+import { questionBankExportService, BankExportFilter } from '../services/questionBankExportService';
 import { QuestionType, PaperStatus } from '@prisma/client';
 import multer from 'multer';
 
@@ -17,6 +18,76 @@ const upload = multer({
 function getUserId(req: Request): string {
   return (req as any).user?.id ?? 'system';
 }
+
+// 题库数据文件（.zxbank）上传，独立于试卷导入的 fileFilter
+const uploadBank = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.(zxbank|json)$/i.test(file.originalname);
+    if (ok) cb(null, true);
+    else cb(new Error('仅支持 .zxbank / .json 题库数据文件'));
+  },
+});
+
+function parsePaperIds(v: unknown): string[] | undefined {
+  if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
+  if (typeof v === 'string' && v) return v.split(',').map((s) => s.trim()).filter(Boolean);
+  return undefined;
+}
+
+// ============ 题库导出 / 导入（生产迁移） ============
+
+/**
+ * 导出题库为 .zxbank 自描述 JSON（按试卷筛选 + 可选教材节点）。
+ * GET /api/admin/question-bank/export?paperIds=&subject=&grade=&term=&version=&unitId=&source=&includeTaxonomy=
+ */
+export const exportBank = async (req: Request, res: Response) => {
+  try {
+    const q = req.query;
+    const filter: BankExportFilter = {
+      paperIds: parsePaperIds(q.paperIds),
+      subject: typeof q.subject === 'string' ? q.subject : undefined,
+      grade: typeof q.grade === 'string' ? q.grade : undefined,
+      term: typeof q.term === 'string' ? q.term : undefined,
+      version: typeof q.version === 'string' ? q.version : undefined,
+      unitId: typeof q.unitId === 'string' ? q.unitId : undefined,
+      source: typeof q.source === 'string' ? q.source : undefined,
+      includeTaxonomy: q.includeTaxonomy === 'true' || q.includeTaxonomy === '1',
+    };
+    const data = await questionBankExportService.buildExport(filter, getUserId(req));
+    const fname = `zhixue-bank-${new Date().toISOString().slice(0, 10)}.zxbank`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=${fname}`);
+    return res.status(200).json(data);
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/**
+ * 导入 .zxbank 题库数据文件（按 id 幂等 upsert）。
+ * POST /api/admin/question-bank/import-data  (multipart, field=file)
+ */
+export const importBank = [
+  uploadBank.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) return res.status(400).json({ success: false, message: '请上传 .zxbank 文件' });
+      let data: any;
+      try {
+        data = JSON.parse(file.buffer.toString('utf-8'));
+      } catch {
+        return res.status(400).json({ success: false, message: '文件不是合法 JSON' });
+      }
+      const summary = await questionBankExportService.applyImport(data, getUserId(req));
+      return res.json({ success: true, data: summary });
+    } catch (e: any) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+  },
+];
 
 // 将 query 参数统一为单个字符串（express 可能为数组）
 function one(v: unknown): string | undefined {
@@ -46,6 +117,8 @@ export const listPapers = async (req: Request, res: Response) => {
     const result = await questionBankService.listPapers({
       subject: one(req.query.subject),
       status: one(req.query.status) as PaperStatus | undefined,
+      paperType: one(req.query.paperType) as any,
+      category: one(req.query.category) as 'EXERCISE' | 'ASSESSMENT' | undefined,
       page: req.query.page ? Number(req.query.page) : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     });
@@ -67,7 +140,7 @@ export const getPaper = async (req: Request, res: Response) => {
 
 export const createPaper = async (req: Request, res: Response) => {
   try {
-    const { subject, title, grade, textbookId, paperType, term, version, unitIds } = req.body;
+    const { subject, title, grade, textbookId, paperType, category, term, version, unitIds } = req.body;
     if (!subject || !title) {
       return res.status(400).json({ success: false, message: '缺少 subject / title' });
     }
@@ -78,6 +151,7 @@ export const createPaper = async (req: Request, res: Response) => {
       createdBy: getUserId(req),
       textbookId,
       paperType,
+      category: category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
       term,
       version,
       unitIds: Array.isArray(unitIds) ? unitIds : undefined,
@@ -121,6 +195,19 @@ export const addPaperItem = async (req: Request, res: Response) => {
   }
 };
 
+export const updatePaper = async (req: Request, res: Response) => {
+  try {
+    const { category } = req.body;
+    if (category !== 'EXERCISE' && category !== 'ASSESSMENT') {
+      return res.status(400).json({ success: false, message: 'category 必须为 EXERCISE 或 ASSESSMENT' });
+    }
+    const paper = await questionBankService.updatePaperCategory(pid(req), category);
+    return res.json({ success: true, data: paper });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
 export const removePaperItem = async (req: Request, res: Response) => {
   try {
     await questionBankService.removePaperItem(pid(req));
@@ -138,12 +225,62 @@ export const listQuestions = async (req: Request, res: Response) => {
       type: one(req.query.type) as QuestionType | undefined,
       knowledgePoint: one(req.query.knowledgePoint),
       paperId: one(req.query.paperId),
+      grade: one(req.query.grade),
+      term: one(req.query.term),
+      unitId: one(req.query.unitId),
+      source: one(req.query.source),
+      reviewStatus: one(req.query.reviewStatus),
       page: req.query.page ? Number(req.query.page) : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     });
     return res.json({ success: true, data: result });
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/**
+ * ④ AI 生成题审核概览
+ * GET /api/admin/question-bank/questions/review-stats
+ */
+export const getReviewStats = async (_req: Request, res: Response) => {
+  try {
+    const data = await questionBankService.getReviewStats();
+    return res.json({ success: true, data });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/**
+ * ④ 批量采纳 / 驳回 AI 生成题
+ * POST /api/admin/question-bank/questions/review
+ * body: { ids: string[], action: 'APPROVE' | 'REJECT', note?: string }
+ */
+export const reviewQuestions = async (req: Request, res: Response) => {
+  try {
+    const { ids, action, note } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: '请选择要审核的题目' });
+    }
+    if (action !== 'APPROVE' && action !== 'REJECT') {
+      return res.status(400).json({ success: false, message: 'action 必须是 APPROVE 或 REJECT' });
+    }
+
+    const data = await questionBankService.reviewQuestions({
+      ids,
+      action,
+      reviewerId: (req as any).user?.userId,
+      note: typeof note === 'string' ? note : undefined,
+    });
+
+    return res.json({
+      success: true,
+      data,
+      message: `已${action === 'APPROVE' ? '采纳' : '驳回'} ${data.updated} 道题`,
+    });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
   }
 };
 
@@ -217,9 +354,11 @@ export const uploadAndImport = [
         createdBy: getUserId(req),
         textbookId: (req.body as any).textbookId || undefined,
         paperType: (req.body as any).paperType || undefined,
+        category: (req.body as any).category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
         unitIds: Array.isArray((req.body as any).unitIds)
           ? (req.body as any).unitIds
           : undefined,
+        ocrProviderId: (req.body as any).ocrProviderId || undefined,
       });
       return res.status(202).json({ success: true, data: result });
     } catch (e: any) {

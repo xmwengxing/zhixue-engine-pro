@@ -68,25 +68,25 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 transition-opacity duration-300 ease-in-out"
       onClick={handleOverlayClick}
     >
       <div
-        className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 transform transition-all duration-300 ease-in-out scale-100 opacity-100`}
+        className={`relative bg-[#232f48] border border-[#324467] rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 transform transition-all duration-300 ease-in-out scale-100 opacity-100`}
         style={{
           animation: 'modalSlideIn 0.3s ease-out',
         }}
       >
         {/* 头部 */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#324467]">
             {title && (
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-white">{title}</h3>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                className="text-[#92a4c9] hover:text-white transition-colors duration-200"
                 aria-label="关闭"
               >
                 <svg
@@ -112,7 +112,7 @@ const Modal: React.FC<ModalProps> = ({
 
         {/* 底部操作区 */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#324467] bg-[#1a2332] rounded-b-lg">
             {footer}
           </div>
         )}

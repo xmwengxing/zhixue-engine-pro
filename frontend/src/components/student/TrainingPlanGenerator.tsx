@@ -39,15 +39,15 @@ export const TrainingPlanGenerator = ({
   return (
     <div className="flex max-w-[1440px] mx-auto px-6 py-8 gap-8">
       {/* 左侧训练路径 */}
-      <aside className="w-72 flex-shrink-0 flex flex-col gap-6 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 h-[calc(100vh-140px)] sticky top-24">
+      <aside className="w-72 flex-shrink-0 flex flex-col gap-6 bg-[#232f48] p-6 rounded-xl border border-[#324467] h-[calc(100vh-140px)] sticky top-24">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white">训练路径</h1>
+          <h1 className="text-lg font-bold text-white">训练路径</h1>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">
+            <p className="text-[#5b6b8c] text-xs font-medium uppercase tracking-wider">
               AI实时生成中
             </p>
           </div>
@@ -62,8 +62,8 @@ export const TrainingPlanGenerator = ({
                 step.status === 'active'
                   ? 'bg-primary text-white shadow-lg shadow-primary/20'
                   : step.status === 'pending'
-                    ? 'bg-slate-50 dark:bg-slate-700 border border-primary/30'
-                    : 'border border-dashed border-slate-300 dark:border-slate-600 opacity-40'
+                    ? 'bg-[#1a2332] border border-primary/30'
+                    : 'border border-dashed border-[#324467] opacity-40'
               }`}
             >
               <span
@@ -95,10 +95,10 @@ export const TrainingPlanGenerator = ({
                 Intelligent Analysis
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-black leading-tight tracking-tight max-w-2xl text-slate-900 dark:text-white">
+            <h2 className="text-3xl md:text-4xl font-black leading-tight tracking-tight max-w-2xl text-white">
               AI正在分析你的答题情况并生成训练计划...
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-normal max-w-xl">
+            <p className="text-[#5b6b8c] text-lg font-normal max-w-xl">
               基于你的前测数据，我们正在计算最佳学习路径。预计还需要 {estimatedTime} 秒钟。
             </p>
           </div>
@@ -107,11 +107,11 @@ export const TrainingPlanGenerator = ({
         {/* 知识点掌握度报告 */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-white">
               <span className="material-symbols-outlined text-primary">analytics</span>
               知识点掌握度报告
             </h3>
-            <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
+            <span className="text-xs text-[#5b6b8c] bg-[#1a2332] px-2 py-1 rounded">
               实时更新
             </span>
           </div>
@@ -128,10 +128,10 @@ export const TrainingPlanGenerator = ({
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                      <p className="text-[#5b6b8c] text-sm font-medium">
                         {point.name}
                       </p>
-                      <p className="text-3xl font-bold mt-1 text-slate-900 dark:text-white">
+                      <p className="text-3xl font-bold mt-1 text-white">
                         {point.mastery}%
                       </p>
                     </div>
@@ -149,7 +149,7 @@ export const TrainingPlanGenerator = ({
                     className={`h-2 bg-${color}-500`}
                   />
                   <p
-                    className={`text-xs ${isHigh ? 'text-slate-400' : `text-${color}-400 font-medium`}`}
+                    className={`text-xs ${isHigh ? 'text-[#5b6b8c]' : `text-${color}-400 font-medium`}`}
                   >
                     {point.description}
                   </p>
@@ -167,10 +167,10 @@ export const TrainingPlanGenerator = ({
                 smart_toy
               </span>
             </div>
-            <div className="absolute -bottom-1 -right-1 size-5 bg-emerald-500 border-4 border-white dark:border-slate-900 rounded-full"></div>
+            <div className="absolute -bottom-1 -right-1 size-5 bg-emerald-500 border-4 border-white rounded-full"></div>
           </div>
           <Card className="flex-1 p-6 rounded-2xl rounded-bl-none border-primary/20 shadow-xl relative">
-            <div className="absolute left-0 bottom-0 transform -translate-x-1/2 translate-y-0 w-0 h-0 border-t-[10px] border-t-transparent border-r-[15px] border-r-white dark:border-r-slate-800 border-b-[10px] border-b-transparent"></div>
+            <div className="absolute left-0 bottom-0 transform -translate-x-1/2 translate-y-0 w-0 h-0 border-t-[10px] border-t-transparent border-r-[15px] border-r-white border-b-[10px] border-b-transparent"></div>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-primary tracking-widest">
@@ -191,7 +191,7 @@ export const TrainingPlanGenerator = ({
                   ></span>
                 </div>
               </div>
-              <p className="text-lg font-medium leading-relaxed text-slate-900 dark:text-white">
+              <p className="text-lg font-medium leading-relaxed text-white">
                 {aiMessage}
               </p>
             </div>

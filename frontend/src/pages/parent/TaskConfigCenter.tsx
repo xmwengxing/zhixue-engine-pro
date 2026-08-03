@@ -95,6 +95,7 @@ const SPECIAL_TYPE_OPTIONS = [
   { value: 'UNIT', label: '按单元攻克', desc: '选择教材单元，从题库抽取对应单元题目' },
   { value: 'KNOWLEDGE_POINT', label: '按知识点攻克', desc: '针对薄弱知识点做专项练习' },
   { value: 'ERROR_BOOK', label: '按错题本攻克', desc: '从孩子错题本挑选题目重新练习' },
+  { value: 'PAPER', label: '题库组卷', desc: '选择整卷或按条件随机抽题，进行专项练习' },
 ] as const;
 
 /**
@@ -132,7 +133,7 @@ export default function TaskConfigCenter() {
   const [specialForm, setSpecialForm] = useState({
     studentId: '',
     subject: '',
-    specialType: 'UNIT' as 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK',
+    specialType: 'UNIT' as 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER',
     textbookId: '',
     unitIds: [] as string[],
     knowledgePoints: [] as string[],
@@ -161,7 +162,18 @@ export default function TaskConfigCenter() {
     units: [] as string[],
     goal: '',
     personality: '',
+    // 教材/单元改下拉选择（节点 id，禁止手填）
+    textbookId: '',
+    unitIds: [] as string[],
+    // 水平评估（初测）：NONE 不设 / PAPER 选卷 / AI 自动组卷
+    assessmentSource: 'NONE' as 'NONE' | 'PAPER' | 'AI',
+    assessmentPaperId: '',
   });
+
+  // 自定义模式：从管理员已添加教材派生下拉选项（学科/版本/单元）
+  const [customTextbooks, setCustomTextbooks] = useState<TextbookWithUnits[]>([]);
+  // 自定义模式：水平评估可选手动试卷（初测与水平评估库）
+  const [assessmentPapers, setAssessmentPapers] = useState<ExamPaperItem[]>([]);
 
   // 档案模式表单数据
   const [profileForm, setProfileForm] = useState({
@@ -286,11 +298,14 @@ export default function TaskConfigCenter() {
    * 加载组卷模式支撑数据：已发布试卷 + 随机组卷可选科目
    */
   useEffect(() => {
-    if (mode !== 'EXAM_PAPER') return;
+    const isExamPaper =
+      mode === 'EXAM_PAPER' ||
+      (taskCategory === 'SPECIAL' && specialForm.specialType === 'PAPER');
+    if (!isExamPaper) return;
     const loadExamData = async () => {
       setLoadingExamData(true);
       try {
-        // 已发布试卷
+        // 已发布试卷（习题与试卷库，用于整卷发布）
         const papersRes = await request.get('/parent/question-bank/papers');
         setPapers(papersRes.data?.papers || []);
         // 可选科目：取自科目老师配置（与题库 materialNode SUBJECT 名称一致）
@@ -304,7 +319,7 @@ export default function TaskConfigCenter() {
       }
     };
     loadExamData();
-  }, [mode, aiTeachers]);
+  }, [mode, aiTeachers, taskCategory, specialForm.specialType]);
 
   /**
    * P2 题库化初测：档案模式选卷时加载已发布试卷
@@ -363,14 +378,22 @@ export default function TaskConfigCenter() {
    * 随机组卷：选择科目后加载题库概况（各题型可用数量）
    */
   useEffect(() => {
-    if (mode !== 'EXAM_PAPER' || examForm.source !== 'RANDOM' || !examForm.subject) {
+    const isExamPaperContext =
+      mode === 'EXAM_PAPER' ||
+      (taskCategory === 'SPECIAL' && specialForm.specialType === 'PAPER');
+    // 专项组卷模式下，科目取自专项表单；学科总任务组卷取自组卷表单
+    const effectiveSubject =
+      taskCategory === 'SPECIAL' && specialForm.specialType === 'PAPER'
+        ? specialForm.subject
+        : examForm.subject;
+    if (!isExamPaperContext || examForm.source !== 'RANDOM' || !effectiveSubject) {
       setBankSummary(null);
       return;
     }
     const loadSummary = async () => {
       try {
         const res = await request.get(
-          `/parent/question-bank/summary?subject=${encodeURIComponent(examForm.subject)}`
+          `/parent/question-bank/summary?subject=${encodeURIComponent(effectiveSubject)}`
         );
         setBankSummary(res.data || null);
       } catch (err) {
@@ -379,7 +402,14 @@ export default function TaskConfigCenter() {
       }
     };
     loadSummary();
-  }, [mode, examForm.source, examForm.subject]);
+  }, [
+    mode,
+    taskCategory,
+    specialForm.specialType,
+    specialForm.subject,
+    examForm.source,
+    examForm.subject,
+  ]);
 
   /**
    * P3 双轨·专项：按科目加载教材列表（含单元，单元专项用）
@@ -403,6 +433,47 @@ export default function TaskConfigCenter() {
       }
     })();
   }, [taskCategory, specialForm.specialType, specialForm.subject]);
+
+  /**
+   * 自定义模式：加载全部教材（学科 / 版本 / 单元下拉数据源，均来自管理员已添加教材）
+   */
+  useEffect(() => {
+    if (taskCategory !== 'SUBJECT_MAIN') return;
+    (async () => {
+      try {
+        const res = await request.get('/parent/question-bank/textbooks');
+        setCustomTextbooks(res.data || []);
+      } catch (err) {
+        console.error('加载教材列表失败:', err);
+        setCustomTextbooks([]);
+      }
+    })();
+  }, [taskCategory]);
+
+  /**
+   * 自定义模式：水平评估选「手动选卷」时，加载该学科的「初测与水平评估」库试卷
+   */
+  useEffect(() => {
+    if (
+      taskCategory !== 'SUBJECT_MAIN' ||
+      customForm.assessmentSource !== 'PAPER' ||
+      !customForm.subject
+    ) {
+      setAssessmentPapers([]);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await request.get(
+          `/parent/question-bank/papers?category=ASSESSMENT&subject=${encodeURIComponent(customForm.subject)}`
+        );
+        setAssessmentPapers(res.data?.papers || []);
+      } catch (err) {
+        console.error('加载初测库试卷失败:', err);
+        setAssessmentPapers([]);
+      }
+    })();
+  }, [taskCategory, customForm.assessmentSource, customForm.subject]);
 
   /**
    * P3 双轨·专项：加载子女薄弱知识点（知识点专项候选）
@@ -496,7 +567,15 @@ export default function TaskConfigCenter() {
         ) {
           throw new Error('请选择或输入至少一个知识点');
         }
-        if (specialForm.questionCount < 1 || specialForm.questionCount > 50) {
+        if (specialForm.specialType === 'PAPER') {
+          // 题库组卷：整卷需选试卷；随机抽题需校验题量
+          if (examForm.source === 'PAPER' && !examForm.paperId) {
+            throw new Error('请选择要发布的试卷');
+          }
+          if (examForm.source === 'RANDOM' && (examForm.questionCount < 1 || examForm.questionCount > 50)) {
+            throw new Error('抽题数量必须在 1-50 之间');
+          }
+        } else if (specialForm.questionCount < 1 || specialForm.questionCount > 50) {
           throw new Error('题量必须在 1-50 之间');
         }
 
@@ -517,6 +596,24 @@ export default function TaskConfigCenter() {
         ) {
           specialBody.errorQuestionIds = specialForm.errorQuestionIds;
         }
+        if (specialForm.specialType === 'PAPER') {
+          // 题库组卷（整卷或随机抽题），复用 EXAM_PAPER 组装逻辑
+          const examConfig: any = {
+            source: examForm.source,
+            title: examForm.title.trim() || undefined,
+          };
+          if (examForm.source === 'PAPER') {
+            examConfig.paperId = examForm.paperId;
+          } else {
+            examConfig.subject = specialForm.subject;
+            examConfig.questionCount = examForm.questionCount;
+            if (examForm.types.length > 0) examConfig.types = examForm.types;
+            if (examForm.difficultyMin != null) examConfig.difficultyMin = examForm.difficultyMin;
+            if (examForm.difficultyMax != null) examConfig.difficultyMax = examForm.difficultyMax;
+            if (examForm.knowledgePoints.length > 0) examConfig.knowledgePoints = examForm.knowledgePoints;
+          }
+          specialBody.examConfig = examConfig;
+        }
 
         const specialResp = await request.post('/parent/tasks/special', specialBody);
         if (!specialResp.success) {
@@ -534,21 +631,30 @@ export default function TaskConfigCenter() {
 
       if (mode === 'CUSTOM') {
         // 自定义模式
-        if (!customForm.studentId || !customForm.title || !customForm.aiTeacher || 
-            !customForm.subject || !customForm.materialVersion || customForm.units.length === 0 || 
+        if (!customForm.studentId || !customForm.title || !customForm.aiTeacher ||
+            !customForm.subject || !customForm.textbookId || customForm.unitIds.length === 0 ||
             !customForm.goal) {
           throw new Error('请填写所有必填字段');
         }
+
+        // 水平评估（初测）：不设 / 手动选卷 / AI 自动组卷
+        const assessment =
+          customForm.assessmentSource === 'NONE'
+            ? null
+            : customForm.assessmentSource === 'PAPER'
+            ? { source: 'PAPER', paperId: customForm.assessmentPaperId }
+            : { source: 'AI' };
 
         requestBody.studentId = customForm.studentId;
         requestBody.customConfig = {
           title: customForm.title,
           aiTeacher: customForm.aiTeacher,
           subject: customForm.subject,
-          materialVersion: customForm.materialVersion,
-          units: customForm.units,
+          textbookId: customForm.textbookId,
+          unitIds: customForm.unitIds,
           goal: customForm.goal,
           personality: customForm.personality || undefined,
+          assessment,
         };
       } else if (mode === 'EXAM_PAPER') {
         // 组卷模式
@@ -640,24 +746,24 @@ export default function TaskConfigCenter() {
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
-        <div className="text-gray-600">加载中...</div>
+      <div className="min-h-screen bg-[#111722] py-8 flex items-center justify-center">
+        <div className="text-[#92a4c9]">加载中...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#111722] py-8">
       <div className="max-w-4xl mx-auto px-4">
         {/* 页面标题 */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">任务配置中心</h1>
-          <p className="mt-2 text-gray-600">为学员创建个性化学习任务</p>
+          <h1 className="text-3xl font-bold text-white">任务配置中心</h1>
+          <p className="mt-2 text-[#92a4c9]">为学员创建个性化学习任务</p>
         </div>
 
         {/* P3 双轨：任务大类选择 */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+        <div className="bg-[#232f48] rounded-lg shadow-lg shadow-black/20 mb-6 p-6">
+          <label className="block text-sm font-medium text-[#92a4c9] mb-3">
             任务大类 <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -666,14 +772,14 @@ export default function TaskConfigCenter() {
               onClick={() => setTaskCategory('SUBJECT_MAIN')}
               className={`px-5 py-4 rounded-lg border-2 text-left transition-colors ${
                 taskCategory === 'SUBJECT_MAIN'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-blue-500 bg-blue-500/15'
+                  : 'border-[#324467] bg-[#232f48] hover:border-[#3d4f73]'
               }`}
             >
-              <div className={`text-base font-semibold ${taskCategory === 'SUBJECT_MAIN' ? 'text-blue-700' : 'text-gray-900'}`}>
+              <div className={`text-base font-semibold ${taskCategory === 'SUBJECT_MAIN' ? 'text-blue-300' : 'text-white'}`}>
                 学科总任务
               </div>
-              <div className="text-xs mt-1 text-gray-500">
+              <div className="text-xs mt-1 text-[#5b6b8c]">
                 长期主线任务，纳入学科学情分析与学习报告；同一学科同时仅允许 1 个进行中
               </div>
             </button>
@@ -682,14 +788,14 @@ export default function TaskConfigCenter() {
               onClick={() => setTaskCategory('SPECIAL')}
               className={`px-5 py-4 rounded-lg border-2 text-left transition-colors ${
                 taskCategory === 'SPECIAL'
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-purple-500 bg-purple-500/15'
+                  : 'border-[#324467] bg-[#232f48] hover:border-[#3d4f73]'
               }`}
             >
-              <div className={`text-base font-semibold ${taskCategory === 'SPECIAL' ? 'text-purple-700' : 'text-gray-900'}`}>
+              <div className={`text-base font-semibold ${taskCategory === 'SPECIAL' ? 'text-purple-300' : 'text-white'}`}>
                 专项攻克任务
               </div>
-              <div className="text-xs mt-1 text-gray-500">
+              <div className="text-xs mt-1 text-[#5b6b8c]">
                 针对单元 / 知识点 / 错题本的短期专项练习，独立报告区，不与总任务混合
               </div>
             </button>
@@ -698,16 +804,16 @@ export default function TaskConfigCenter() {
 
         {/* Tab 切换（仅学科总任务需要选择出题方式） */}
         {taskCategory === 'SUBJECT_MAIN' && (
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
+        <div className="bg-[#232f48] rounded-lg shadow-lg shadow-black/20 mb-6">
+          <div className="border-b border-[#324467]">
             <nav className="flex -mb-px">
               <button
                 type="button"
                 onClick={() => setMode('CUSTOM')}
                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                   mode === 'CUSTOM'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-300'
+                    : 'border-transparent text-[#5b6b8c] hover:text-[#92a4c9] hover:border-[#3d4f73]'
                 }`}
               >
                 自定义配置模式
@@ -717,38 +823,27 @@ export default function TaskConfigCenter() {
                 onClick={() => setMode('PROFILE')}
                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
                   mode === 'PROFILE'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-300'
+                    : 'border-transparent text-[#5b6b8c] hover:text-[#92a4c9] hover:border-[#3d4f73]'
                 }`}
               >
                 档案提取模式
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('EXAM_PAPER')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  mode === 'EXAM_PAPER'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                题库组卷模式
               </button>
             </nav>
           </div>
 
           {/* 模式说明 */}
-          <div className="p-6 bg-blue-50 border-b border-gray-200">
+          <div className="p-6 bg-blue-500/15 border-b border-[#324467]">
             {mode === 'CUSTOM' ? (
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-300">
                 自定义配置模式: 自由选择教材内容、题目数量和难度，完全自定义学习任务
               </p>
             ) : mode === 'EXAM_PAPER' ? (
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-300">
                 题库组卷模式: 从管理员导入的标准化题库直接布置任务——可整卷发布，或按科目/题型/难度随机抽题自动组卷，学员在电子答题专区作答
               </p>
             ) : (
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-300">
                 档案提取模式: 基于学员档案自动生成推荐任务，智能匹配学习内容。可临时修改部分信息，不影响学员档案
               </p>
             )}
@@ -757,11 +852,11 @@ export default function TaskConfigCenter() {
         )}
 
         {/* 任务配置表单 */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">任务配置</h2>
+        <div className="bg-[#232f48] rounded-lg shadow-lg shadow-black/20 p-6">
+          <h2 className="text-xl font-semibold text-white mb-6">任务配置</h2>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/40 rounded-lg">
               <p className="text-red-600">{error}</p>
             </div>
           )}
@@ -772,14 +867,14 @@ export default function TaskConfigCenter() {
               <>
                 {/* 学员选择 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     选择学员 <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
                     value={customForm.studentId}
                     onChange={(e) => setCustomForm({ ...customForm, studentId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">请选择学员</option>
                     {students.map((student) => (
@@ -793,7 +888,7 @@ export default function TaskConfigCenter() {
 
                 {/* 任务标题 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     任务标题 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -802,20 +897,20 @@ export default function TaskConfigCenter() {
                     value={customForm.title}
                     onChange={(e) => setCustomForm({ ...customForm, title: e.target.value })}
                     placeholder="例如：数学第一单元练习"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {/* AI 科目老师 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     AI 科目老师 <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
                     value={customForm.aiTeacher}
                     onChange={(e) => setCustomForm({ ...customForm, aiTeacher: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">请选择 AI 科目老师</option>
                     {aiTeachers.map((teacher) => (
@@ -826,60 +921,182 @@ export default function TaskConfigCenter() {
                   </select>
                 </div>
 
-                {/* 科目 */}
+                {/* 科目（下拉，来自管理员已添加教材） */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     科目 <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={customForm.subject}
-                    onChange={(e) => setCustomForm({ ...customForm, subject: e.target.value })}
-                    placeholder="例如：数学"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* 教材版本 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    教材版本 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={customForm.materialVersion}
-                    onChange={(e) => setCustomForm({ ...customForm, materialVersion: e.target.value })}
-                    placeholder="例如：人教版"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* 单元选择 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    单元 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={customForm.units.join(', ')}
                     onChange={(e) =>
                       setCustomForm({
                         ...customForm,
-                        units: e.target.value.split(',').map((u) => u.trim()).filter((u) => u),
+                        subject: e.target.value,
+                        textbookId: '',
+                        unitIds: [],
+                        materialVersion: '',
+                        assessmentPaperId: '',
                       })
                     }
-                    placeholder="多个单元用逗号分隔，例如：第一单元, 第二单元"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="mt-1 text-sm text-gray-500">支持多选，用逗号分隔</p>
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">请选择科目</option>
+                    {Array.from(new Set(customTextbooks.map((t) => t.subject)))
+                      .filter(Boolean)
+                      .map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                  </select>
+                  {customTextbooks.length === 0 && (
+                    <p className="mt-1 text-sm text-amber-300">
+                      暂无教材，请先到「管理端 › 教材管理」创建教材与单元。
+                    </p>
+                  )}
+                </div>
+
+                {/* 教材版本（单选，根据学科自动识别） */}
+                <div>
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                    教材版本 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    disabled={!customForm.subject}
+                    value={customForm.textbookId}
+                    onChange={(e) => {
+                      const tb = customTextbooks.find((t) => t.id === e.target.value);
+                      setCustomForm({
+                        ...customForm,
+                        textbookId: e.target.value,
+                        materialVersion: tb?.version ?? '',
+                        unitIds: [],
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                  >
+                    <option value="">请选择教材版本</option>
+                    {customTextbooks
+                      .filter((t) => t.subject === customForm.subject)
+                      .map((tb) => (
+                        <option key={tb.id} value={tb.id}>
+                          {tb.version}
+                          {tb.grade ? `（${tb.grade === '7' ? '七年级' : tb.grade === '8' ? '八年级' : tb.grade === '9' ? '九年级' : tb.grade}${tb.term === 'UP' ? '上' : tb.term === 'DOWN' ? '下' : ''}）` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* 单元（多选，根据学科+版本自动识别） */}
+                <div>
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                    单元（可多选） <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {(customTextbooks.find((t) => t.id === customForm.textbookId)?.units || []).map((u) => {
+                      const checked = customForm.unitIds.includes(u.id);
+                      return (
+                        <button
+                          type="button"
+                          key={u.id}
+                          onClick={() =>
+                            setCustomForm({
+                              ...customForm,
+                              unitIds: checked
+                                ? customForm.unitIds.filter((id) => id !== u.id)
+                                : [...customForm.unitIds, u.id],
+                            })
+                          }
+                          className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                            checked
+                              ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                              : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
+                          }`}
+                        >
+                          {u.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {customForm.textbookId && (
+                    <p className="mt-1 text-sm text-[#5b6b8c]">
+                      已选 {customForm.unitIds.length} 个单元，将从题库抽取这些单元下的题目
+                    </p>
+                  )}
+                </div>
+
+                {/* 水平评估试卷（初测）：可选套卷或 AI 自动组卷 */}
+                <div className="p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-3">
+                    水平评估试卷（任务初测）
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {([
+                      { v: 'NONE', label: '不设（按教材自动出题）' },
+                      { v: 'PAPER', label: '手动选择初测试卷' },
+                      { v: 'AI', label: 'AI 自动从初测库组卷' },
+                    ] as const).map((opt) => (
+                      <label
+                        key={opt.v}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                          customForm.assessmentSource === opt.v
+                            ? 'border-blue-500 bg-blue-500/10 text-blue-200'
+                            : 'border-[#324467] text-[#92a4c9] hover:bg-[#232f48]'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="assessmentSource"
+                          checked={customForm.assessmentSource === opt.v}
+                          onChange={() =>
+                            setCustomForm({
+                              ...customForm,
+                              assessmentSource: opt.v,
+                              assessmentPaperId: '',
+                            })
+                          }
+                          className="accent-blue-500"
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+
+                  {customForm.assessmentSource === 'PAPER' && (
+                    <div className="mt-3">
+                      {assessmentPapers.length === 0 ? (
+                        <p className="text-sm text-amber-300">
+                          该学科「初测与水平评估」库暂无试卷，请先到管理端题库创建并发布。
+                        </p>
+                      ) : (
+                        <select
+                          required
+                          value={customForm.assessmentPaperId}
+                          onChange={(e) =>
+                            setCustomForm({ ...customForm, assessmentPaperId: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">请选择初测试卷</option>
+                          {assessmentPapers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.title}（{p._count?.items ?? 0} 题）
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-[#5b6b8c]">
+                    初测试卷来自管理端「初测与水平评估」题库，不区分难度，用于评估学员当前水平。
+                  </p>
                 </div>
 
                 {/* 任务目标 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     任务目标 <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -888,13 +1105,13 @@ export default function TaskConfigCenter() {
                     onChange={(e) => setCustomForm({ ...customForm, goal: e.target.value })}
                     placeholder="描述本次任务的学习目标和要求"
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {/* 性格特征(选填) */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     性格特征 (选填)
                   </label>
                   <textarea
@@ -902,7 +1119,7 @@ export default function TaskConfigCenter() {
                     onChange={(e) => setCustomForm({ ...customForm, personality: e.target.value })}
                     placeholder="描述学员的性格特征，帮助 AI 更好地调整教学方式"
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </>
@@ -913,14 +1130,14 @@ export default function TaskConfigCenter() {
               <>
                 {/* 学员选择 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     选择学员 <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
                     value={profileForm.studentId}
                     onChange={(e) => handleStudentSelect(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">请选择学员</option>
                     {students.map((student) => (
@@ -934,30 +1151,30 @@ export default function TaskConfigCenter() {
 
                 {/* 学员档案信息展示 */}
                 {selectedStudent && selectedStudent.profile && (
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">学员档案信息</h3>
+                  <div className="p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                    <h3 className="text-sm font-semibold text-white mb-3">学员档案信息</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-600">姓名:</span>
-                        <span className="ml-2 text-gray-900">{selectedStudent.profile.realName}</span>
+                        <span className="text-[#92a4c9]">姓名:</span>
+                        <span className="ml-2 text-white">{selectedStudent.profile.realName}</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">年级:</span>
-                        <span className="ml-2 text-gray-900">
+                        <span className="text-[#92a4c9]">年级:</span>
+                        <span className="ml-2 text-white">
                           {GRADE_OPTIONS.find((g) => g.value === selectedStudent.profile?.grade)?.label || 
                            selectedStudent.profile.grade}
                         </span>
                       </div>
                       {selectedStudent.profile.school && (
                         <div>
-                          <span className="text-gray-600">学校:</span>
-                          <span className="ml-2 text-gray-900">{selectedStudent.profile.school}</span>
+                          <span className="text-[#92a4c9]">学校:</span>
+                          <span className="ml-2 text-white">{selectedStudent.profile.school}</span>
                         </div>
                       )}
                       {selectedStudent.profile.learningFoundation && (
                         <div>
-                          <span className="text-gray-600">学习基础:</span>
-                          <span className="ml-2 text-gray-900">
+                          <span className="text-[#92a4c9]">学习基础:</span>
+                          <span className="ml-2 text-white">
                             {LEARNING_FOUNDATION_OPTIONS.find(
                               (lf) => lf.value === selectedStudent.profile?.learningFoundation
                             )?.label || selectedStudent.profile.learningFoundation}
@@ -966,8 +1183,8 @@ export default function TaskConfigCenter() {
                       )}
                       {selectedStudent.profile.interests && (
                         <div className="col-span-2">
-                          <span className="text-gray-600">兴趣爱好:</span>
-                          <span className="ml-2 text-gray-900">{selectedStudent.profile.interests}</span>
+                          <span className="text-[#92a4c9]">兴趣爱好:</span>
+                          <span className="ml-2 text-white">{selectedStudent.profile.interests}</span>
                         </div>
                       )}
                     </div>
@@ -976,14 +1193,14 @@ export default function TaskConfigCenter() {
 
                 {/* AI 科目老师 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     AI 科目老师 <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
                     value={profileForm.aiTeacher}
                     onChange={(e) => setProfileForm({ ...profileForm, aiTeacher: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">请选择 AI 科目老师</option>
                     {aiTeachers.map((teacher) => (
@@ -996,7 +1213,7 @@ export default function TaskConfigCenter() {
 
                 {/* 训练目标 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     训练目标 <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -1005,9 +1222,9 @@ export default function TaskConfigCenter() {
                     onChange={(e) => setProfileForm({ ...profileForm, trainingGoal: e.target.value })}
                     placeholder="描述本次训练的目标，例如：巩固第一单元知识点、提升计算能力等"
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-[#5b6b8c]">
                     训练目标长度需在 10-500 字符之间（当前：{profileForm.trainingGoal.length} 字符）
                   </p>
                   {profileForm.trainingGoal.length > 0 && 
@@ -1022,7 +1239,7 @@ export default function TaskConfigCenter() {
 
                 {/* 诊断题目数量 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     诊断题目数量 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1035,9 +1252,9 @@ export default function TaskConfigCenter() {
                       const value = parseInt(e.target.value) || 10;
                       setProfileForm({ ...profileForm, diagnosticQuestionCount: value });
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-[#5b6b8c]">
                     设置诊断测试的题目数量，范围：5-20 题，默认 10 题
                   </p>
                   {(profileForm.diagnosticQuestionCount < 5 || profileForm.diagnosticQuestionCount > 20) && (
@@ -1049,7 +1266,7 @@ export default function TaskConfigCenter() {
 
                 {/* 初始测试题来源（P2 题库化初测） */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     初始测试题来源 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -1061,8 +1278,8 @@ export default function TaskConfigCenter() {
                       }}
                       className={`px-4 py-3 rounded-lg border text-left transition-colors ${
                         initialTestSource === 'AI'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                          : 'border-[#324467] bg-[#232f48] text-[#92a4c9] hover:border-[#3d4f73]'
                       }`}
                     >
                       <div className="text-sm font-semibold">AI 智能筛题（推荐）</div>
@@ -1078,8 +1295,8 @@ export default function TaskConfigCenter() {
                       }}
                       className={`px-4 py-3 rounded-lg border text-left transition-colors ${
                         initialTestSource === 'PAPER'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                          : 'border-[#324467] bg-[#232f48] text-[#92a4c9] hover:border-[#3d4f73]'
                       }`}
                     >
                       <div className="text-sm font-semibold">选用已发布试卷</div>
@@ -1096,7 +1313,7 @@ export default function TaskConfigCenter() {
                         setInitialTestPaperId(e.target.value);
                         setPreviewData(null);
                       }}
-                      className="mt-3 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="mt-3 w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">请选择试卷</option>
                       {profilePapers.map((p) => (
@@ -1112,25 +1329,25 @@ export default function TaskConfigCenter() {
                       type="button"
                       onClick={() => void handlePreviewInitialTest()}
                       disabled={previewLoading}
-                      className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 text-sm font-medium text-blue-300 border border-blue-500 rounded-lg hover:bg-blue-500/15 transition-colors disabled:opacity-50"
                     >
                       {previewLoading ? '正在抽题预览…' : '预览初测题目'}
                     </button>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-[#5b6b8c]">
                       发布前可预览将抽到的题目（预览不入库）
                     </span>
                   </div>
 
                   {previewData && (
-                    <div className="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-72 overflow-y-auto">
+                    <div className="mt-3 border border-[#324467] rounded-lg p-4 bg-[#1a2332] max-h-72 overflow-y-auto">
                       {previewData.meta?.reason && (
-                        <p className="text-xs text-blue-700 bg-blue-50 rounded px-3 py-2 mb-3">
+                        <p className="text-xs text-blue-300 bg-blue-500/15 rounded px-3 py-2 mb-3">
                           AI 选题思路：{previewData.meta.reason}
                         </p>
                       )}
                       {previewData.meta?.shortage &&
                         Object.keys(previewData.meta.shortage).length > 0 && (
-                          <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2 mb-3">
+                          <p className="text-xs text-amber-300 bg-amber-500/10 rounded px-3 py-2 mb-3">
                             部分难度题库存量不足（发布时将按平台设置自动 AI 补题）：
                             {Object.entries(previewData.meta.shortage)
                               .map(([lv, n]) => `难度${lv}缺${n}题`)
@@ -1139,11 +1356,11 @@ export default function TaskConfigCenter() {
                         )}
                       <ol className="space-y-2">
                         {previewData.questions.map((q, i) => (
-                          <li key={q.id} className="text-sm text-gray-700 flex gap-2">
-                            <span className="text-gray-400 shrink-0">{i + 1}.</span>
+                          <li key={q.id} className="text-sm text-[#92a4c9] flex gap-2">
+                            <span className="text-[#5b6b8c] shrink-0">{i + 1}.</span>
                             <div>
                               <span className="line-clamp-2">{q.stem}</span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-[#5b6b8c]">
                                 难度 {q.difficulty}/5
                                 {q.knowledgePoints?.length > 0 &&
                                   ` · ${q.knowledgePoints.slice(0, 2).join('、')}`}
@@ -1157,14 +1374,14 @@ export default function TaskConfigCenter() {
                 </div>
 
                 {/* 临时修改区域 */}
-                <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                <div className="border-t border-[#324467] pt-6">
+                  <h3 className="text-sm font-semibold text-white mb-4">
                     临时修改 (仅用于本次任务，不影响学员档案)
                   </h3>
 
                   {/* 临时学校 */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       学校 (临时)
                     </label>
                     <input
@@ -1172,13 +1389,13 @@ export default function TaskConfigCenter() {
                       value={profileForm.tempSchool}
                       onChange={(e) => setProfileForm({ ...profileForm, tempSchool: e.target.value })}
                       placeholder={selectedStudent?.profile?.school || '输入学校名称'}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* 临时学习基础 */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       学习基础 (临时)
                     </label>
                     <select
@@ -1186,7 +1403,7 @@ export default function TaskConfigCenter() {
                       onChange={(e) =>
                         setProfileForm({ ...profileForm, tempLearningFoundation: e.target.value })
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">使用档案中的值</option>
                       {LEARNING_FOUNDATION_OPTIONS.map((option) => (
@@ -1199,7 +1416,7 @@ export default function TaskConfigCenter() {
 
                   {/* 临时兴趣爱好 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       兴趣爱好 (临时)
                     </label>
                     <textarea
@@ -1207,7 +1424,7 @@ export default function TaskConfigCenter() {
                       onChange={(e) => setProfileForm({ ...profileForm, tempInterests: e.target.value })}
                       placeholder={selectedStudent?.profile?.interests || '输入兴趣爱好'}
                       rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -1215,36 +1432,39 @@ export default function TaskConfigCenter() {
             )}
 
             {/* 组卷模式表单 */}
-            {taskCategory === 'SUBJECT_MAIN' && mode === 'EXAM_PAPER' && (
+            {((taskCategory === 'SUBJECT_MAIN' && mode === 'EXAM_PAPER') ||
+              (taskCategory === 'SPECIAL' && specialForm.specialType === 'PAPER')) && (
               <>
                 {loadingExamData && (
-                  <div className="text-sm text-gray-500">题库数据加载中...</div>
+                  <div className="text-sm text-[#5b6b8c]">题库数据加载中...</div>
                 )}
 
-                {/* 学员选择 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    选择学员 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    value={examForm.studentId}
-                    onChange={(e) => setExamForm({ ...examForm, studentId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">请选择学员</option>
-                    {students.map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.profile?.realName || student.username}
-                        {student.studentIdNumber && ` (${student.studentIdNumber})`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* 学员选择（仅学科总任务组卷需要；专项已在上方选择学员） */}
+                {taskCategory === 'SUBJECT_MAIN' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                      选择学员 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={examForm.studentId}
+                      onChange={(e) => setExamForm({ ...examForm, studentId: e.target.value })}
+                      className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">请选择学员</option>
+                      {students.map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.profile?.realName || student.username}
+                          {student.studentIdNumber && ` (${student.studentIdNumber})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* 组卷方式 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     组卷方式 <span className="text-red-500">*</span>
                   </label>
                   <div className="flex space-x-3">
@@ -1253,8 +1473,8 @@ export default function TaskConfigCenter() {
                       onClick={() => setExamForm({ ...examForm, source: 'PAPER' })}
                       className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                         examForm.source === 'PAPER'
-                          ? 'border-blue-500 bg-blue-50 text-blue-600'
-                          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                          : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       整卷发布
@@ -1264,8 +1484,8 @@ export default function TaskConfigCenter() {
                       onClick={() => setExamForm({ ...examForm, source: 'RANDOM' })}
                       className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                         examForm.source === 'RANDOM'
-                          ? 'border-blue-500 bg-blue-50 text-blue-600'
-                          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                          : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       随机抽题组卷
@@ -1276,11 +1496,11 @@ export default function TaskConfigCenter() {
                 {/* 整卷模式：选择试卷 */}
                 {examForm.source === 'PAPER' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       选择试卷 <span className="text-red-500">*</span>
                     </label>
                     {papers.length === 0 ? (
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                      <div className="p-4 bg-amber-500/10 border border-amber-500/40 rounded-lg text-sm text-amber-300">
                         题库中暂无已发布的试卷。请先到「管理端 › 题库」导入试卷并发布后，再来此处布置任务。
                       </div>
                     ) : (
@@ -1289,7 +1509,7 @@ export default function TaskConfigCenter() {
                           required
                           value={examForm.paperId}
                           onChange={(e) => setExamForm({ ...examForm, paperId: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">请选择已发布的试卷</option>
                           {papers.map((p) => (
@@ -1299,7 +1519,7 @@ export default function TaskConfigCenter() {
                           ))}
                         </select>
                         {examForm.paperId && (
-                          <p className="mt-1 text-sm text-gray-500">
+                          <p className="mt-1 text-sm text-[#5b6b8c]">
                             将按原卷顺序与分值布置，共{' '}
                             {papers.find((p) => p.id === examForm.paperId)?._count?.items ?? 0} 道题目
                           </p>
@@ -1312,45 +1532,56 @@ export default function TaskConfigCenter() {
                 {/* 随机组卷模式 */}
                 {examForm.source === 'RANDOM' && (
                   <>
-                    {/* 科目 */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        科目 <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        required
-                        value={examForm.subject}
-                        onChange={(e) => setExamForm({ ...examForm, subject: e.target.value, types: [] })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">请选择科目</option>
-                        {examSubjects.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* 科目（学科总任务组卷可下拉选择；专项组卷科目已在上方选定，仅展示） */}
+                    {taskCategory === 'SUBJECT_MAIN' ? (
+                      <div>
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                          科目 <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          required
+                          value={examForm.subject}
+                          onChange={(e) => setExamForm({ ...examForm, subject: e.target.value, types: [] })}
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">请选择科目</option>
+                          {examSubjects.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                          科目
+                        </label>
+                        <div className="w-full px-4 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white">
+                          {specialForm.subject}
+                        </div>
+                      </div>
+                    )}
 
                     {/* 题库概况 */}
-                    {examForm.subject && (
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-2">题库概况</h3>
+                    {(taskCategory === 'SUBJECT_MAIN' ? examForm.subject : specialForm.subject) && (
+                      <div className="p-4 bg-[#1a2332] rounded-lg border border-[#324467]">
+                        <h3 className="text-sm font-semibold text-white mb-2">题库概况</h3>
                         {bankSummary ? (
                           bankSummary.total === 0 ? (
-                            <p className="text-sm text-amber-700">
+                            <p className="text-sm text-amber-300">
                               该科目题库暂无题目，请先到「管理端 › 题库」导入题目。
                             </p>
                           ) : (
                             <>
-                              <p className="text-sm text-gray-600 mb-2">
-                                共 <span className="font-semibold text-gray-900">{bankSummary.total}</span> 道可用题目：
+                              <p className="text-sm text-[#92a4c9] mb-2">
+                                共 <span className="font-semibold text-white">{bankSummary.total}</span> 道可用题目：
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {Object.entries(bankSummary.byType).map(([type, count]) => (
                                   <span
                                     key={type}
-                                    className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-700"
+                                    className="px-2 py-1 text-xs rounded bg-blue-500/15 text-blue-300"
                                   >
                                     {EXAM_TYPE_LABELS[type] || type}: {count}
                                   </span>
@@ -1359,14 +1590,14 @@ export default function TaskConfigCenter() {
                             </>
                           )
                         ) : (
-                          <p className="text-sm text-gray-500">加载中...</p>
+                          <p className="text-sm text-[#5b6b8c]">加载中...</p>
                         )}
                       </div>
                     )}
 
                     {/* 抽题数量 */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                         抽题数量 <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1379,15 +1610,15 @@ export default function TaskConfigCenter() {
                           const value = parseInt(e.target.value) || 1;
                           setExamForm({ ...examForm, questionCount: value });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
-                      <p className="mt-1 text-sm text-gray-500">从题库中随机抽取的题目数量，范围 1-50</p>
+                      <p className="mt-1 text-sm text-[#5b6b8c]">从题库中随机抽取的题目数量，范围 1-50</p>
                     </div>
 
                     {/* 题型筛选 */}
                     {bankSummary && bankSummary.total > 0 && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                           题型（不选则不限）
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -1407,8 +1638,8 @@ export default function TaskConfigCenter() {
                                 }
                                 className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                                   checked
-                                    ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    ? 'border-blue-500 bg-blue-500/15 text-blue-300'
+                                    : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
                                 }`}
                               >
                                 {EXAM_TYPE_LABELS[type] || type}
@@ -1422,7 +1653,7 @@ export default function TaskConfigCenter() {
                     {/* 难度范围 */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                           难度下限
                         </label>
                         <select
@@ -1430,7 +1661,7 @@ export default function TaskConfigCenter() {
                           onChange={(e) =>
                             setExamForm({ ...examForm, difficultyMin: parseInt(e.target.value) })
                           }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           {[1, 2, 3, 4, 5].map((d) => (
                             <option key={d} value={d}>
@@ -1440,7 +1671,7 @@ export default function TaskConfigCenter() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                           难度上限
                         </label>
                         <select
@@ -1448,7 +1679,7 @@ export default function TaskConfigCenter() {
                           onChange={(e) =>
                             setExamForm({ ...examForm, difficultyMax: parseInt(e.target.value) })
                           }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           {[1, 2, 3, 4, 5].map((d) => (
                             <option key={d} value={d}>
@@ -1461,7 +1692,7 @@ export default function TaskConfigCenter() {
 
                     {/* 知识点（选填） */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                         知识点（选填，逗号分隔）
                       </label>
                       <input
@@ -1477,16 +1708,16 @@ export default function TaskConfigCenter() {
                           })
                         }
                         placeholder="如：一元二次方程, 因式分解"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
-                      <p className="mt-1 text-sm text-gray-500">仅抽取包含这些知识点的题目（为空则不限）</p>
+                      <p className="mt-1 text-sm text-[#5b6b8c]">仅抽取包含这些知识点的题目（为空则不限）</p>
                     </div>
                   </>
                 )}
 
                 {/* 任务标题（选填） */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     任务标题（选填）
                   </label>
                   <input
@@ -1494,7 +1725,7 @@ export default function TaskConfigCenter() {
                     value={examForm.title}
                     onChange={(e) => setExamForm({ ...examForm, title: e.target.value })}
                     placeholder="不填则自动生成（如：数学随机练习卷（10 题））"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </>
@@ -1505,7 +1736,7 @@ export default function TaskConfigCenter() {
               <>
                 {/* 学员选择 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     选择学员 <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1519,7 +1750,7 @@ export default function TaskConfigCenter() {
                         errorQuestionIds: [],
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">请选择学员</option>
                     {students.map((student) => (
@@ -1533,7 +1764,7 @@ export default function TaskConfigCenter() {
 
                 {/* 科目 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     科目 <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1549,7 +1780,7 @@ export default function TaskConfigCenter() {
                         errorQuestionIds: [],
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">请选择科目</option>
                     {Array.from(new Set(aiTeachers.map((t) => t.subject)))
@@ -1564,7 +1795,7 @@ export default function TaskConfigCenter() {
 
                 {/* 专项类型 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     专项类型 <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1584,8 +1815,8 @@ export default function TaskConfigCenter() {
                         }
                         className={`px-4 py-3 rounded-lg border text-left transition-colors ${
                           specialForm.specialType === opt.value
-                            ? 'border-purple-500 bg-purple-50 text-purple-700'
-                            : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                            ? 'border-purple-500 bg-purple-500/15 text-purple-300'
+                            : 'border-[#324467] bg-[#232f48] text-[#92a4c9] hover:border-[#3d4f73]'
                         }`}
                       >
                         <div className="text-sm font-semibold">{opt.label}</div>
@@ -1596,18 +1827,18 @@ export default function TaskConfigCenter() {
                 </div>
 
                 {loadingSpecialData && (
-                  <div className="text-sm text-gray-500">目标数据加载中...</div>
+                  <div className="text-sm text-[#5b6b8c]">目标数据加载中...</div>
                 )}
 
                 {/* 单元专项：教材 + 单元多选 */}
                 {specialForm.specialType === 'UNIT' && specialForm.subject && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                         选择教材 <span className="text-red-500">*</span>
                       </label>
                       {specialTextbooks.length === 0 && !loadingSpecialData ? (
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/40 rounded-lg text-sm text-amber-300">
                           该科目暂无教材，请先到「管理端 › 教材管理」创建教材与单元。
                         </div>
                       ) : (
@@ -1616,7 +1847,7 @@ export default function TaskConfigCenter() {
                           onChange={(e) =>
                             setSpecialForm({ ...specialForm, textbookId: e.target.value, unitIds: [] })
                           }
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="">请选择教材</option>
                           {specialTextbooks.map((tb) => (
@@ -1630,7 +1861,7 @@ export default function TaskConfigCenter() {
 
                     {specialForm.textbookId && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                           选择单元（可多选） <span className="text-red-500">*</span>
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -1651,8 +1882,8 @@ export default function TaskConfigCenter() {
                                   }
                                   className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                                     checked
-                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                                      ? 'border-purple-500 bg-purple-500/15 text-purple-300'
+                                      : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
                                   }`}
                                 >
                                   {u.name}
@@ -1661,7 +1892,7 @@ export default function TaskConfigCenter() {
                             }
                           )}
                         </div>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-[#5b6b8c]">
                           已选 {specialForm.unitIds.length} 个单元，将从题库抽取这些单元下的题目
                         </p>
                       </div>
@@ -1672,12 +1903,12 @@ export default function TaskConfigCenter() {
                 {/* 知识点专项：薄弱知识点候选 + 自定义补充 */}
                 {specialForm.specialType === 'KNOWLEDGE_POINT' && specialForm.studentId && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       目标知识点（可多选） <span className="text-red-500">*</span>
                     </label>
                     {weakPoints.length > 0 ? (
                       <>
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-[#5b6b8c] mb-2">
                           以下为孩子近期错题中的薄弱知识点（按错题数排序），点击选择：
                         </p>
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -1697,8 +1928,8 @@ export default function TaskConfigCenter() {
                                 }
                                 className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                                   checked
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                                    ? 'border-purple-500 bg-purple-500/15 text-purple-300'
+                                    : 'border-[#324467] text-[#92a4c9] hover:bg-[#1a2332]'
                                 }`}
                               >
                                 {wp.point}
@@ -1710,7 +1941,7 @@ export default function TaskConfigCenter() {
                       </>
                     ) : (
                       !loadingSpecialData && (
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs text-[#5b6b8c] mb-2">
                           暂无薄弱知识点记录，可手动输入目标知识点：
                         </p>
                       )
@@ -1721,7 +1952,7 @@ export default function TaskConfigCenter() {
                         value={customKpInput}
                         onChange={(e) => setCustomKpInput(e.target.value)}
                         placeholder="手动补充知识点，多个用逗号分隔，如：一元二次方程, 因式分解"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                       <button
                         type="button"
@@ -1738,13 +1969,13 @@ export default function TaskConfigCenter() {
                           }
                           setCustomKpInput('');
                         }}
-                        className="px-4 py-2 text-sm font-medium text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-purple-300 border border-purple-500 rounded-lg hover:bg-purple-500/15 transition-colors"
                       >
                         添加
                       </button>
                     </div>
                     {specialForm.knowledgePoints.length > 0 && (
-                      <p className="mt-2 text-sm text-gray-600">
+                      <p className="mt-2 text-sm text-[#92a4c9]">
                         已选：{specialForm.knowledgePoints.join('、')}
                       </p>
                     )}
@@ -1754,22 +1985,22 @@ export default function TaskConfigCenter() {
                 {/* 错题本专项：错题多选 */}
                 {specialForm.specialType === 'ERROR_BOOK' && specialForm.studentId && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                       选择错题（可多选，不选则自动抽取未掌握错题）
                     </label>
                     {childErrors.length === 0 && !loadingSpecialData ? (
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                      <div className="p-4 bg-amber-500/10 border border-amber-500/40 rounded-lg text-sm text-amber-300">
                         该学员{specialForm.subject ? `「${specialForm.subject}」学科` : ''}暂无错题记录。
                       </div>
                     ) : (
-                      <div className="border border-gray-200 rounded-lg max-h-72 overflow-y-auto divide-y divide-gray-100">
+                      <div className="border border-[#324467] rounded-lg max-h-72 overflow-y-auto divide-y divide-[#324467]">
                         {childErrors.map((eq) => {
                           const checked = specialForm.errorQuestionIds.includes(eq.id);
                           return (
                             <label
                               key={eq.id}
                               className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                                checked ? 'bg-purple-50' : 'hover:bg-gray-50'
+                                checked ? 'bg-purple-500/15' : 'hover:bg-[#1a2332]'
                               }`}
                             >
                               <input
@@ -1786,8 +2017,8 @@ export default function TaskConfigCenter() {
                                 className="mt-1"
                               />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-800 line-clamp-2">{eq.stem || '（无题干）'}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className="text-sm text-white line-clamp-2">{eq.stem || '（无题干）'}</p>
+                                <p className="text-xs text-[#5b6b8c] mt-0.5">
                                   {eq.type ? `${EXAM_TYPE_LABELS[eq.type] || eq.type} · ` : ''}
                                   难度 {eq.difficulty ?? '-'}/5
                                   {eq.mastery === 'MASTERED' ? ' · 已掌握' : ' · 未掌握'}
@@ -1800,38 +2031,40 @@ export default function TaskConfigCenter() {
                         })}
                       </div>
                     )}
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-[#5b6b8c]">
                       已选 {specialForm.errorQuestionIds.length} 道错题
                       {specialForm.errorQuestionIds.length === 0 && '（不选则按题量自动抽取未掌握错题）'}
                     </p>
                   </div>
                 )}
 
-                {/* 题量 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    题量 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={50}
-                    value={specialForm.questionCount}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1;
-                      setSpecialForm({ ...specialForm, questionCount: value });
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                  <p className="mt-1 text-sm text-gray-500">
-                    范围 1-50。{specialForm.specialType === 'ERROR_BOOK' && '错题本模式下若已勾选错题，以勾选数量为准'}
-                  </p>
-                </div>
+                {/* 题量（题库组卷模式在组卷表单内自行设置抽题数量，此处隐藏） */}
+                {specialForm.specialType !== 'PAPER' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                      题量 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={50}
+                      value={specialForm.questionCount}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        setSpecialForm({ ...specialForm, questionCount: value });
+                      }}
+                      className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-sm text-[#5b6b8c]">
+                      范围 1-50。{specialForm.specialType === 'ERROR_BOOK' && '错题本模式下若已勾选错题，以勾选数量为准'}
+                    </p>
+                  </div>
+                )}
 
                 {/* 任务标题（选填） */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#92a4c9] mb-2">
                     任务标题（选填）
                   </label>
                   <input
@@ -1839,11 +2072,11 @@ export default function TaskConfigCenter() {
                     value={specialForm.title}
                     onChange={(e) => setSpecialForm({ ...specialForm, title: e.target.value })}
                     placeholder="不填则自动生成（如：数学·单元专项攻克）"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                 </div>
 
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+                <div className="p-4 bg-purple-500/15 border border-purple-500/40 rounded-lg text-sm text-purple-300">
                   专项攻克任务为简化流程：直接从题库抽题、学员在电子答题专区作答、生成独立专项报告，不计入学科总任务学情主线，但错题会汇总到同一错题本。
                 </div>
               </>
@@ -1851,16 +2084,16 @@ export default function TaskConfigCenter() {
 
             {/* 家长激励寄语（仅学科总任务） */}
             {taskCategory === 'SUBJECT_MAIN' && (
-            <div className="border-t border-gray-200 pt-6">
+            <div className="border-t border-[#324467] pt-6">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-[#92a4c9]">
                   家长激励寄语 (选填)
                 </label>
                 <button
                   type="button"
                   onClick={handleGenerateEncouragement}
                   disabled={generatingEncouragement}
-                  className="px-3 py-1.5 text-xs font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-xs font-medium text-blue-300 border border-blue-500 rounded-lg hover:bg-blue-500/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {generatingEncouragement ? 'AI 生成中...' : '✨ AI 帮我写'}
                 </button>
@@ -1870,25 +2103,25 @@ export default function TaskConfigCenter() {
                 onChange={(e) => setEncouragement(e.target.value.slice(0, 200))}
                 placeholder="写一段激励孩子的话，孩子在训练时会看到。也可以点击「AI 帮我写」生成后再修改"
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-sm text-gray-500">{encouragement.length}/200 字</p>
+              <p className="mt-1 text-sm text-[#5b6b8c]">{encouragement.length}/200 字</p>
             </div>
             )}
 
             {/* 提交按钮 */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+            <div className="flex justify-end space-x-4 pt-6 border-t border-[#324467]">
               <button
                 type="button"
                 onClick={() => navigate('/parent/dashboard')}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:bg-[#1a2332] transition-colors"
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-[#324467] disabled:cursor-not-allowed"
               >
                 {loading
                   ? '创建中...'

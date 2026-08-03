@@ -63,6 +63,9 @@ function baseWhere(c: PickCriteria): Prisma.QuestionWhereInput {
   if (c.knowledgePoints && c.knowledgePoints.length > 0) {
     where.knowledgePoints = { hasSome: c.knowledgePoints };
   }
+  // ④ AI 生成题需人工采纳后才可被自动抽题命中（PENDING/REJECTED 一律排除）；
+  //   用 AND 包裹，避免与上面 unitIds 的 OR 冲突。
+  where.AND = [{ OR: [{ reviewStatus: null }, { reviewStatus: 'APPROVED' }] }];
   return where;
 }
 
@@ -195,10 +198,85 @@ ${JSON.stringify(unitStock.map((u) => ({ unitId: u.id, name: u.name, stock: u.by
 4. 只输出 JSON，格式：
 {"unitIds":["..."],"difficultyDist":{"2":3,"3":5,"4":2},"reason":"一句话说明选题思路"}`;
 
-  const response = await aiServiceManager.callAI(prompt, { temperature: 0.3, maxTokens: 600, timeout: 20000 });
-  const parsed = extractJson(response);
+  // 规则兜底：AI 不可用/返回异常时按题库真实存量生成一份可用的筛题条件，
+  // 保证「发布任务」这条主链路永远不会因为 AI 抖动而整体失败。
+  const ruleBasedFallback = (why: string): ProposedCriteria => {
+    // 取存量最多的前 3 个单元
+    const ranked = [...unitStock]
+      .map((u) => ({
+        ...u,
+        total: Object.values(u.byDifficulty).reduce((a, b) => a + b, 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+    const chosen = ranked.slice(0, 3).filter((u) => u.total > 0);
+
+    // 汇总所选单元各难度存量，按 5:3:2（易:中:难）意图分配，且不超过实际存量
+    const stock: Record<string, number> = {};
+    for (const u of chosen) {
+      for (const [lv, n] of Object.entries(u.byDifficulty)) stock[lv] = (stock[lv] ?? 0) + n;
+    }
+    const levels = Object.keys(stock)
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= 1 && n <= 5)
+      .sort((a, b) => a - b);
+
+    const dist: DifficultyDist = {};
+    let left = count;
+    // 权重：偏中低难度
+    const weightOf = (lv: number) => (lv <= 2 ? 5 : lv === 3 ? 3 : 2);
+    const weightSum = levels.reduce((s, lv) => s + weightOf(lv), 0) || 1;
+    for (const lv of levels) {
+      if (left <= 0) break;
+      const want = Math.min(
+        stock[String(lv)] ?? 0,
+        Math.max(1, Math.round((weightOf(lv) / weightSum) * count))
+      );
+      const take = Math.min(want, left);
+      if (take > 0) {
+        dist[String(lv)] = take;
+        left -= take;
+      }
+    }
+    // 还有余量 → 往存量还够的难度上补
+    for (const lv of levels) {
+      if (left <= 0) break;
+      const key = String(lv);
+      const room = (stock[key] ?? 0) - (dist[key] ?? 0);
+      if (room > 0) {
+        const take = Math.min(room, left);
+        dist[key] = (dist[key] ?? 0) + take;
+        left -= take;
+      }
+    }
+
+    logger.warn(`aiProposeCriteria 降级为规则筛题（原因：${why}）`);
+    return {
+      subject: input.subject,
+      unitIds: chosen.map((u) => u.id),
+      count,
+      // 完全没有难度信息时不限难度，让 pickByDistribution 走「不限难度」分支
+      difficultyDist: Object.keys(dist).length > 0 ? dist : undefined,
+      reason: `AI 选题服务暂不可用，已按题库存量自动分配（${why}）`,
+    };
+  };
+
+  let parsed: any = null;
+  try {
+    // 本地大模型（Ollama）单次生成实测 20~35 秒，超时必须给足，否则每次都在返回前被掐断
+    const response = await aiServiceManager.callAI(prompt, {
+      temperature: 0.3,
+      maxTokens: 600,
+      timeout: 90000,
+    });
+    parsed = extractJson(response);
+  } catch (error: unknown) {
+    return ruleBasedFallback(
+      error instanceof Error ? error.message.slice(0, 60) : 'AI 调用失败'
+    );
+  }
+
   if (!parsed || !Array.isArray(parsed.unitIds) || typeof parsed.difficultyDist !== 'object') {
-    throw new Error('AI 筛题条件解析失败，请重试或改用手动模式');
+    return ruleBasedFallback('AI 返回格式无法解析');
   }
 
   // 归一化：难度分布总量对齐 count
@@ -209,7 +287,7 @@ ${JSON.stringify(unitStock.map((u) => ({ unitId: u.id, name: u.name, stock: u.by
     const lv = Number(k);
     if (n > 0 && Number.isInteger(lv) && lv >= 1 && lv <= 5) { dist[k] = n; sum += n; }
   }
-  if (sum === 0) throw new Error('AI 筛题条件无有效难度分布');
+  if (sum === 0) return ruleBasedFallback('AI 返回的难度分布为空');
   if (sum !== count) {
     // 等比缩放并修正余数
     const keys = Object.keys(dist);
@@ -225,7 +303,7 @@ ${JSON.stringify(unitStock.map((u) => ({ unitId: u.id, name: u.name, stock: u.by
 
   const validUnitIds = new Set(unitStock.map((u) => u.id));
   const unitIds = (parsed.unitIds as string[]).filter((id) => validUnitIds.has(id));
-  if (unitIds.length === 0) throw new Error('AI 选择的单元在题库中无存量');
+  if (unitIds.length === 0) return ruleBasedFallback('AI 选择的单元在题库中无存量');
 
   return {
     subject: input.subject,

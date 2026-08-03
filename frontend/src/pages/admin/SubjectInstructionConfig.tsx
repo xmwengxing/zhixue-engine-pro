@@ -271,17 +271,17 @@ const SubjectInstructionConfig: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* 左侧科目列表 */}
-      <aside className="w-80 flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+      <aside className="w-80 flex flex-col bg-[#232f48] border-r border-[#324467]">
         <div className="p-6 pb-2">
-          <h1 className="text-slate-900 dark:text-white text-lg font-bold">科目智能体</h1>
-          <p className="text-slate-500 text-sm">管理与配置各学科 AI 老师</p>
+          <h1 className="text-white text-lg font-bold">科目智能体</h1>
+          <p className="text-[#92a4c9] text-sm">管理与配置各学科 AI 老师</p>
         </div>
 
         {/* 新增科目按钮 */}
         <div className="px-4 pb-2">
           <button
             onClick={() => setShowAddSubjectModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
             新增科目
@@ -300,16 +300,16 @@ const SubjectInstructionConfig: React.FC = () => {
                 onClick={() => selectSubject(subject.name)}
                 className={`flex items-center justify-between gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-blue-600/10 border border-blue-600/20'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                    ? 'bg-primary/10 border border-primary/20'
+                    : 'hover:bg-[#324467]'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex items-center justify-center size-10 rounded-lg ${
                       isSelected
-                        ? 'bg-blue-600/20 text-blue-600'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-[#1a2332] text-[#5b6b8c]'
                     }`}
                   >
                     <span className="material-symbols-outlined">{subject.icon}</span>
@@ -317,14 +317,14 @@ const SubjectInstructionConfig: React.FC = () => {
                   <div>
                     <p
                       className={`text-sm font-bold ${
-                        isSelected ? 'text-blue-600' : 'text-slate-700 dark:text-white'
+                        isSelected ? 'text-primary' : 'text-white'
                       }`}
                     >
                       {subject.name} AI
                     </p>
                     <p
                       className={`text-xs ${
-                        isSelected ? 'text-blue-600/70' : 'text-slate-400'
+                        isSelected ? 'text-primary/70' : 'text-[#5b6b8c]'
                       }`}
                     >
                       {isConfigured ? '已配置' : '未配置'}
@@ -332,7 +332,7 @@ const SubjectInstructionConfig: React.FC = () => {
                   </div>
                 </div>
                 {isSelected && (
-                  <span className="material-symbols-outlined text-blue-600 text-sm">
+                  <span className="material-symbols-outlined text-primary text-sm">
                     chevron_right
                   </span>
                 )}
@@ -344,7 +344,7 @@ const SubjectInstructionConfig: React.FC = () => {
           {customSubjects.length > 0 && (
             <>
               <div className="pt-4 pb-2 px-2">
-                <p className="text-xs font-bold text-slate-400 uppercase">自定义科目</p>
+                <p className="text-xs font-bold text-[#5b6b8c] uppercase">自定义科目</p>
               </div>
               {customSubjects.map((subject) => {
                 const isSelected = selectedSubject === subject.name;
@@ -355,8 +355,8 @@ const SubjectInstructionConfig: React.FC = () => {
                     key={subject.name}
                     className={`flex items-center justify-between gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-blue-600/10 border border-blue-600/20'
-                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'hover:bg-[#324467]'
                     }`}
                   >
                     <div
@@ -366,8 +366,8 @@ const SubjectInstructionConfig: React.FC = () => {
                       <div
                         className={`flex items-center justify-center size-10 rounded-lg ${
                           isSelected
-                            ? 'bg-blue-600/20 text-blue-600'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                            ? 'bg-primary/20 text-primary'
+                            : 'bg-[#1a2332] text-[#5b6b8c]'
                         }`}
                       >
                         <span className="material-symbols-outlined">{subject.icon}</span>
@@ -375,14 +375,14 @@ const SubjectInstructionConfig: React.FC = () => {
                       <div>
                         <p
                           className={`text-sm font-bold ${
-                            isSelected ? 'text-blue-600' : 'text-slate-700 dark:text-white'
+                            isSelected ? 'text-primary' : 'text-white'
                           }`}
                         >
                           {subject.name} AI
                         </p>
                         <p
                           className={`text-xs ${
-                            isSelected ? 'text-blue-600/70' : 'text-slate-400'
+                            isSelected ? 'text-primary/70' : 'text-[#5b6b8c]'
                           }`}
                         >
                           {isConfigured ? '已配置' : '未配置'}
@@ -408,22 +408,22 @@ const SubjectInstructionConfig: React.FC = () => {
       </aside>
 
       {/* 右侧配置面板 */}
-      <main className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 overflow-y-auto">
+      <main className="flex-1 flex flex-col bg-[#111722] overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-slate-400">加载中...</div>
+            <div className="text-[#5b6b8c]">加载中...</div>
           </div>
         ) : !selectedSubject ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-slate-400">请选择一个科目进行配置</div>
+            <div className="text-[#5b6b8c]">请选择一个科目进行配置</div>
           </div>
         ) : (
           <>
             {/* 页面标题 */}
-            <div className="flex flex-wrap justify-between items-end gap-3 px-8 py-6 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex flex-wrap justify-between items-end gap-3 px-8 py-6 border-b border-[#324467]">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
-                  <p className="text-slate-900 dark:text-white text-3xl font-bold">
+                  <p className="text-white text-3xl font-bold">
                     {selectedSubject} AI 配置
                   </p>
                   {isSubjectConfigured(selectedSubject) && (
@@ -432,7 +432,7 @@ const SubjectInstructionConfig: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-500 text-base">
+                <p className="text-[#92a4c9] text-base">
                   配置 {selectedSubject} 辅导智能体的启发式教学规则及提示词。
                 </p>
               </div>
@@ -449,7 +449,7 @@ const SubjectInstructionConfig: React.FC = () => {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-600/20"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
                 >
                   <span className="material-symbols-outlined text-[18px]">save</span>
                   {saving ? '保存中...' : '保存配置'}
@@ -460,18 +460,18 @@ const SubjectInstructionConfig: React.FC = () => {
             {/* 配置表单 */}
             <div className="px-8 py-6 space-y-6">
               {/* AI 服务商选择 */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+              <div className="bg-[#232f48] rounded-xl border border-[#324467] p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-blue-600">cloud_sync</span>
-                  <h2 className="text-slate-900 dark:text-white text-xl font-bold">
+                  <span className="material-symbols-outlined text-primary">cloud_sync</span>
+                  <h2 className="text-white text-xl font-bold">
                     AI 服务商
                   </h2>
                 </div>
-                <p className="text-slate-500 text-sm mb-4">
+                <p className="text-[#92a4c9] text-sm mb-4">
                   选择该科目使用的 AI 服务商。如不选择，将使用系统默认服务商。
                 </p>
                 <select
-                  className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-3"
+                  className="w-full bg-[#1a2332] border-[#324467] text-white rounded-lg px-4 py-3"
                   value={formData.providerId}
                   onChange={(e) =>
                     setFormData({ ...formData, providerId: e.target.value })
@@ -492,18 +492,18 @@ const SubjectInstructionConfig: React.FC = () => {
               </div>
 
               {/* 系统提示词 */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+              <div className="bg-[#232f48] rounded-xl border border-[#324467] p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-blue-600">psychology</span>
-                  <h2 className="text-slate-900 dark:text-white text-xl font-bold">
+                  <span className="material-symbols-outlined text-primary">psychology</span>
+                  <h2 className="text-white text-xl font-bold">
                     系统提示词 (System Prompt)
                   </h2>
                 </div>
-                <p className="text-slate-500 text-sm mb-4">
+                <p className="text-[#92a4c9] text-sm mb-4">
                   定义 AI 老师的角色、教学风格和行为准则。这将影响 AI 的所有回复。
                 </p>
                 <textarea
-                  className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-3 min-h-[300px] font-mono text-sm"
+                  className="w-full bg-[#1a2332] border-[#324467] text-white rounded-lg px-4 py-3 min-h-[300px] font-mono text-sm"
                   value={formData.systemPrompt}
                   onChange={(e) =>
                     setFormData({ ...formData, systemPrompt: e.target.value })
@@ -524,28 +524,28 @@ const SubjectInstructionConfig: React.FC = () => {
               </div>
 
               {/* 示例对话 */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+              <div className="bg-[#232f48] rounded-xl border border-[#324467] p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-blue-600">chat</span>
-                    <h2 className="text-slate-900 dark:text-white text-xl font-bold">
+                    <span className="material-symbols-outlined text-primary">chat</span>
+                    <h2 className="text-white text-xl font-bold">
                       示例对话
                     </h2>
                   </div>
                   <button
                     onClick={addExample}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white text-sm font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#1a2332] text-white text-sm font-bold rounded-lg hover:bg-[#324467] transition-all"
                   >
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     添加示例
                   </button>
                 </div>
-                <p className="text-slate-500 text-sm mb-6">
+                <p className="text-[#92a4c9] text-sm mb-6">
                   提供一些典型的问答示例，帮助 AI 更好地理解期望的回复风格。
                 </p>
 
                 {formData.examples.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">
+                  <div className="text-center py-8 text-[#5b6b8c]">
                     暂无示例对话，点击上方按钮添加
                   </div>
                 ) : (
@@ -553,10 +553,10 @@ const SubjectInstructionConfig: React.FC = () => {
                     {formData.examples.map((example, index) => (
                       <div
                         key={index}
-                        className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3"
+                        className="border border-[#324467] rounded-lg p-4 space-y-3"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-600 dark:text-slate-400 text-sm font-bold">
+                          <span className="text-[#92a4c9] text-sm font-bold">
                             示例 {index + 1}
                           </span>
                           <button
@@ -570,11 +570,11 @@ const SubjectInstructionConfig: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="text-slate-600 dark:text-slate-400 text-xs font-bold block mb-2">
+                          <label className="text-[#92a4c9] text-xs font-bold block mb-2">
                             学生问题
                           </label>
                           <textarea
-                            className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm"
+                            className="w-full bg-[#1a2332] border-[#324467] text-white rounded-lg px-3 py-2 text-sm"
                             rows={2}
                             value={example.question}
                             onChange={(e) =>
@@ -585,11 +585,11 @@ const SubjectInstructionConfig: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="text-slate-600 dark:text-slate-400 text-xs font-bold block mb-2">
+                          <label className="text-[#92a4c9] text-xs font-bold block mb-2">
                             AI 回复
                           </label>
                           <textarea
-                            className="w-full bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm"
+                            className="w-full bg-[#1a2332] border-[#324467] text-white rounded-lg px-3 py-2 text-sm"
                             rows={3}
                             value={example.response}
                             onChange={(e) =>
@@ -611,14 +611,14 @@ const SubjectInstructionConfig: React.FC = () => {
       {/* 新增科目弹窗 */}
       {showAddSubjectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+          <div className="bg-[#232f48] rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div className="p-6 border-b border-[#324467]">
+              <h2 className="text-xl font-bold text-white">
                 新增自定义科目
               </h2>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-bold text-[#92a4c9] mb-2">
                 科目名称
               </label>
               <input
@@ -627,7 +627,7 @@ const SubjectInstructionConfig: React.FC = () => {
                 onChange={(e) => setNewSubjectName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
                 placeholder="例如：编程、美术、音乐等"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="w-full px-4 py-3 bg-[#1a2332] border border-[#324467] rounded-lg text-white"
                 autoFocus
               />
             </div>
@@ -637,13 +637,13 @@ const SubjectInstructionConfig: React.FC = () => {
                   setShowAddSubjectModal(false);
                   setNewSubjectName('');
                 }}
-                className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
+                className="flex-1 px-4 py-2.5 bg-[#1a2332] text-white rounded-lg hover:bg-[#324467] transition-all"
               >
                 取消
               </button>
               <button
                 onClick={handleAddSubject}
-                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all"
               >
                 添加
               </button>

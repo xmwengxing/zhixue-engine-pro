@@ -117,17 +117,17 @@ const ErrorRetry: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">加载中...</div>
+      <div className="min-h-screen bg-[#111722] flex items-center justify-center">
+        <div className="text-[#5b6b8c]">加载中...</div>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#111722] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-500 mb-4">会话不存在</div>
+          <div className="text-[#5b6b8c] mb-4">会话不存在</div>
           <button
             onClick={handleBackToErrorBook}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -142,8 +142,8 @@ const ErrorRetry: React.FC = () => {
   // 完成页面
   if (completed) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-[#111722] flex items-center justify-center p-6">
+        <div className="bg-[#232f48] rounded-lg shadow-xl p-8 max-w-md w-full text-center">
           <div className="mb-6">
             <svg
               className="w-16 h-16 text-green-500 mx-auto"
@@ -160,17 +160,17 @@ const ErrorRetry: React.FC = () => {
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-white mb-2">
             错题重做完成！
           </h2>
 
-          <p className="text-gray-600 mb-6">
+          <p className="text-[#92a4c9] mb-6">
             恭喜你完成了错题重做，继续努力攻克薄弱知识点！
           </p>
 
-          <div className="bg-blue-50 rounded-lg p-4 mb-6">
-            <div className="text-sm text-gray-600 mb-1">本次获得积分</div>
-            <div className="text-3xl font-bold text-blue-600">
+          <div className="bg-blue-500/10 rounded-lg p-4 mb-6">
+            <div className="text-sm text-[#92a4c9] mb-1">本次获得积分</div>
+            <div className="text-3xl font-bold text-blue-400">
               +{earnedPoints}
             </div>
           </div>
@@ -184,7 +184,7 @@ const ErrorRetry: React.FC = () => {
             </button>
             <button
               onClick={() => navigate('/student/dashboard')}
-              className="w-full px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full px-4 py-3 border border-[#324467] text-[#c3cfe6] font-medium rounded-lg hover:bg-[#1a2332] transition-colors"
             >
               返回首页
             </button>
@@ -196,14 +196,14 @@ const ErrorRetry: React.FC = () => {
 
   // 错题重做主界面
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#111722]">
       {/* 顶部导航栏 */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-[#232f48] border-b border-[#324467] px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={handleBackToErrorBook}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-[#92a4c9] hover:text-white"
             >
               <svg
                 className="w-6 h-6"
@@ -220,10 +220,10 @@ const ErrorRetry: React.FC = () => {
               </svg>
             </button>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-semibold text-white">
                 错题重做练习
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#92a4c9]">
                 通过 AI 引导，攻克薄弱知识点
               </p>
             </div>
@@ -252,14 +252,14 @@ const ErrorRetry: React.FC = () => {
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <div className="text-gray-500">没有更多题目了</div>
+              <div className="text-[#5b6b8c]">没有更多题目了</div>
             </div>
           )}
         </div>
 
         {/* AI 助手区域 */}
         {showAI && (
-          <div className="hidden lg:block lg:w-1/3 border-l border-gray-200 bg-white">
+          <div className="hidden lg:block lg:w-1/3 border-l border-[#324467] bg-[#232f48]">
             <AIAssistant
               sessionId={session.id}
               questionId={currentQuestion?.id}
@@ -273,12 +273,12 @@ const ErrorRetry: React.FC = () => {
       {/* 移动端 AI 助手弹窗 */}
       {showAI && (
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">AI 学习助手</h3>
+          <div className="absolute bottom-0 left-0 right-0 bg-[#232f48] rounded-t-2xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-[#324467] flex justify-between items-center">
+              <h3 className="font-semibold text-white">AI 学习助手</h3>
               <button
                 onClick={() => setShowAI(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#5b6b8c] hover:text-[#92a4c9]"
               >
                 <svg
                   className="w-6 h-6"

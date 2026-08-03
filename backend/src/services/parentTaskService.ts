@@ -1,5 +1,6 @@
 import { TaskStatus } from '@prisma/client';
 import { logger } from '../middlewares/logger';
+import { ConflictError } from '../middlewares/errorHandler';
 import { prisma } from '../lib/prisma';
 
 /**
@@ -8,11 +9,23 @@ import { prisma } from '../lib/prisma';
 export interface CustomConfig {
   title: string;
   aiTeacher: string; // AI 科目老师 ID
-  subject: string; // 科目
-  materialVersion: string; // 教材版本
-  units: string[]; // 单元列表(支持多选)
+  subject: string; // 科目（从管理员已添加教材的学科中选择）
+  /** 教材节点 id（TEXTBOOK 节点），下拉自动识别，不允许手填 */
+  textbookId: string;
+  /** 单元节点 id 列表（UNIT 节点，多选），下拉自动识别 */
+  unitIds: string[];
+  /** 兼容旧字段：教材版本 / 单元名（展示用，由 textbookId 推导） */
+  materialVersion?: string;
+  units?: string[];
   goal: string; // 任务目标
   personality?: string; // 性格特征(选填)
+  /**
+   * 水平评估试卷（初测）：从「初测与水平评估」题库选取套卷或 AI 自动组卷。
+   * - { source: 'PAPER', paperId } 手动选卷
+   * - { source: 'AI' } AI 自动从初测库组卷
+   * - null/undefined 不设置，按教材自动出题
+   */
+  assessment?: { source: 'PAPER' | 'AI'; paperId?: string } | null;
 }
 
 /**
@@ -106,6 +119,20 @@ export interface CreateTaskRequest {
  */
 export class ParentTaskService {
   /**
+   * 获取家长名下所有有效绑定学员 ID
+   * 说明：家长端「可见任务」统一按亲子关系判定（与 ownership 中间件一致），
+   * 而非按 task.createdBy，避免管理员代建 / 系统派单的任务对家长不可见，
+   * 也保证首页统计与任务列表口径一致。
+   */
+  private async getBoundStudentIds(parentId: string): Promise<string[]> {
+    const relations = await prisma.parentChildRelation.findMany({
+      where: { parentId, status: 'ACTIVE' },
+      select: { studentId: true },
+    });
+    return relations.map((r) => r.studentId);
+  }
+
+  /**
    * 获取可用的 AI 科目老师列表
    * @returns AI 科目老师列表
    */
@@ -151,12 +178,15 @@ export class ParentTaskService {
     try {
       const { studentId, status, category, subject, page = 1, limit = 10 } = filters;
 
-      // 构建查询条件
+      // 构建查询条件：亲子关系可见 ∪ 本人创建（与 ownership 中间件、首页统计口径一致）
+      const boundStudentIds = await this.getBoundStudentIds(parentId);
+
       const where: any = {
-        createdBy: parentId,
+        OR: [{ studentId: { in: boundStudentIds } }, { createdBy: parentId }],
       };
 
       if (studentId) {
+        // 已由 validateOwnership 校验归属，这里收窄到单个学员
         where.studentId = studentId;
       }
 
@@ -245,7 +275,23 @@ export class ParentTaskService {
               status: true,
               startedAt: true,
               completedAt: true,
+              totalSteps: true,
+              currentStep: true,
             },
+            orderBy: { startedAt: 'desc' },
+          },
+          reports: {
+            select: {
+              id: true,
+              generatedAt: true,
+              subject: true,
+              category: true,
+              specialType: true,
+            },
+            orderBy: { generatedAt: 'desc' },
+          },
+          creator: {
+            select: { id: true, username: true, realName: true, role: true },
           },
         },
       });
@@ -254,8 +300,9 @@ export class ParentTaskService {
         throw new Error('任务不存在');
       }
 
-      // 验证权限
-      if (task.createdBy !== parentId) {
+      // 验证权限：亲子关系 或 本人创建（学员被删/解绑后仍可查看自己建的任务）
+      const boundStudentIds = await this.getBoundStudentIds(parentId);
+      if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
         throw new Error('无权访问该任务');
       }
 
@@ -320,7 +367,16 @@ export class ParentTaskService {
           throw new Error('自定义模式需要提供 customConfig');
         }
 
-        const { title, aiTeacher, subject, materialVersion, units, goal, personality } = data.customConfig;
+        const {
+          title,
+          aiTeacher,
+          subject,
+          textbookId,
+          unitIds,
+          goal,
+          personality,
+          assessment,
+        } = data.customConfig;
 
         // 验证 AI 科目老师是否存在
         const subjectInstruction = await prisma.subjectInstruction.findUnique({
@@ -331,11 +387,39 @@ export class ParentTaskService {
           throw new Error('AI 科目老师不存在');
         }
 
-        // 查找教材节点
-        const materialNodes = await this.findMaterialNodes(subject, materialVersion, units);
+        // 教材 / 单元必须从管理员已添加教材中下拉选择（节点 id），不允许手填
+        if (!textbookId || !Array.isArray(unitIds) || unitIds.length === 0) {
+          throw new Error('请选择教材版本并至少勾选一个单元');
+        }
 
-        if (materialNodes.length === 0) {
-          throw new Error('未找到匹配的教材内容');
+        // 解析教材与单元：以 TEXTBOOK + UNIT 节点 id 为准（修复旧 VERSION 树查找失效问题）
+        const { ensureSubjectNode } = await import('./questionBankService');
+        const textbook = await prisma.materialNode.findUnique({
+          where: { id: textbookId },
+          include: { children: true },
+        });
+        if (!textbook || textbook.type !== 'TEXTBOOK') {
+          throw new Error('所选教材不存在');
+        }
+        const subjectNodeId = await ensureSubjectNode(subject);
+        const validUnitIds = (unitIds as string[]).filter((id) =>
+          textbook.children.some((c: any) => c.id === id && c.type === 'UNIT')
+        );
+        if (validUnitIds.length === 0) {
+          throw new Error('请至少选择一个有效单元');
+        }
+        const tbMeta = (textbook.metadata ?? {}) as any;
+        const unitNames = validUnitIds
+          .map((id) => (textbook.children.find((c: any) => c.id === id)?.metadata as any)?.name)
+          .filter(Boolean);
+
+        // 校验水平评估配置（若有）
+        let assessmentConfig: { source: 'PAPER' | 'AI'; paperId?: string } | null = null;
+        if (assessment && (assessment.source === 'PAPER' || assessment.source === 'AI')) {
+          if (assessment.source === 'PAPER' && !assessment.paperId) {
+            throw new Error('水平评估选卷模式需要提供 paperId');
+          }
+          assessmentConfig = { source: assessment.source, paperId: assessment.paperId };
         }
 
         // 组装任务配置
@@ -345,11 +429,17 @@ export class ParentTaskService {
           mode: 'CUSTOM',
           aiTeacher,
           subject,
-          materialVersion,
-          units,
+          textbookId,
+          materialVersion: tbMeta.version ?? null,
+          grade: tbMeta.grade ?? null,
+          term: tbMeta.term ?? null,
+          unitIds: validUnitIds,
+          units: unitNames,
           goal,
           personality,
-          materialNodeIds: materialNodes.map(n => n.id),
+          // 兼容：题目 materialNodeId 指向 SUBJECT 节点，generateQuestions 按此 + unitIds 取题
+          materialNodeIds: [subjectNodeId],
+          assessment: assessmentConfig,
         };
 
         // 组装 AI 指令(将在 aiServiceManager 中使用)
@@ -478,9 +568,11 @@ export class ParentTaskService {
           select: { id: true, title: true, status: true },
         });
         if (existingMain) {
-          throw new Error(
+          // 业务约束冲突属于 409，不是 500 —— 否则前端会当成「服务器炸了」而不是提示用户
+          throw new ConflictError(
             `该学员的「${taskSubject}」学科已有进行中的总任务（${existingMain.title}），` +
-              '同一学科同时只允许 1 个学科总任务。请先完成或删除现有任务，或改为发布专项攻克任务。'
+              '同一学科同时只允许 1 个学科总任务。请先完成或删除现有任务，或改为发布专项攻克任务。',
+            { existingTaskId: existingMain.id, subject: taskSubject }
           );
         }
       }
@@ -543,16 +635,18 @@ export class ParentTaskService {
     data: {
       studentId: string;
       subject: string;
-      specialType: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK';
+      specialType: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER';
       /** UNIT：单元节点 id 列表 */
       unitIds?: string[];
       /** KNOWLEDGE_POINT：知识点列表 */
       knowledgePoints?: string[];
       /** ERROR_BOOK：错题 id 列表（不传则自动取该学科未掌握错题） */
       errorQuestionIds?: string[];
-      /** 抽题数量（UNIT/KNOWLEDGE_POINT 生效，默认 10，1-50） */
+      /** 抽题数量（UNIT/KNOWLEDGE_POINT/PAPER 生效，默认 10，1-50） */
       questionCount?: number;
       title?: string;
+      /** PAPER：组卷配置（整卷或随机抽题） */
+      examConfig?: ExamPaperConfig;
     }
   ) {
     // 校验亲子关系
@@ -642,6 +736,56 @@ export class ParentTaskService {
       questionIds = Array.from(new Set(errors.map((e) => e.questionId)));
       targetRef = { errorQuestionIds: errors.map((e) => e.id) };
       defaultTitle = `${data.subject}错题攻克 · ${questionIds.length} 题`;
+    } else if (data.specialType === 'PAPER') {
+      // 题库组卷专项：复用 EXAM_PAPER 构建逻辑（整卷或随机抽题），但归类为专项攻克
+      if (!data.examConfig) {
+        throw new Error('题库组卷专项需要提供 examConfig');
+      }
+      const built = await this.buildExamPaperTask(data.examConfig);
+      questionIds = (built.config as any).questionIds ?? [];
+      if (questionIds.length === 0) {
+        throw new Error('组卷结果为空，请调整筛选条件或先导入题目');
+      }
+      targetRef = {
+        source: data.examConfig.source,
+        paperId: (built.config as any).paperId ?? null,
+        randomFilter: (built.config as any).randomFilter ?? null,
+      };
+      defaultTitle = built.title || `${data.subject}题库组卷专项`;
+      // 用专项一致的 config（source 标记 SPECIAL，便于与单元/知识点专项目录统一归类）
+      const specialConfig: any = {
+        ...(built.config as any),
+        source: 'SPECIAL',
+        specialType: 'PAPER',
+      };
+      // 直接写入任务配置，跳过下方通用 config 组装
+      const paperTask = await prisma.task.create({
+        data: {
+          studentId: data.studentId,
+          createdBy: parentId,
+          title: data.title || defaultTitle,
+          mode: 'EXAM_PAPER',
+          category: 'SPECIAL',
+          subject: data.subject,
+          specialType: 'PAPER',
+          targetRef,
+          config: specialConfig,
+          status: 'PENDING',
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              username: true,
+              studentProfile: { select: { realName: true } },
+            },
+          },
+        },
+      });
+      logger.info(
+        `专项题库组卷任务创建成功: ${paperTask.id}, 学员 ${data.studentId}, 学科 ${data.subject}, 题量 ${questionIds.length}`
+      );
+      return paperTask;
     } else {
       throw new Error('无效的专项类型');
     }
@@ -943,90 +1087,6 @@ export class ParentTaskService {
   }
 
   /**
-   * 查找教材节点
-   * @param subject 科目
-   * @param materialVersion 教材版本
-   * @param units 单元列表
-   * @returns 教材节点列表
-   */
-  private async findMaterialNodes(subject: string, materialVersion: string, units: string[]) {
-    try {
-      // 查找版本节点
-      const versionNode = await prisma.materialNode.findFirst({
-        where: {
-          type: 'VERSION',
-          name: materialVersion,
-        },
-      });
-
-      logger.info(`查找版本节点: ${materialVersion}, 结果: ${versionNode ? versionNode.id : '未找到'}`);
-
-      if (!versionNode) {
-        throw new Error(`未找到教材版本: ${materialVersion}`);
-      }
-
-      // 查找科目节点(可能在VERSION下,也可能在GRADE下)
-      // 先尝试直接在VERSION下查找
-      let subjectNode = await prisma.materialNode.findFirst({
-        where: {
-          type: 'SUBJECT',
-          name: subject,
-          parentId: versionNode.id,
-        },
-      });
-
-      // 如果没找到,尝试在GRADE节点下查找
-      if (!subjectNode) {
-        const gradeNodes = await prisma.materialNode.findMany({
-          where: {
-            type: 'GRADE',
-            parentId: versionNode.id,
-          },
-        });
-
-        for (const gradeNode of gradeNodes) {
-          subjectNode = await prisma.materialNode.findFirst({
-            where: {
-              type: 'SUBJECT',
-              name: subject,
-              parentId: gradeNode.id,
-            },
-          });
-          if (subjectNode) break;
-        }
-      }
-
-      logger.info(`查找科目节点: ${subject}, 结果: ${subjectNode ? subjectNode.id : '未找到'}`);
-
-      if (!subjectNode) {
-        throw new Error(`未找到科目: ${subject}`);
-      }
-
-      // 查找单元节点
-      const materialNodes = await prisma.materialNode.findMany({
-        where: {
-          type: 'UNIT',
-          name: {
-            in: units,
-          },
-          parentId: subjectNode.id,
-        },
-      });
-
-      logger.info(`查找单元节点: ${units.join(', ')}, 父节点: ${subjectNode.id}, 结果数量: ${materialNodes.length}`);
-
-      if (materialNodes.length === 0) {
-        throw new Error('未找到匹配的单元');
-      }
-
-      return materialNodes;
-    } catch (error) {
-      logger.error('查找教材节点失败:', error);
-      throw error;
-    }
-  }
-
-  /**
    * 组装 AI 指令
    * @param systemPrompt 科目指令(第一级)
    * @param goal 任务目标(第二级)
@@ -1083,37 +1143,59 @@ export class ParentTaskService {
         throw new Error('任务不存在');
       }
 
-      // 验证权限：只有创建者可以删除
-      if (task.createdBy !== parentId) {
+      // 验证权限：亲子关系 或 本人创建（学员被删/解绑后仍可清理自己建的任务）
+      const boundStudentIds = await this.getBoundStudentIds(parentId);
+      if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
         throw new Error('无权删除该任务');
       }
 
       // 检查学员是否已被删除
       const studentDeleted = !task.student || task.student.status === 'DELETED';
 
-      // 如果学员未被删除，执行正常的删除检查
+      // 删除限制口径（放宽）：
+      // 仅当「学员仍存在」且「存在 ACTIVE 训练会话」时禁止删除。
+      // 说明：历史上按 status === 'IN_PROGRESS' 拦截，会导致大量「孤儿任务」
+      // （如冒烟测试遗留、会话已中断但状态未回写）永远无法清理。
       if (!studentDeleted) {
-        // 检查任务状态：进行中的任务不能删除
-        if (task.status === 'IN_PROGRESS') {
-          throw new Error('进行中的任务不能删除，请等待任务完成或联系管理员');
-        }
-
-        // 检查是否有关联的活跃训练会话
         const hasActiveSessions = task.trainingSessions.some(
-          session => session.status === 'ACTIVE'
+          (session) => session.status === 'ACTIVE'
         );
 
         if (hasActiveSessions) {
-          throw new Error('该任务有正在进行的训练会话，无法删除');
+          throw new Error('该任务有正在进行的训练会话，请让学员先结束训练后再删除');
         }
       } else {
-        // 学员已被删除，允许直接删除任务
         logger.info(`任务 ${taskId} 的学员已被删除，允许删除任务`);
       }
 
-      // 删除任务（级联删除会自动处理关联的训练会话、报告等）
-      await prisma.task.delete({
-        where: { id: taskId },
+      // Prisma schema 未配置 onDelete: Cascade，需手动按依赖顺序清理
+      const sessionIds = task.trainingSessions.map((s) => s.id);
+
+      await prisma.$transaction(async (tx) => {
+        if (sessionIds.length > 0) {
+          const answers = await tx.answer.findMany({
+            where: { sessionId: { in: sessionIds } },
+            select: { id: true },
+          });
+          const answerIds = answers.map((a) => a.id);
+
+          if (answerIds.length > 0) {
+            // 错题引用答题记录，需先删除
+            await tx.errorQuestion.deleteMany({ where: { answerId: { in: answerIds } } });
+            await tx.answer.deleteMany({ where: { id: { in: answerIds } } });
+          }
+
+          await tx.aIConversation.deleteMany({ where: { sessionId: { in: sessionIds } } });
+        }
+
+        // 报告同时引用 task 与 session
+        await tx.report.deleteMany({ where: { taskId } });
+
+        if (sessionIds.length > 0) {
+          await tx.trainingSession.deleteMany({ where: { id: { in: sessionIds } } });
+        }
+
+        await tx.task.delete({ where: { id: taskId } });
       });
 
       logger.info(`任务删除成功: ${taskId}, 家长: ${parentId}${studentDeleted ? ' (学员已删除)' : ''}`);

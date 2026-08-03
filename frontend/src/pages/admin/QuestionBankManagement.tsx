@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import request, { type ApiResponse } from '../../utils/request';
+import { useAuthStore } from '../../stores/authStore';
 import { getErrorMessage } from '../../types/error';
 
 /**
@@ -27,6 +28,8 @@ interface Paper {
   textbookId?: string | null;
   textbookName?: string | null;
   unitIds?: string[];
+  /** 试卷分类：EXERCISE 习题与试卷 / ASSESSMENT 初测与水平评估 */
+  category?: 'EXERCISE' | 'ASSESSMENT' | null;
   createdAt: string;
   _count?: { items: number };
 }
@@ -43,6 +46,18 @@ interface Question {
   unitIds?: string[];
   textbookId?: string | null;
   createdAt: string;
+  /** 题目来源：MANUAL / IMPORT / AI_GENERATED */
+  source?: string | null;
+  /** ④ AI 生成题审核态：null=无需审核，PENDING/APPROVED/REJECTED */
+  reviewStatus?: string | null;
+}
+
+/** ④ AI 生成题审核统计 */
+interface ReviewStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  aiTotal: number;
 }
 
 interface PaperItem {
@@ -70,6 +85,34 @@ interface PagedResult<T> {
   total: number;
   page: number;
   limit: number;
+}
+
+// OCR 识别方式（导入弹窗下拉用）
+interface OcrProviderOption {
+  id: string;
+  name: string;
+  method: string;
+  isDefault: boolean;
+  status: string;
+}
+
+// 导出文件结构（仅需 counts）
+interface BankExport {
+  format: string;
+  counts: { questions: number; papers: number; paperItems: number; materialNodes: number };
+}
+
+// 导入数据汇总
+interface ImportSummary {
+  questionsCreated: number;
+  questionsUpdated: number;
+  papersCreated: number;
+  papersUpdated: number;
+  paperItemsCreated: number;
+  paperItemsUpdated: number;
+  materialNodesCreated: number;
+  materialNodesUpdated: number;
+  errors: string[];
 }
 
 /** AI 难度归类后台任务状态（P2） */
@@ -106,6 +149,13 @@ const STATUS_LABELS: Record<string, { text: string; cls: string }> = {
   DRAFT: { text: '草稿', cls: 'bg-[#324467] text-[#92a4c9]' },
   NORMALIZED: { text: '已识别', cls: 'bg-amber-500/20 text-amber-400' },
   PUBLISHED: { text: '已发布', cls: 'bg-green-500/20 text-green-400' },
+};
+
+// ④ AI 生成题审核态
+const REVIEW_LABELS: Record<string, { text: string; cls: string }> = {
+  PENDING: { text: '待审核', cls: 'bg-orange-500/15 text-orange-300 border-orange-500/30' },
+  APPROVED: { text: '已通过', cls: 'bg-green-500/15 text-green-300 border-green-500/30' },
+  REJECTED: { text: '已退回', cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
 };
 
 const PAGE_SIZE = 10;
@@ -148,6 +198,8 @@ const QuestionBankManagement = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [paperTotal, setPaperTotal] = useState(0);
   const [paperPage, setPaperPage] = useState(1);
+  // 试卷分类：习题与试卷 / 初测与水平评估
+  const [paperCategory, setPaperCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
 
   // 题目列表
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -155,9 +207,18 @@ const QuestionBankManagement = () => {
   const [questionPage, setQuestionPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState('');
 
+  // ④ AI 生成题审核
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [reviewFilter, setReviewFilter] = useState('');
+  const [selectedQIds, setSelectedQIds] = useState<string[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+
   // 弹窗
   const [showCreatePaper, setShowCreatePaper] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showImportData, setShowImportData] = useState(false);
   const [detailPaperId, setDetailPaperId] = useState<string | null>(null);
   const [editQuestion, setEditQuestion] = useState<Question | 'new' | null>(null);
 
@@ -193,15 +254,21 @@ const QuestionBankManagement = () => {
   const loadPapers = useCallback(async () => {
     if (!activeSubject) return;
     try {
+      const params = new URLSearchParams({
+        subject: activeSubject,
+        page: String(paperPage),
+        limit: String(PAGE_SIZE),
+        category: paperCategory,
+      });
       const res = await request.get<ApiResponse<PagedResult<Paper>>>(
-        `/admin/question-bank/papers?subject=${encodeURIComponent(activeSubject)}&page=${paperPage}&limit=${PAGE_SIZE}`
+        `/admin/question-bank/papers?${params.toString()}`
       );
       setPapers(res.data.items);
       setPaperTotal(res.data.total);
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [activeSubject, paperPage]);
+  }, [activeSubject, paperPage, paperCategory]);
 
   const loadQuestions = useCallback(async () => {
     if (!activeSubject) return;
@@ -212,15 +279,30 @@ const QuestionBankManagement = () => {
         limit: String(PAGE_SIZE),
       });
       if (typeFilter) params.set('type', typeFilter);
+      if (sourceFilter) params.set('source', sourceFilter);
+      if (reviewFilter) params.set('reviewStatus', reviewFilter);
       const res = await request.get<ApiResponse<PagedResult<Question>>>(
         `/admin/question-bank/questions?${params.toString()}`
       );
       setQuestions(res.data.items);
       setQuestionTotal(res.data.total);
+      setSelectedQIds([]);
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [activeSubject, questionPage, typeFilter]);
+  }, [activeSubject, questionPage, typeFilter, sourceFilter, reviewFilter]);
+
+  // ④ 审核统计（全库口径，不随科目筛选变化）
+  const loadReviewStats = useCallback(async () => {
+    try {
+      const res = await request.get<ApiResponse<ReviewStats>>(
+        '/admin/question-bank/questions/review-stats'
+      );
+      setReviewStats(res.data);
+    } catch {
+      /* 统计失败不阻断主流程 */
+    }
+  }, []);
 
   useEffect(() => {
     void loadPapers();
@@ -230,11 +312,15 @@ const QuestionBankManagement = () => {
     void loadQuestions();
   }, [loadQuestions]);
 
-  // 切换科目时重置分页
+  useEffect(() => {
+    void loadReviewStats();
+  }, [loadReviewStats]);
+
+  // 切换科目或试卷分类时重置分页
   useEffect(() => {
     setPaperPage(1);
     setQuestionPage(1);
-  }, [activeSubject]);
+  }, [activeSubject, paperCategory]);
 
   // ---------- 试卷操作 ----------
 
@@ -256,6 +342,72 @@ const QuestionBankManagement = () => {
       void loadPapers();
     } catch (e) {
       setError(getErrorMessage(e));
+    }
+  };
+
+  /** 调整试卷分类（习题与试卷 ↔ 初测与水平评估） */
+  const handleChangePaperCategory = async (paper: Paper, category: 'EXERCISE' | 'ASSESSMENT') => {
+    if (paper.category === category) return;
+    try {
+      await request.patch<ApiResponse>(`/admin/question-bank/papers/${paper.id}`, { category });
+      flash(`已移至「${category === 'EXERCISE' ? '习题与试卷' : '初测与水平评估'}」`);
+      void loadPapers();
+    } catch (e) {
+      setError(getErrorMessage(e));
+    }
+  };
+
+  // ---------- ④ AI 生成题审核 ----------
+
+  const toggleSelectQuestion = (id: string) => {
+    setSelectedQIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllQuestions = () => {
+    setSelectedQIds((prev) => (prev.length === questions.length ? [] : questions.map((q) => q.id)));
+  };
+
+  /** 一键跳到「AI 生成 · 待审核」视图 */
+  const jumpToPendingReview = () => {
+    setView('questions');
+    setSourceFilter('AI_GENERATED');
+    setReviewFilter('PENDING');
+    setTypeFilter('');
+    setQuestionPage(1);
+  };
+
+  /** ids 缺省时对当前勾选项批量操作；单题快捷审核直接传 [id]，避免读到旧 state */
+  const handleReview = async (action: 'APPROVE' | 'REJECT', ids?: string[]) => {
+    const targetIds = ids ?? selectedQIds;
+    if (targetIds.length === 0) return;
+    const verb = action === 'APPROVE' ? '通过' : '退回';
+    if (
+      !window.confirm(
+        `确定${verb} ${targetIds.length} 道题吗？\n${
+          action === 'APPROVE'
+            ? '通过后将转为正式题库题，可被自动抽题命中。'
+            : '退回后仍保留记录（供追溯 AI 出题质量），但不再参与任何抽题。'
+        }`
+      )
+    ) {
+      return;
+    }
+    setReviewing(true);
+    try {
+      const res = await request.post<ApiResponse<{ updated: number }>>(
+        '/admin/question-bank/questions/review',
+        { ids: targetIds, action }
+      );
+      flash(`已${verb} ${res.data?.updated ?? targetIds.length} 道题`);
+      setSelectedQIds([]);
+      void loadQuestions();
+      void loadReviewStats();
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setReviewing(false);
     }
   };
 
@@ -332,6 +484,19 @@ const QuestionBankManagement = () => {
               </p>
             </div>
             <div className="flex gap-3">
+              {/* ④ AI 生成题待审核入口 */}
+              {!!reviewStats?.pending && (
+                <button
+                  onClick={jumpToPendingReview}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-300 border border-orange-500/40 rounded-lg text-sm font-medium hover:bg-orange-500/30 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">rate_review</span>
+                  AI 生成题待审核
+                  <span className="px-1.5 py-0.5 rounded bg-orange-500/30 text-orange-200 text-xs">
+                    {reviewStats.pending}
+                  </span>
+                </button>
+              )}
               <button
                 onClick={() => setShowClassify(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-lg text-sm font-medium hover:bg-amber-500/30 transition-colors"
@@ -345,6 +510,20 @@ const QuestionBankManagement = () => {
               >
                 <span className="material-symbols-outlined text-[20px]">upload_file</span>
                 导入试卷
+              </button>
+              <button
+                onClick={() => setShowExport(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#232f48] text-white rounded-lg text-sm font-medium hover:bg-[#324467] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">download</span>
+                导出题库
+              </button>
+              <button
+                onClick={() => setShowImportData(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#232f48] text-white rounded-lg text-sm font-medium hover:bg-[#324467] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">drive_folder_upload</span>
+                导入数据
               </button>
               <button
                 onClick={() => setShowCreatePaper(true)}
@@ -418,6 +597,30 @@ const QuestionBankManagement = () => {
           {/* 试卷视图 */}
           {view === 'papers' && (
             <div className="flex flex-col gap-3">
+              {/* 试卷分类页签：习题与试卷 / 初测与水平评估 */}
+              <div className="flex mb-1 rounded-lg bg-[#232f48] p-1 w-fit">
+                <button
+                  onClick={() => setPaperCategory('EXERCISE')}
+                  className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    paperCategory === 'EXERCISE' ? 'bg-primary text-white' : 'text-[#92a4c9]'
+                  }`}
+                >
+                  习题与试卷
+                </button>
+                <button
+                  onClick={() => setPaperCategory('ASSESSMENT')}
+                  className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    paperCategory === 'ASSESSMENT' ? 'bg-primary text-white' : 'text-[#92a4c9]'
+                  }`}
+                >
+                  初测与水平评估
+                </button>
+              </div>
+              {paperCategory === 'ASSESSMENT' && (
+                <p className="text-xs text-[#5b6b8c]">
+                  该分类不区分难度，专门用于任务初测或水平评估，训练舱初测可从此库整卷抽取或由 AI 组合。
+                </p>
+              )}
               {papers.length === 0 ? (
                 <EmptyState text="当前科目暂无试卷，可点击右上角「导入试卷」或「新建试卷」" />
               ) : (
@@ -434,6 +637,15 @@ const QuestionBankManagement = () => {
                         >
                           {STATUS_LABELS[p.status]?.text || p.status}
                         </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs ${
+                            p.category === 'ASSESSMENT'
+                              ? 'bg-amber-500/15 text-amber-300'
+                              : 'bg-blue-500/15 text-blue-300'
+                          }`}
+                        >
+                          {p.category === 'ASSESSMENT' ? '初测与水平评估' : '习题与试卷'}
+                        </span>
                       </div>
                       <div className="text-[#92a4c9] text-xs mt-1">
                         {p.paperType ? `${PAPER_TYPE_LABELS[p.paperType] || p.paperType} · ` : ''}
@@ -445,6 +657,18 @@ const QuestionBankManagement = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          handleChangePaperCategory(
+                            p,
+                            p.category === 'ASSESSMENT' ? 'EXERCISE' : 'ASSESSMENT'
+                          )
+                        }
+                        className="px-3 py-1.5 text-xs text-amber-300 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors"
+                        title="在「习题与试卷」与「初测与水平评估」之间切换分类"
+                      >
+                        改分类
+                      </button>
                       <button
                         onClick={() => setDetailPaperId(p.id)}
                         className="px-3 py-1.5 text-xs text-white bg-[#232f48] rounded-lg hover:bg-[#324467] transition-colors"
@@ -476,7 +700,7 @@ const QuestionBankManagement = () => {
           {/* 题目视图 */}
           {view === 'questions' && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <select
                   value={typeFilter}
                   onChange={(e) => {
@@ -492,21 +716,127 @@ const QuestionBankManagement = () => {
                     </option>
                   ))}
                 </select>
+
+                {/* ④ 来源 / 审核态筛选 */}
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => {
+                    setSourceFilter(e.target.value);
+                    setQuestionPage(1);
+                  }}
+                  className="bg-[#232f48] text-white text-sm rounded-lg px-3 py-2 border border-[#324467] focus:outline-none"
+                >
+                  <option value="">全部来源</option>
+                  <option value="AI_GENERATED">AI 生成</option>
+                  <option value="IMPORT">试卷导入</option>
+                  <option value="MANUAL">手工录入</option>
+                </select>
+                <select
+                  value={reviewFilter}
+                  onChange={(e) => {
+                    setReviewFilter(e.target.value);
+                    setQuestionPage(1);
+                  }}
+                  className="bg-[#232f48] text-white text-sm rounded-lg px-3 py-2 border border-[#324467] focus:outline-none"
+                >
+                  <option value="">全部审核态</option>
+                  <option value="PENDING">待审核</option>
+                  <option value="APPROVED">已通过</option>
+                  <option value="REJECTED">已退回</option>
+                  <option value="NONE">无需审核</option>
+                </select>
+
+                {(sourceFilter || reviewFilter) && (
+                  <button
+                    onClick={() => {
+                      setSourceFilter('');
+                      setReviewFilter('');
+                      setQuestionPage(1);
+                    }}
+                    className="px-3 py-2 text-xs text-[#92a4c9] bg-[#232f48] border border-[#324467] rounded-lg hover:text-white transition-colors"
+                  >
+                    清除筛选
+                  </button>
+                )}
+
+                <div className="flex-1" />
+
+                {reviewStats && (
+                  <span className="text-xs text-[#5b6b8c]">
+                    AI 生成题 {reviewStats.aiTotal} 道 · 待审 {reviewStats.pending} · 已通过{' '}
+                    {reviewStats.approved} · 已退回 {reviewStats.rejected}
+                  </span>
+                )}
               </div>
+
+              {/* ④ 批量审核操作条 */}
+              {questions.length > 0 && (
+                <div className="flex items-center gap-3 flex-wrap rounded-lg bg-[#1a2332] border border-[#324467] px-4 py-2.5">
+                  <label className="flex items-center gap-2 text-xs text-[#92a4c9] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={selectedQIds.length > 0 && selectedQIds.length === questions.length}
+                      onChange={toggleSelectAllQuestions}
+                      className="accent-primary"
+                    />
+                    本页全选
+                  </label>
+                  <span className="text-xs text-[#5b6b8c]">已选 {selectedQIds.length} 道</span>
+                  <div className="flex-1" />
+                  <button
+                    disabled={selectedQIds.length === 0 || reviewing}
+                    onClick={() => void handleReview('APPROVE')}
+                    className="px-3 py-1.5 text-xs text-green-300 bg-green-500/10 border border-green-500/30 rounded-lg hover:bg-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {reviewing ? '处理中…' : '通过入库'}
+                  </button>
+                  <button
+                    disabled={selectedQIds.length === 0 || reviewing}
+                    onClick={() => void handleReview('REJECT')}
+                    className="px-3 py-1.5 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    退回
+                  </button>
+                </div>
+              )}
               {questions.length === 0 ? (
                 <EmptyState text="当前科目暂无题目" />
               ) : (
                 questions.map((q) => (
                   <div
                     key={q.id}
-                    className="flex flex-wrap items-start gap-4 rounded-xl bg-[#1a2332] border border-[#324467] px-5 py-4"
+                    className={`flex flex-wrap items-start gap-4 rounded-xl bg-[#1a2332] border px-5 py-4 transition-colors ${
+                      selectedQIds.includes(q.id) ? 'border-primary' : 'border-[#324467]'
+                    }`}
                   >
+                    <input
+                      type="checkbox"
+                      checked={selectedQIds.includes(q.id)}
+                      onChange={() => toggleSelectQuestion(q.id)}
+                      className="mt-1 accent-primary"
+                      aria-label="选择题目"
+                    />
                     <div className="flex-1 min-w-[240px]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="px-2 py-0.5 rounded text-xs bg-primary/20 text-primary">
                           {TYPE_LABELS[q.type] || q.type}
                         </span>
                         <span className="text-[#92a4c9] text-xs">难度 {q.difficulty}/5</span>
+                        {q.source === 'AI_GENERATED' && (
+                          <span className="px-2 py-0.5 rounded text-xs bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            AI 生成
+                          </span>
+                        )}
+                        {q.reviewStatus && (
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs border ${
+                              REVIEW_LABELS[q.reviewStatus]?.cls ||
+                              'bg-[#232f48] text-[#92a4c9] border-[#324467]'
+                            }`}
+                          >
+                            {REVIEW_LABELS[q.reviewStatus]?.text || q.reviewStatus}
+                          </span>
+                        )}
                         {q.knowledgePoints.slice(0, 3).map((kp) => (
                           <span
                             key={kp}
@@ -523,12 +853,32 @@ const QuestionBankManagement = () => {
                         答案：{q.answer}
                       </p>
                     </div>
-                    <button
-                      onClick={() => setEditQuestion(q)}
-                      className="px-3 py-1.5 text-xs text-white bg-[#232f48] rounded-lg hover:bg-[#324467] transition-colors"
-                    >
-                      编辑
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {q.reviewStatus === 'PENDING' && (
+                        <>
+                          <button
+                            disabled={reviewing}
+                            onClick={() => void handleReview('APPROVE', [q.id])}
+                            className="px-3 py-1.5 text-xs text-green-300 bg-green-500/10 border border-green-500/30 rounded-lg hover:bg-green-500/20 disabled:opacity-40 transition-colors"
+                          >
+                            通过
+                          </button>
+                          <button
+                            disabled={reviewing}
+                            onClick={() => void handleReview('REJECT', [q.id])}
+                            className="px-3 py-1.5 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg hover:bg-red-500/20 disabled:opacity-40 transition-colors"
+                          >
+                            退回
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setEditQuestion(q)}
+                        className="px-3 py-1.5 text-xs text-white bg-[#232f48] rounded-lg hover:bg-[#324467] transition-colors"
+                      >
+                        编辑
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -653,6 +1003,23 @@ const QuestionBankManagement = () => {
           subject={activeSubject}
           subjects={subjects}
           onClose={() => setShowImport(false)}
+          onDone={(msg) => {
+            flash(msg);
+            void loadPapers();
+            void loadQuestions();
+          }}
+        />
+      )}
+      {showExport && (
+        <ExportBankModal
+          subject={activeSubject}
+          subjects={subjects}
+          onClose={() => setShowExport(false)}
+        />
+      )}
+      {showImportData && (
+        <ImportDataModal
+          onClose={() => setShowImportData(false)}
           onDone={(msg) => {
             flash(msg);
             void loadPapers();
@@ -933,6 +1300,7 @@ const CreatePaperModal = ({
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [tbSubject, setTbSubject] = useState<string | undefined>();
   const [paperType, setPaperType] = useState('UNIT');
+  const [category, setCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -950,6 +1318,7 @@ const CreatePaperModal = ({
         title: form.title.trim(),
         textbookId: tbId || undefined,
         paperType,
+        category,
         unitIds,
       });
       onCreated();
@@ -1000,6 +1369,36 @@ const CreatePaperModal = ({
           paperType={paperType}
           onPaperTypeChange={setPaperType}
         />
+        <div>
+          <label className={labelCls}>试卷分类</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setCategory('EXERCISE')}
+              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                category === 'EXERCISE'
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-primary'
+              }`}
+            >
+              习题与试卷
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('ASSESSMENT')}
+              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                category === 'ASSESSMENT'
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-amber-500'
+              }`}
+            >
+              初测与水平评估
+            </button>
+          </div>
+          <p className="text-[#5b6b8c] text-[11px] mt-1">
+            「初测与水平评估」不区分难度，专门用于任务初测或水平评估，可被训练舱初测整卷抽取或由 AI 组合
+          </p>
+        </div>
         <button
           onClick={() => void submit()}
           disabled={submitting}
@@ -1028,12 +1427,31 @@ const ImportModal = ({
   const [tbId, setTbId] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [paperType, setPaperType] = useState('UNIT');
+  const [category, setCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'failed'>(
     'idle'
   );
   const [message, setMessage] = useState<string>('');
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // OCR 识别方式（默认回退到系统配置；管理员可指定）
+  const [providers, setProviders] = useState<OcrProviderOption[]>([]);
+  const [ocrProviderId, setOcrProviderId] = useState<string>('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await request.get<ApiResponse<OcrProviderOption[]>>('/admin/ocr-providers');
+        const list = (res.data || []).filter((p) => p.status === 'ACTIVE');
+        setProviders(list);
+        const def = list.find((p) => p.isDefault);
+        setOcrProviderId(def ? def.id : '');
+      } catch {
+        /* 忽略：无识别方式时由后端退回默认/环境变量 */
+      }
+    })();
+  }, []);
 
   useEffect(
     () => () => {
@@ -1081,7 +1499,9 @@ const ImportModal = ({
       fd.append('subject', selSubject);
       if (tbId) fd.append('textbookId', tbId);
       fd.append('paperType', paperType);
+      fd.append('category', category);
       unitIds.forEach((id) => fd.append('unitIds', id));
+      if (ocrProviderId) fd.append('ocrProviderId', ocrProviderId);
       const res = await request.post<ApiResponse<{ jobId: string }>>(
         '/admin/question-bank/import',
         fd,
@@ -1133,6 +1553,36 @@ const ImportModal = ({
           onPaperTypeChange={setPaperType}
         />
         <div>
+          <label className={labelCls}>试卷分类</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setCategory('EXERCISE')}
+              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                category === 'EXERCISE'
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-primary'
+              }`}
+            >
+              习题与试卷
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('ASSESSMENT')}
+              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                category === 'ASSESSMENT'
+                  ? 'bg-amber-500 text-white border-amber-500'
+                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-amber-500'
+              }`}
+            >
+              初测与水平评估
+            </button>
+          </div>
+          <p className="text-[#5b6b8c] text-[11px] mt-1">
+            导入的试卷将归入所选分类；「初测与水平评估」不区分难度，供任务初测或水平评估使用
+          </p>
+        </div>
+        <div>
           <label className={labelCls}>试卷文件 *</label>
           <input
             type="file"
@@ -1141,6 +1591,31 @@ const ImportModal = ({
             disabled={busy}
             className="w-full text-sm text-[#92a4c9] file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-[#232f48] file:text-white file:text-sm file:cursor-pointer"
           />
+        </div>
+        <div>
+          <label className={labelCls}>OCR 识别方式</label>
+          <select
+            value={ocrProviderId}
+            onChange={(e) => setOcrProviderId(e.target.value)}
+            disabled={busy}
+            className={inputCls}
+          >
+            <option value="">默认方式（系统配置）</option>
+            {providers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.method === 'LOCAL_SERVICE'
+                  ? '（本地 OCR）'
+                  : p.method === 'LOCAL_VISION'
+                    ? '（本地视觉）'
+                    : '（厂商 API）'}
+                {p.isDefault ? ' · 默认' : ''}
+              </option>
+            ))}
+          </select>
+          <p className="text-[#5b6b8c] text-[11px] mt-1">
+            图片 / 扫描件识别方式；留空则使用系统默认配置。未配置视觉模型时仅支持文本格式。
+          </p>
         </div>
         {message && (
           <div
@@ -1437,6 +1912,326 @@ const QuestionFormModal = ({
         >
           {submitting ? '保存中...' : '保存题目'}
         </button>
+      </div>
+    </Modal>
+  );
+};
+
+/** 导出题库弹窗（按试卷筛选 → .zxbank 自描述 JSON，带鉴权下载） */
+const ExportBankModal = ({
+  subject,
+  subjects,
+  onClose,
+}: {
+  subject: string;
+  subjects: string[];
+  onClose: () => void;
+}) => {
+  const [selSubject, setSelSubject] = useState(subject);
+  const [papers, setPapers] = useState<Paper[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [includeTaxonomy, setIncludeTaxonomy] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [counts, setCounts] = useState<BankExport['counts'] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const loadPapers = useCallback(
+    async (subj: string) => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const params = new URLSearchParams({ limit: '1000' });
+        if (subj) params.set('subject', subj);
+        const res = await request.get<ApiResponse<PagedResult<Paper>>>(
+          `/admin/question-bank/papers?${params.toString()}`
+        );
+        setPapers(res.data.items || []);
+        setSelectedIds([]);
+        setCounts(null);
+      } catch (e) {
+        setErr(getErrorMessage(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    void loadPapers(selSubject);
+  }, [selSubject, loadPapers]);
+
+  const toggle = (id: string) =>
+    setSelectedIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const buildQuery = () => {
+    const q = new URLSearchParams();
+    if (selSubject) q.set('subject', selSubject);
+    if (selectedIds.length) q.set('paperIds', selectedIds.join(','));
+    q.set('includeTaxonomy', String(includeTaxonomy));
+    return q.toString();
+  };
+
+  const preview = async () => {
+    setErr(null);
+    try {
+      const res = await request.get<ApiResponse<BankExport>>(
+        `/admin/question-bank/export?${buildQuery()}`
+      );
+      setCounts(res.data.counts);
+    } catch (e) {
+      setErr(getErrorMessage(e));
+    }
+  };
+
+  const exportNow = async () => {
+    setExporting(true);
+    setErr(null);
+    try {
+      const token = useAuthStore.getState().token;
+      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${base}/admin/question-bank/export?${buildQuery()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`导出失败（${res.status}）`);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `zhixue-bank-${new Date().toISOString().slice(0, 10)}.zxbank`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      setErr(getErrorMessage(e, '导出失败'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <Modal title="导出题库数据" onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        <p className="text-[#92a4c9] text-xs leading-relaxed">
+          选择科目与试卷后导出为 <code className="text-primary">.zxbank</code> 自描述 JSON（含试卷、题目、卷内关系，可选附带教材节点）。
+          该文件可在生产环境通过「导入数据」直接入库。
+        </p>
+
+        <div>
+          <label className={labelCls}>科目</label>
+          <select
+            value={selSubject}
+            onChange={(e) => setSelSubject(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">全部科目</option>
+            {subjects.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>
+            试卷范围（不选则导出「全部科目/当前科目」的所有试卷）
+          </label>
+          {loading ? (
+            <p className="text-[#5b6b8c] text-xs">加载试卷中...</p>
+          ) : papers.length === 0 ? (
+            <p className="text-[#5b6b8c] text-xs">该科目暂无试卷，将导出全部题目数据。</p>
+          ) : (
+            <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto rounded-lg bg-[#111722] border border-[#324467] p-2">
+              {papers.map((p) => {
+                const checked = selectedIds.includes(p.id);
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => toggle(p.id)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm transition-colors ${
+                      checked ? 'bg-primary/20 text-white' : 'text-[#92a4c9] hover:bg-[#232f48]'
+                    }`}
+                  >
+                    <span
+                      className={`size-4 rounded border flex items-center justify-center text-[12px] ${
+                        checked ? 'bg-primary border-primary text-white' : 'border-[#324467]'
+                      }`}
+                    >
+                      {checked ? '✓' : ''}
+                    </span>
+                    <span className="truncate">{p.title}</span>
+                    <span className="text-[#5b6b8c] text-xs ml-auto">{p._count?.items ?? 0} 题</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            checked={includeTaxonomy}
+            onChange={(e) => setIncludeTaxonomy(e.target.checked)}
+          />
+          <span className="text-[#92a4c9] text-sm">附带教材节点（使文件自包含，便于跨环境导入）</span>
+        </label>
+
+        {err && <p className="text-red-400 text-sm">{err}</p>}
+
+        {counts && (
+          <div className="rounded-lg bg-[#232f48] p-4 text-sm">
+            <p className="text-white font-medium mb-2">预计导出：</p>
+            <div className="grid grid-cols-2 gap-2 text-[#92a4c9]">
+              <span>题目：{counts.questions}</span>
+              <span>试卷：{counts.papers}</span>
+              <span>卷内关系：{counts.paperItems}</span>
+              <span>教材节点：{counts.materialNodes}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => void preview()}
+            className="px-4 py-2.5 bg-[#232f48] text-white rounded-lg text-sm font-medium hover:bg-[#324467] transition-colors"
+          >
+            预览命中数
+          </button>
+          <button
+            onClick={() => void exportNow()}
+            disabled={exporting}
+            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            {exporting ? '导出中...' : '导出题库（.zxbank）'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+/** 导入题库数据弹窗（上传 .zxbank → 按 id 幂等 upsert） */
+const ImportDataModal = ({
+  onClose,
+  onDone,
+}: {
+  onClose: () => void;
+  onDone: (msg: string) => void;
+}) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [phase, setPhase] = useState<'idle' | 'uploading' | 'done' | 'failed'>('idle');
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
+  const [message, setMessage] = useState('');
+
+  const upload = async () => {
+    if (!file) {
+      setMessage('请先选择 .zxbank 文件');
+      return;
+    }
+    setPhase('uploading');
+    setMessage('导入中（按 id 幂等写入，可能需要片刻）...');
+    setSummary(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await request.post<ApiResponse<ImportSummary>>(
+        '/admin/question-bank/import-data',
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      setSummary(res.data);
+      setPhase('done');
+      setMessage('导入完成。');
+      onDone('题库数据已导入');
+    } catch (e) {
+      setPhase('failed');
+      setMessage(getErrorMessage(e));
+    }
+  };
+
+  const busy = phase === 'uploading';
+
+  return (
+    <Modal title="导入题库数据" onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        <p className="text-[#92a4c9] text-xs leading-relaxed">
+          上传此前导出的 <code className="text-primary">.zxbank</code> 文件，系统将按 id 幂等写入
+          教材节点 / 题目 / 试卷 / 卷内题目（已存在则更新）。适用于生产环境直接灌入结构化数据。
+        </p>
+
+        <div>
+          <label className={labelCls}>数据文件 *（.zxbank / .json）</label>
+          <input
+            type="file"
+            accept=".zxbank,.json"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            disabled={busy}
+            className="w-full text-sm text-[#92a4c9] file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-[#232f48] file:text-white file:text-sm file:cursor-pointer"
+          />
+        </div>
+
+        {message && (
+          <div
+            className={`rounded-lg px-4 py-3 text-sm ${
+              phase === 'failed'
+                ? 'bg-red-500/10 text-red-400'
+                : phase === 'done'
+                  ? 'bg-green-500/10 text-green-400'
+                  : 'bg-[#232f48] text-[#92a4c9]'
+            }`}
+          >
+            {busy && (
+              <span className="material-symbols-outlined text-[16px] animate-spin align-middle mr-2">
+                progress_activity
+              </span>
+            )}
+            {message}
+          </div>
+        )}
+
+        {summary && (
+          <div className="rounded-lg bg-[#232f48] p-4 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-[#92a4c9]">
+              <span>题目 新建/更新：{summary.questionsCreated}/{summary.questionsUpdated}</span>
+              <span>试卷 新建/更新：{summary.papersCreated}/{summary.papersUpdated}</span>
+              <span>卷内 新建/更新：{summary.paperItemsCreated}/{summary.paperItemsUpdated}</span>
+              <span>教材节点 新建/更新：{summary.materialNodesCreated}/{summary.materialNodesUpdated}</span>
+            </div>
+            {summary.errors.length > 0 && (
+              <div className="mt-3">
+                <p className="text-red-400 text-xs mb-1">部分记录导入失败（{summary.errors.length}）：</p>
+                <ul className="text-red-400/80 text-xs list-disc pl-5 max-h-32 overflow-y-auto">
+                  {summary.errors.slice(0, 20).map((er, i) => (
+                    <li key={i}>{er}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => void upload()}
+            disabled={busy || !file}
+            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            {busy ? '导入中...' : '开始导入'}
+          </button>
+          {(phase === 'done' || phase === 'failed') && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 bg-[#232f48] text-white rounded-lg text-sm font-medium"
+            >
+              关闭
+            </button>
+          )}
+        </div>
       </div>
     </Modal>
   );

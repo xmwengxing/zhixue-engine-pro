@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import request from '../../utils/request';
 import { getErrorMessage } from '../../types/error';
@@ -30,8 +30,39 @@ interface Child {
   student: Student;
 }
 
+/** 年级枚举 → 中文 */
+const GRADE_LABEL: Record<string, string> = {
+  PRIMARY_1_1: '一年级上',
+  PRIMARY_1_2: '一年级下',
+  PRIMARY_2_1: '二年级上',
+  PRIMARY_2_2: '二年级下',
+  PRIMARY_3_1: '三年级上',
+  PRIMARY_3_2: '三年级下',
+  PRIMARY_4_1: '四年级上',
+  PRIMARY_4_2: '四年级下',
+  PRIMARY_5_1: '五年级上',
+  PRIMARY_5_2: '五年级下',
+  PRIMARY_6_1: '六年级上',
+  PRIMARY_6_2: '六年级下',
+  MIDDLE_1_1: '初一上',
+  MIDDLE_1_2: '初一下',
+  MIDDLE_2_1: '初二上',
+  MIDDLE_2_2: '初二下',
+  MIDDLE_3_1: '初三上',
+  MIDDLE_3_2: '初三下',
+  HIGH_1_1: '高一上',
+  HIGH_1_2: '高一下',
+  HIGH_2_1: '高二上',
+  HIGH_2_2: '高二下',
+  HIGH_3_1: '高三上',
+  HIGH_3_2: '高三下',
+};
+
+const gradeLabel = (grade?: string | null) => (grade ? GRADE_LABEL[grade] || grade : '未设置年级');
+
 /**
- * 家长端 - 亲子关系管理中心
+ * 家长端 - 亲子关系管理
+ * 布局外壳由 ParentDashboard 提供（本页不再自带顶部导航）
  */
 export default function ChildManagement() {
   const navigate = useNavigate();
@@ -39,20 +70,19 @@ export default function ChildManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  // 获取子女列表
-  // 使用 useCallback 包装异步函数，避免 React Hooks 依赖项警告
   const fetchChildren = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await request.get('/parent/children');
-      setChildren(response.data.children);
-    } catch (error: unknown) {
-      console.error('获取子女列表失败:', error);
-      const apiError = error as { response?: { status?: number } };
-      if (apiError.response?.status === 401) {
-        navigate('/login');
-      }
+      setError('');
+      const response: any = await request.get('/parent/children');
+      setChildren(response?.data?.children || []);
+    } catch (err: unknown) {
+      console.error('获取子女列表失败:', err);
+      const apiError = err as { response?: { status?: number } };
+      if (apiError.response?.status === 401) navigate('/login');
+      else setError(getErrorMessage(err, '获取子女列表失败'));
     } finally {
       setLoading(false);
     }
@@ -62,28 +92,23 @@ export default function ChildManagement() {
     fetchChildren();
   }, [fetchChildren]);
 
-  // 解绑学员
   const handleUnbind = async (relationId: string, studentName: string) => {
-    if (!confirm(`确定要解绑学员 ${studentName} 吗？解绑后历史数据将被保留。`)) {
-      return;
-    }
+    if (!confirm(`确定要解绑学员 ${studentName} 吗？解绑后历史数据将被保留。`)) return;
 
     try {
       await request.delete(`/parent/children/${relationId}/unbind`);
-      
-      // 刷新列表
-      fetchChildren();
-      alert('解绑成功');
-    } catch (error: unknown) {
-      console.error('解绑失败:', error);
-      alert(getErrorMessage(error, '解绑失败'));
+      await fetchChildren();
+      setSelectedChild(null);
+    } catch (err: unknown) {
+      console.error('解绑失败:', err);
+      alert(getErrorMessage(err, '解绑失败'));
     }
   };
 
-  // 获取科目等级标签
+  /** 科目等级标签（兼容大小写枚举） */
   const getSubjectBadges = (subjectLevels: Record<string, string>) => {
     if (!subjectLevels) return [];
-    
+
     const levelMap: Record<string, string> = {
       weak: 'L1',
       average: 'L3',
@@ -92,185 +117,209 @@ export default function ChildManagement() {
     };
 
     return Object.entries(subjectLevels)
-      .slice(0, 2) // 只显示前两个科目
+      .slice(0, 3)
       .map(([subject, level]) => ({
         subject,
-        level: levelMap[level] || 'L3',
+        level: levelMap[String(level).toLowerCase()] || 'L3',
       }));
   };
 
+  const visibleChildren = useMemo(
+    () =>
+      selectedChild ? children.filter((c) => c.student.id === selectedChild) : children,
+    [children, selectedChild]
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-[#111722]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">加载中...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+          <p className="mt-4 text-[#92a4c9]">加载中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      {/* 顶部导航栏 */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-10 py-3 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-blue-600">
-            <div className="w-8 h-8 flex items-center justify-center bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <span className="material-symbols-outlined text-blue-600">family_restroom</span>
-            </div>
-            <h2 className="text-slate-900 dark:text-white text-lg font-bold">智能学习成长平台</h2>
+    <div className="min-h-full bg-[#111722] p-6 lg:p-8">
+      <div className="mx-auto max-w-[1100px]">
+        {/* 标题 */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white lg:text-3xl">亲子管理</h1>
+            <p className="mt-2 text-sm text-[#92a4c9]">
+              管理已绑定的学员，可创建新学员或通过授权码/学号绑定已有账号
+            </p>
           </div>
-          <div className="flex items-center gap-8">
-            <nav className="flex items-center gap-9">
-              <a href="/parent/overview" className="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-blue-600 transition-colors">
-                学习报表
-              </a>
-              <a href="/parent/tasks" className="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-blue-600 transition-colors">
-                任务中心
-              </a>
-              <a href="/parent/children" className="text-blue-600 text-sm font-bold border-b-2 border-blue-600 pb-1">
-                亲子关系
-              </a>
-              <a href="/parent/profile" className="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-blue-600 transition-colors">
-                个人中心
-              </a>
-            </nav>
-          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 self-start rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-600"
+          >
+            <span className="material-symbols-outlined text-[20px]">person_add</span>
+            添加学员
+          </button>
         </div>
-      </header>
 
-      {/* 主内容区 */}
-      <main className="flex-1 flex justify-center py-10 px-4">
-        <div className="max-w-[1024px] w-full">
-          {/* 标题区域 */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between px-4 pb-6">
-            <div>
-              <h1 className="text-slate-900 dark:text-white text-3xl font-bold">亲子关系管理中心</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-                管理已绑定的学员，实时掌握孩子学习动态，支持快速切换学习看板
-              </p>
-            </div>
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {error}
           </div>
+        )}
 
-          {/* 学员切换标签 */}
-          <div className="pb-8 px-4">
-            <div className="flex border-b border-slate-200 dark:border-slate-700 gap-8 overflow-x-auto">
+        {/* 学员筛选 */}
+        {children.length > 0 && (
+          <div className="mb-6 flex gap-6 overflow-x-auto border-b border-[#324467]">
+            <button
+              onClick={() => setSelectedChild(null)}
+              className={`whitespace-nowrap border-b-[3px] pb-3 pt-2 text-sm font-bold transition-all ${
+                selectedChild === null
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-[#92a4c9] hover:text-white'
+              }`}
+            >
+              全部学员（{children.length}）
+            </button>
+            {children.map((child) => (
               <button
-                onClick={() => setSelectedChild(null)}
-                className={`flex flex-col items-center justify-center border-b-[3px] pb-3 pt-4 transition-all ${
-                  selectedChild === null
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-blue-600'
+                key={child.relationId}
+                onClick={() => setSelectedChild(child.student.id)}
+                className={`whitespace-nowrap border-b-[3px] pb-3 pt-2 text-sm font-medium transition-all ${
+                  selectedChild === child.student.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-[#92a4c9] hover:text-white'
                 }`}
               >
-                <p className="text-sm font-bold">全部学员</p>
+                {child.student.profile?.realName || child.student.username}
               </button>
-              {children.map((child) => (
-                <button
-                  key={child.relationId}
-                  onClick={() => setSelectedChild(child.student.id)}
-                  className={`flex flex-col items-center justify-center border-b-[3px] pb-3 pt-4 transition-all whitespace-nowrap ${
-                    selectedChild === child.student.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-blue-600'
-                  }`}
-                >
-                  <p className="text-sm font-medium">{child.student.profile?.realName || child.student.username}</p>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
+        )}
 
-          {/* 学员卡片网格 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-            {children.map((child) => {
-              const badges = getSubjectBadges(child.student.profile?.subjectLevels || {});
-              
-              return (
-                <div
-                  key={child.relationId}
-                  className="group relative flex flex-col items-center gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-100 dark:border-slate-700"
+        {/* 学员卡片 */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleChildren.map((child) => {
+            const name = child.student.profile?.realName || child.student.username;
+            const badges = getSubjectBadges(child.student.profile?.subjectLevels || {});
+            const completeness = child.student.profile?.completeness ?? 0;
+
+            return (
+              <div
+                key={child.relationId}
+                className="relative flex flex-col gap-4 rounded-xl border border-[#324467] bg-[#232f48] p-6"
+              >
+                <button
+                  onClick={() => handleUnbind(child.relationId, name)}
+                  className="absolute right-4 top-4 text-[#5b6b8c] transition-colors hover:text-red-400"
+                  title="解除绑定"
                 >
-                  {/* 解绑按钮 */}
-                  <button
-                    onClick={() => handleUnbind(child.relationId, child.student.profile?.realName || child.student.username)}
-                    className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"
-                    title="解除绑定"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">link_off</span>
-                  </button>
+                  <span className="material-symbols-outlined text-[20px]">link_off</span>
+                </button>
 
-                  {/* 头像 */}
-                  <div className="relative">
-                    <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-4 border-white dark:border-slate-800 shadow-sm flex items-center justify-center text-white text-2xl font-bold">
-                      {(child.student.profile?.realName || child.student.username).charAt(0)}
-                    </div>
-                    <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" title="在线"></div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-2xl font-bold text-white">
+                    {name.charAt(0)}
                   </div>
-
-                  {/* 学员信息 */}
                   <div className="text-center">
-                    <p className="text-slate-900 dark:text-white text-lg font-bold">
-                      {child.student.profile?.realName || child.student.username}
+                    <p className="text-lg font-bold text-white">{name}</p>
+                    <p className="mt-1 text-sm text-[#92a4c9]">
+                      {gradeLabel(child.student.profile?.grade)} · {child.relation}
                     </p>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                      {child.student.profile?.grade || '未设置年级'} · <span className="text-blue-600 font-medium">正在训练</span>
-                    </p>
-                    <div className="mt-4 flex gap-2 justify-center">
-                      {badges.map((badge, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] rounded uppercase font-bold tracking-wider"
-                        >
-                          {badge.subject} {badge.level}
-                        </span>
-                      ))}
-                    </div>
                   </div>
                 </div>
-              );
-            })}
 
-            {/* 添加新学员卡片 */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-slate-300 dark:border-slate-600 p-6 rounded-xl hover:bg-white/50 dark:hover:bg-slate-800/50 hover:border-blue-600 transition-all group min-h-[220px]"
-            >
-              <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                <span className="material-symbols-outlined text-3xl">add</span>
-              </div>
-              <div className="text-center">
-                <p className="text-slate-600 dark:text-slate-300 font-bold">添加新学员</p>
-                <p className="text-slate-400 text-xs mt-1">最多支持绑定5名学员</p>
-              </div>
-            </button>
-          </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {badges.length > 0 ? (
+                    badges.map((badge) => (
+                      <span
+                        key={badge.subject}
+                        className="rounded bg-blue-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-300"
+                      >
+                        {badge.subject} {badge.level}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[#5b6b8c]">尚未设置学科水平</span>
+                  )}
+                </div>
 
-          {/* 指导说明 */}
-          <div className="mt-12 px-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
-              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                <span className="material-symbols-outlined">help</span>
+                <div className="space-y-1.5 border-t border-[#324467] pt-3 text-xs text-[#5b6b8c]">
+                  <div className="flex justify-between">
+                    <span>学号</span>
+                    <span className="text-[#92a4c9]">
+                      {child.student.studentIdNumber || '—'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>账号状态</span>
+                    <span
+                      className={
+                        child.student.status === 'ACTIVE' ? 'text-emerald-300' : 'text-amber-300'
+                      }
+                    >
+                      {child.student.status === 'ACTIVE' ? '正常' : child.student.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>档案完整度</span>
+                    <span className="text-[#92a4c9]">{completeness}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>绑定时间</span>
+                    <span className="text-[#92a4c9]">
+                      {new Date(child.bindedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => navigate(`/parent/overview?studentId=${child.student.id}`)}
+                    className="rounded-lg bg-[#1a2332] py-2 text-xs font-medium text-[#92a4c9] transition-colors hover:text-white"
+                  >
+                    学情概览
+                  </button>
+                  <button
+                    onClick={() => navigate(`/parent/learning-state?studentId=${child.student.id}`)}
+                    className="rounded-lg bg-[#1a2332] py-2 text-xs font-medium text-[#92a4c9] transition-colors hover:text-white"
+                  >
+                    学科档案
+                  </button>
+                </div>
               </div>
-              <div>
-                <h4 className="text-slate-900 dark:text-white font-bold">多学生管理指南</h4>
-                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-                  您可以通过顶部导航栏在不同孩子之间快速切换，系统将为您展示每个孩子专属的学习报表与训练计划。如有任何疑问，请联系您的班主任。
-                </p>
-              </div>
-              <a
-                href="#"
-                className="md:ml-auto px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                查看帮助手册
-              </a>
+            );
+          })}
+
+          {/* 添加新学员卡片 */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="group flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-[#324467] p-6 transition-all hover:border-primary"
+          >
+            <div className="flex size-16 items-center justify-center rounded-full bg-[#1a2332] text-[#5b6b8c] transition-all group-hover:bg-primary group-hover:text-white">
+              <span className="material-symbols-outlined text-3xl">add</span>
             </div>
+            <div className="text-center">
+              <p className="font-bold text-[#92a4c9] group-hover:text-white">添加新学员</p>
+              <p className="mt-1 text-xs text-[#5b6b8c]">创建新账号或绑定已有学员</p>
+            </div>
+          </button>
+        </div>
+
+        {/* 指导说明 */}
+        <div className="mt-10 flex flex-col items-start gap-4 rounded-xl border border-[#324467] bg-[#232f48] p-6 md:flex-row md:items-center">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+            <span className="material-symbols-outlined">help</span>
+          </div>
+          <div>
+            <h4 className="font-bold text-white">多学员管理说明</h4>
+            <p className="mt-1 text-sm text-[#92a4c9]">
+              绑定后可在「学情概览」「任务管理」「学习报告」中按学员切换查看。解绑仅断开亲子关系，
+              学员账号与历史学习数据均会保留。
+            </p>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* 添加学员弹窗 */}
       {showAddModal && (
         <AddChildModal
           onClose={() => setShowAddModal(false)}
@@ -284,16 +333,20 @@ export default function ChildManagement() {
   );
 }
 
-// 添加学员弹窗组件
+// ============ 添加学员弹窗 ============
+
 interface AddChildModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
+const inputClass =
+  'w-full rounded-lg border border-[#324467] bg-[#1a2332] px-4 py-3 text-white placeholder:text-[#5b6b8c] focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary';
+const labelClass = 'mb-2 block text-sm font-bold text-[#92a4c9]';
+
 function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
   const [addMethod, setAddMethod] = useState<'create' | 'bind'>('create');
-  
-  // 创建学员表单数据
+
   const [createForm, setCreateForm] = useState({
     authCode: '',
     username: '',
@@ -309,7 +362,6 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
     relation: '父亲',
   });
 
-  // 绑定学员表单数据
   const [bindForm, setBindForm] = useState({
     bindMethod: 'authCode' as 'authCode' | 'studentId',
     authCode: '',
@@ -318,235 +370,200 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
   });
 
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  // 处理创建学员表单提交
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
 
-    // 验证必填字段
-    if (!createForm.authCode.trim()) {
-      alert('请输入授权码');
-      return;
-    }
-
-    if (!createForm.username.trim()) {
-      alert('请输入用户名');
-      return;
-    }
-
-    if (!createForm.password.trim()) {
-      alert('请输入密码');
-      return;
-    }
-
-    if (createForm.password !== createForm.confirmPassword) {
-      alert('两次输入的密码不一致');
-      return;
-    }
-
-    if (!createForm.name.trim()) {
-      alert('请输入学员姓名');
-      return;
-    }
-
-    if (!createForm.birthDate) {
-      alert('请选择出生年月');
-      return;
-    }
-
-    if (!createForm.grade) {
-      alert('请选择年级');
-      return;
-    }
+    if (!createForm.authCode.trim()) return setFormError('请输入授权码');
+    if (!createForm.username.trim()) return setFormError('请输入用户名');
+    if (!createForm.password.trim()) return setFormError('请输入密码');
+    if (createForm.password !== createForm.confirmPassword)
+      return setFormError('两次输入的密码不一致');
+    if (!createForm.name.trim()) return setFormError('请输入学员姓名');
+    if (!createForm.birthDate) return setFormError('请选择出生年月');
+    if (!createForm.grade) return setFormError('请选择年级');
 
     try {
       setLoading(true);
-      
-      await request.post(
-        '/parent/children/create',
-        {
-          authCode: createForm.authCode,
-          username: createForm.username,
-          password: createForm.password,
-          profile: {
-            name: createForm.name,
-            gender: createForm.gender,
-            birthDate: createForm.birthDate,
-            grade: createForm.grade,
-            school: createForm.school || undefined,
-            learningFoundation: createForm.learningFoundation || undefined,
-            interests: createForm.interests || undefined,
-          },
-          relation: createForm.relation,
-        }
-      );
-
-      alert('学员创建并绑定成功');
+      await request.post('/parent/children/create', {
+        authCode: createForm.authCode,
+        username: createForm.username,
+        password: createForm.password,
+        profile: {
+          name: createForm.name,
+          gender: createForm.gender,
+          birthDate: createForm.birthDate,
+          grade: createForm.grade,
+          school: createForm.school || undefined,
+          learningFoundation: createForm.learningFoundation || undefined,
+          interests: createForm.interests || undefined,
+        },
+        relation: createForm.relation,
+      });
       onSuccess();
-    } catch (error: unknown) {
-      console.error('创建学员失败:', error);
-      alert(getErrorMessage(error, '创建学员失败'));
+    } catch (err: unknown) {
+      console.error('创建学员失败:', err);
+      setFormError(getErrorMessage(err, '创建学员失败'));
     } finally {
       setLoading(false);
     }
   };
 
-  // 处理绑定学员表单提交
   const handleBindSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
 
-    if (bindForm.bindMethod === 'authCode' && !bindForm.authCode.trim()) {
-      alert('请输入授权码');
-      return;
-    }
-
-    if (bindForm.bindMethod === 'studentId' && !bindForm.studentIdNumber.trim()) {
-      alert('请输入学号');
-      return;
-    }
+    if (bindForm.bindMethod === 'authCode' && !bindForm.authCode.trim())
+      return setFormError('请输入授权码');
+    if (bindForm.bindMethod === 'studentId' && !bindForm.studentIdNumber.trim())
+      return setFormError('请输入学号');
 
     try {
       setLoading(true);
-      
-      await request.post(
-        '/parent/children/bind',
-        {
-          authCode: bindForm.bindMethod === 'authCode' ? bindForm.authCode : undefined,
-          studentIdNumber: bindForm.bindMethod === 'studentId' ? bindForm.studentIdNumber : undefined,
-          relation: bindForm.relation,
-        }
-      );
-
-      alert('绑定成功');
+      await request.post('/parent/children/bind', {
+        authCode: bindForm.bindMethod === 'authCode' ? bindForm.authCode : undefined,
+        studentIdNumber:
+          bindForm.bindMethod === 'studentId' ? bindForm.studentIdNumber : undefined,
+        relation: bindForm.relation,
+      });
       onSuccess();
-    } catch (error: unknown) {
-      console.error('绑定失败:', error);
-      alert(getErrorMessage(error, '绑定失败'));
+    } catch (err: unknown) {
+      console.error('绑定失败:', err);
+      setFormError(getErrorMessage(err, '绑定失败'));
     } finally {
       setLoading(false);
     }
   };
 
+  const tabClass = (active: boolean) =>
+    `flex-1 rounded-lg border-2 px-4 py-3 font-medium transition-colors ${
+      active
+        ? 'border-primary bg-primary/15 text-primary'
+        : 'border-[#324467] text-[#92a4c9] hover:border-primary hover:text-white'
+    }`;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full p-6 my-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">添加学员</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4">
+      <div className="my-8 w-full max-w-2xl rounded-xl border border-[#324467] bg-[#232f48] p-6 shadow-2xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">添加学员</h2>
+          <button onClick={onClose} className="text-[#92a4c9] hover:text-white">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
-        {/* 添加方式选择 */}
-        <div className="flex gap-4 mb-6">
+        <div className="mb-6 flex gap-4">
           <button
             type="button"
-            onClick={() => setAddMethod('create')}
-            className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
-              addMethod === 'create'
-                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
-                : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-600'
-            }`}
+            onClick={() => {
+              setAddMethod('create');
+              setFormError('');
+            }}
+            className={tabClass(addMethod === 'create')}
           >
             创建新学员
           </button>
           <button
             type="button"
-            onClick={() => setAddMethod('bind')}
-            className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
-              addMethod === 'bind'
-                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
-                : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-600'
-            }`}
+            onClick={() => {
+              setAddMethod('bind');
+              setFormError('');
+            }}
+            className={tabClass(addMethod === 'bind')}
           >
             绑定已有学员
           </button>
         </div>
 
-        {/* 创建学员表单 */}
+        {formError && (
+          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {formError}
+          </div>
+        )}
+
         {addMethod === 'create' && (
-          <form onSubmit={handleCreateSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            {/* 授权码 */}
+          <form
+            onSubmit={handleCreateSubmit}
+            className="max-h-[60vh] space-y-4 overflow-y-auto pr-2"
+          >
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                授权码 <span className="text-red-500">*</span>
+              <label className={labelClass}>
+                授权码 <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={createForm.authCode}
                 onChange={(e) => setCreateForm({ ...createForm, authCode: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className={inputClass}
                 placeholder="请输入授权码"
               />
             </div>
 
-            {/* 用户名 */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                用户名 <span className="text-red-500">*</span>
+              <label className={labelClass}>
+                用户名 <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={createForm.username}
                 onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className={inputClass}
                 placeholder="请输入用户名"
               />
             </div>
 
-            {/* 密码 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  密码 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  密码 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="password"
                   value={createForm.password}
                   onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className={inputClass}
                   placeholder="请输入密码"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  确认密码 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  确认密码 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="password"
                   value={createForm.confirmPassword}
-                  onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, confirmPassword: e.target.value })
+                  }
+                  className={inputClass}
                   placeholder="请再次输入密码"
                 />
               </div>
             </div>
 
-            {/* 学员信息 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  姓名 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  姓名 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className={inputClass}
                   placeholder="请输入姓名"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  性别 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  性别 <span className="text-red-400">*</span>
                 </label>
                 <select
                   value={createForm.gender}
                   onChange={(e) => setCreateForm({ ...createForm, gender: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600"
+                  className={inputClass}
                 >
                   <option value="男">男</option>
                   <option value="女">女</option>
@@ -556,82 +573,76 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  出生年月 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  出生年月 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="date"
                   value={createForm.birthDate}
                   onChange={(e) => setCreateForm({ ...createForm, birthDate: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  年级 <span className="text-red-500">*</span>
+                <label className={labelClass}>
+                  年级 <span className="text-red-400">*</span>
                 </label>
                 <select
                   value={createForm.grade}
                   onChange={(e) => setCreateForm({ ...createForm, grade: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600"
+                  className={inputClass}
                 >
                   <option value="">请选择年级</option>
                   <optgroup label="小学">
-                    <option value="PRIMARY_1_1">一年级上</option>
-                    <option value="PRIMARY_1_2">一年级下</option>
-                    <option value="PRIMARY_2_1">二年级上</option>
-                    <option value="PRIMARY_2_2">二年级下</option>
-                    <option value="PRIMARY_3_1">三年级上</option>
-                    <option value="PRIMARY_3_2">三年级下</option>
-                    <option value="PRIMARY_4_1">四年级上</option>
-                    <option value="PRIMARY_4_2">四年级下</option>
-                    <option value="PRIMARY_5_1">五年级上</option>
-                    <option value="PRIMARY_5_2">五年级下</option>
-                    <option value="PRIMARY_6_1">六年级上</option>
-                    <option value="PRIMARY_6_2">六年级下</option>
+                    {Object.entries(GRADE_LABEL)
+                      .filter(([k]) => k.startsWith('PRIMARY'))
+                      .map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
                   </optgroup>
                   <optgroup label="初中">
-                    <option value="MIDDLE_1_1">初一上</option>
-                    <option value="MIDDLE_1_2">初一下</option>
-                    <option value="MIDDLE_2_1">初二上</option>
-                    <option value="MIDDLE_2_2">初二下</option>
-                    <option value="MIDDLE_3_1">初三上</option>
-                    <option value="MIDDLE_3_2">初三下</option>
+                    {Object.entries(GRADE_LABEL)
+                      .filter(([k]) => k.startsWith('MIDDLE'))
+                      .map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
                   </optgroup>
                   <optgroup label="高中">
-                    <option value="HIGH_1_1">高一上</option>
-                    <option value="HIGH_1_2">高一下</option>
-                    <option value="HIGH_2_1">高二上</option>
-                    <option value="HIGH_2_2">高二下</option>
-                    <option value="HIGH_3_1">高三上</option>
-                    <option value="HIGH_3_2">高三下</option>
+                    {Object.entries(GRADE_LABEL)
+                      .filter(([k]) => k.startsWith('HIGH'))
+                      .map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
                   </optgroup>
                 </select>
               </div>
             </div>
 
-            {/* 选填信息 */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                就读院校
-              </label>
+              <label className={labelClass}>就读院校</label>
               <input
                 type="text"
                 value={createForm.school}
                 onChange={(e) => setCreateForm({ ...createForm, school: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className={inputClass}
                 placeholder="请输入就读院校（选填）"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                学习基础
-              </label>
+              <label className={labelClass}>学习基础</label>
               <select
                 value={createForm.learningFoundation}
-                onChange={(e) => setCreateForm({ ...createForm, learningFoundation: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600"
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, learningFoundation: e.target.value })
+                }
+                className={inputClass}
               >
                 <option value="">请选择学习基础（选填）</option>
                 <option value="WEAK">薄弱</option>
@@ -642,27 +653,24 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                兴趣爱好
-              </label>
+              <label className={labelClass}>兴趣爱好</label>
               <textarea
                 value={createForm.interests}
                 onChange={(e) => setCreateForm({ ...createForm, interests: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className={inputClass}
                 placeholder="请输入兴趣爱好（选填）"
                 rows={3}
               />
             </div>
 
-            {/* 关系选择 */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                关系 <span className="text-red-500">*</span>
+              <label className={labelClass}>
+                关系 <span className="text-red-400">*</span>
               </label>
               <select
                 value={createForm.relation}
                 onChange={(e) => setCreateForm({ ...createForm, relation: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600"
+                className={inputClass}
               >
                 <option value="父亲">父亲</option>
                 <option value="母亲">母亲</option>
@@ -670,87 +678,65 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
               </select>
             </div>
 
-            {/* 提交按钮 */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              className="mt-6 w-full rounded-lg bg-primary py-3 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? '创建中...' : '创建并绑定'}
             </button>
           </form>
         )}
 
-        {/* 绑定学员表单 */}
         {addMethod === 'bind' && (
           <form onSubmit={handleBindSubmit} className="space-y-6">
-            {/* 绑定方式选择 */}
             <div className="flex gap-4">
               <button
                 type="button"
                 onClick={() => setBindForm({ ...bindForm, bindMethod: 'authCode' })}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
-                  bindForm.bindMethod === 'authCode'
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-600'
-                }`}
+                className={tabClass(bindForm.bindMethod === 'authCode')}
               >
                 授权码绑定
               </button>
               <button
                 type="button"
                 onClick={() => setBindForm({ ...bindForm, bindMethod: 'studentId' })}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
-                  bindForm.bindMethod === 'studentId'
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-600'
-                }`}
+                className={tabClass(bindForm.bindMethod === 'studentId')}
               >
                 学号绑定
               </button>
             </div>
 
-            {/* 授权码输入 */}
-            {bindForm.bindMethod === 'authCode' && (
+            {bindForm.bindMethod === 'authCode' ? (
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  授权码
-                </label>
+                <label className={labelClass}>授权码</label>
                 <input
                   type="text"
                   value={bindForm.authCode}
                   onChange={(e) => setBindForm({ ...bindForm, authCode: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className={inputClass}
                   placeholder="请输入授权码"
                 />
               </div>
-            )}
-
-            {/* 学号输入 */}
-            {bindForm.bindMethod === 'studentId' && (
+            ) : (
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                  学号
-                </label>
+                <label className={labelClass}>学号</label>
                 <input
                   type="text"
                   value={bindForm.studentIdNumber}
                   onChange={(e) => setBindForm({ ...bindForm, studentIdNumber: e.target.value })}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className={inputClass}
                   placeholder="请输入学号"
                 />
               </div>
             )}
 
-            {/* 关系选择 */}
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                关系
-              </label>
+              <label className={labelClass}>关系</label>
               <select
                 value={bindForm.relation}
                 onChange={(e) => setBindForm({ ...bindForm, relation: e.target.value })}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600"
+                className={inputClass}
               >
                 <option value="父亲">父亲</option>
                 <option value="母亲">母亲</option>
@@ -758,11 +744,10 @@ function AddChildModal({ onClose, onSuccess }: AddChildModalProps) {
               </select>
             </div>
 
-            {/* 提交按钮 */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-primary py-3 font-bold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? '绑定中...' : '确认绑定'}
             </button>

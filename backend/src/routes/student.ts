@@ -8,6 +8,7 @@ import { studentPointsController } from '../controllers/studentPointsController'
 import { studentWishController } from '../controllers/studentWishController';
 import { reportStatusController } from '../controllers/reportStatusController';
 import * as answerZoneController from '../controllers/answerZoneController';
+import { recognize as visionRecognize } from '../controllers/visionRecognitionController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
@@ -127,11 +128,25 @@ router.get('/answer-zone/:taskId', answerZoneController.loadExamPaper);
 router.post('/answer-zone/:sessionId/submit', answerZoneController.submitExamPaper);
 
 /**
+ * @route   POST /api/student/vision/recognize
+ * @desc    上传图片 → 调用非本地视觉模型 → 返回识别文本
+ * @access  Private (Student)
+ */
+router.post('/vision/recognize', ...visionRecognize);
+
+/**
  * @route   GET /api/student/training/next-question/:sessionId
  * @desc    获取下一道题目（档案提取模式）
  * @access  Private (Student)
  */
 router.get('/training/next-question/:sessionId', studentTrainingController.getNextQuestion);
+
+/**
+ * @route   GET /api/student/training/resume/:sessionId
+ * @desc    断点续答：返回当前应答的题目（优先复用未提交的题目快照）
+ * @access  Private (Student)
+ */
+router.get('/training/resume/:sessionId', studentTrainingController.resumeSession);
 
 /**
  * @route   GET /api/student/training/session/:sessionId

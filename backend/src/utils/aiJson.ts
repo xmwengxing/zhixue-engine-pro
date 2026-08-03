@@ -63,7 +63,11 @@ function matchBracket(s: string, openIdx: number): number {
  * 用 zod schema 安全解析并校验 AI 返回的 JSON。
  * 不抛异常；校验失败返回结构化错误，便于上层决定重试或回传 SSE error 事件。
  */
-export function parseAIJson<T>(raw: string, schema: ZodType<T>): ParseResult<T> {
+export function parseAIJson<T>(
+  raw: string,
+  schema: ZodType<T>,
+  preprocess?: (obj: any) => any
+): ParseResult<T> {
   const json = extractJson(raw);
   if (!json) return { ok: false, error: 'AI 响应中未找到 JSON 内容' };
 
@@ -73,6 +77,8 @@ export function parseAIJson<T>(raw: string, schema: ZodType<T>): ParseResult<T> 
   } catch (e) {
     return { ok: false, error: `JSON 解析失败：${(e as Error).message}` };
   }
+
+  if (preprocess) obj = preprocess(obj);
 
   const result = schema.safeParse(obj);
   if (!result.success) {

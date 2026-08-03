@@ -135,6 +135,28 @@ export const getSession = async (sessionId: string): Promise<TrainingSession> =>
 };
 
 /**
+ * ① 断点续答：返回「当前应该答的那道题」
+ * 优先复用后端已下发但未提交的题目快照，刷新/换设备后不会跳题，也不会重复触发 AI 出题。
+ */
+export interface ResumeResponse {
+  sessionId: string;
+  phase: string;
+  status: string;
+  progress: number;
+  currentStage: string | null;
+  resumable: boolean;
+  fromSnapshot?: boolean;
+  questionNumber?: number | null;
+  question: Record<string, unknown> | null;
+  reason?: string;
+}
+
+export const resumeTraining = async (sessionId: string): Promise<ResumeResponse> => {
+  const response = await request.get(`/student/training/resume/${sessionId}`);
+  return response.data;
+};
+
+/**
  * 生成稳定的幂等键（离线/重试防重复提交）
  * 同一 (sessionId, questionId) 在浏览器内复用同一键，避免网络恢复后重复提交。
  */

@@ -10,7 +10,7 @@ interface ApiResponse<T = any> {
 }
 
 // AI 服务商类型
-type AIProviderType = 'OPENAI' | 'CLAUDE' | 'DEEPSEEK' | 'QWEN' | 'GEMINI' | 'ZHIPU' | 'DOUBAO' | 'WENXIN' | 'CUSTOM';
+type AIProviderType = 'OPENAI' | 'CLAUDE' | 'DEEPSEEK' | 'QWEN' | 'GEMINI' | 'ZHIPU' | 'DOUBAO' | 'WENXIN' | 'CUSTOM' | 'OLLAMA';
 
 interface AIProvider {
   id: string;
@@ -21,6 +21,10 @@ interface AIProvider {
   model: string;
   priority: number;
   status: 'ACTIVE' | 'INACTIVE';
+  contextWindow?: number | null;
+  maxTokens?: number | null;
+  streamEnabled?: boolean;
+  supportsReasoning?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +38,16 @@ interface ProviderFormData {
   model: string;
   priority: number;
   status: 'ACTIVE' | 'INACTIVE';
+  contextWindow?: number | null;
+  maxTokens?: number | null;
+  streamEnabled?: boolean;
+  supportsReasoning?: boolean;
+}
+
+interface ModelOption {
+  id: string;
+  name: string;
+  contextWindow?: number;
 }
 
 const AIServiceConfig: React.FC = () => {
@@ -49,6 +63,10 @@ const AIServiceConfig: React.FC = () => {
     model: '',
     priority: 0,
     status: 'ACTIVE',
+    contextWindow: null,
+    maxTokens: null,
+    streamEnabled: false,
+    supportsReasoning: false,
   });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -57,6 +75,11 @@ const AIServiceConfig: React.FC = () => {
     error: string | null;
     message: string;
   } | null>(null);
+  // 识别模型
+  const [identifying, setIdentifying] = useState(false);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [showModelSelect, setShowModelSelect] = useState(false);
+  const [identifyError, setIdentifyError] = useState<string | null>(null);
 
   // 加载服务商列表
   const loadProviders = async () => {
@@ -88,8 +111,15 @@ const AIServiceConfig: React.FC = () => {
       model: '',
       priority: providers.length,
       status: 'ACTIVE',
+      contextWindow: null,
+      maxTokens: null,
+      streamEnabled: false,
+      supportsReasoning: false,
     });
     setTestResult(null);
+    setModelOptions([]);
+    setShowModelSelect(false);
+    setIdentifyError(null);
     setShowAddModal(true);
   };
 
@@ -104,9 +134,56 @@ const AIServiceConfig: React.FC = () => {
       model: provider.model,
       priority: provider.priority,
       status: provider.status,
+      contextWindow: provider.contextWindow ?? null,
+      maxTokens: provider.maxTokens ?? null,
+      streamEnabled: !!provider.streamEnabled,
+      supportsReasoning: !!provider.supportsReasoning,
     });
     setTestResult(null);
+    setModelOptions([]);
+    setShowModelSelect(false);
+    setIdentifyError(null);
     setShowAddModal(true);
+  };
+
+  // 识别模型：调用后端 /ai-providers/models 拉取真实模型列表
+  const handleIdentifyModels = async () => {
+    if (!formData.endpoint) {
+      setIdentifyError('请先填写 API Endpoint');
+      return;
+    }
+    setIdentifying(true);
+    setIdentifyError(null);
+    setShowModelSelect(false);
+    try {
+      const response = await request.post<ApiResponse<ModelOption[]>>('/admin/ai-providers/models', {
+        type: formData.type,
+        apiKey: formData.apiKey,
+        endpoint: formData.endpoint,
+      });
+      if (response.success && response.data?.length) {
+        setModelOptions(response.data);
+        setShowModelSelect(true);
+      } else if (response.success) {
+        setIdentifyError('该端点未返回可用模型');
+      } else {
+        setIdentifyError(response.message || '获取模型列表失败');
+      }
+    } catch (error: unknown) {
+      setIdentifyError(getErrorMessage(error, '获取模型列表失败'));
+    } finally {
+      setIdentifying(false);
+    }
+  };
+
+  // 选中模型后自动填入 model（+ 上下文长度）
+  const handleSelectModel = (m: ModelOption) => {
+    setFormData((prev) => ({
+      ...prev,
+      model: m.id,
+      contextWindow: m.contextWindow ?? prev.contextWindow ?? null,
+    }));
+    setShowModelSelect(false);
   };
 
   // 测试连接
@@ -157,12 +234,17 @@ const AIServiceConfig: React.FC = () => {
   // 保存服务商
   const handleSave = async () => {
     try {
+      // 修复：编辑时若 apiKey 是后端掩码值（含 "..."），不把它写回，避免覆盖真实密钥
+      const payload: any = { ...formData };
+      if (editingProvider && typeof payload.apiKey === 'string' && payload.apiKey.includes('...')) {
+        delete payload.apiKey;
+      }
       if (editingProvider) {
         // 更新
-        await request.put(`/admin/ai-providers/${editingProvider.id}`, formData);
+        await request.put(`/admin/ai-providers/${editingProvider.id}`, payload);
       } else {
         // 创建
-        await request.post('/admin/ai-providers', formData);
+        await request.post('/admin/ai-providers', payload);
       }
       setShowAddModal(false);
       loadProviders();
@@ -242,6 +324,11 @@ const AIServiceConfig: React.FC = () => {
       name: '文心一言',
       endpoint: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop',
       models: ['ernie-4.0-turbo-8k', 'ernie-3.5-8k', 'ernie-speed-128k']
+    },
+    OLLAMA: {
+      name: '本地 Ollama',
+      endpoint: 'http://localhost:11434',
+      models: [] // 走"识别模型"按钮从 /api/tags 拉取
     },
     CUSTOM: {
       name: '自定义',
@@ -384,6 +471,22 @@ const AIServiceConfig: React.FC = () => {
                         当前模型
                       </label>
                       <span className="text-slate-900 dark:text-slate-200 text-sm">{provider.model}</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {provider.type === 'OLLAMA' && (
+                          <span className="text-[10px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded">本地</span>
+                        )}
+                        {provider.supportsReasoning && (
+                          <span className="text-[10px] bg-purple-500/10 text-purple-500 px-1.5 py-0.5 rounded">推理</span>
+                        )}
+                        {provider.streamEnabled && (
+                          <span className="text-[10px] bg-sky-500/10 text-sky-500 px-1.5 py-0.5 rounded">流式</span>
+                        )}
+                        {provider.contextWindow ? (
+                          <span className="text-[10px] bg-slate-500/10 text-slate-400 px-1.5 py-0.5 rounded">
+                            上下文 {provider.contextWindow.toLocaleString()}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="flex flex-col min-w-[180px]">
@@ -509,6 +612,7 @@ const AIServiceConfig: React.FC = () => {
                   <option value="ZHIPU">智谱 AI</option>
                   <option value="DOUBAO">豆包</option>
                   <option value="WENXIN">文心一言</option>
+                  <option value="OLLAMA">本地 Ollama</option>
                   <option value="CUSTOM">自定义</option>
                 </select>
               </div>
@@ -543,18 +647,114 @@ const AIServiceConfig: React.FC = () => {
                 <label className="text-slate-700 dark:text-slate-300 text-sm font-medium block mb-2">
                   模型名称 *
                 </label>
-                <input
-                  type="text"
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-2"
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="gpt-4o"
-                />
-                {providerTypeConfig[formData.type].models.length > 0 && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-2"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    placeholder="gpt-4o"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleIdentifyModels}
+                    disabled={identifying || !formData.endpoint}
+                    className="shrink-0 px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 flex items-center gap-1"
+                    title="从服务端拉取该端点上的真实模型列表"
+                  >
+                    {identifying ? (
+                      <span className="material-symbols-outlined animate-spin text-sm">refresh</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-sm">search</span>
+                    )}
+                    识别模型
+                  </button>
+                </div>
+
+                {showModelSelect && modelOptions.length > 0 && (
+                  <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg max-h-44 overflow-y-auto">
+                    {modelOptions.map((m) => (
+                      <button
+                        type="button"
+                        key={m.id}
+                        onClick={() => handleSelectModel(m)}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 flex justify-between items-center gap-2"
+                      >
+                        <span className="truncate">{m.name}</span>
+                        {m.contextWindow ? (
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            上下文 {m.contextWindow.toLocaleString()}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {identifyError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-2">{identifyError}</p>
+                )}
+                {providerTypeConfig[formData.type].models.length > 0 && !showModelSelect && (
                   <p className="text-slate-500 dark:text-slate-400 text-xs mt-2">
                     常用模型：{providerTypeConfig[formData.type].models.join('、')}
                   </p>
                 )}
+              </div>
+
+              {/* 输出最大 token（留空=官方默认） */}
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 text-sm font-medium block mb-2">
+                  输出最大 token（留空 = 官方默认）
+                </label>
+                <input
+                  type="number"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-2"
+                  value={formData.maxTokens ?? ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, maxTokens: e.target.value ? parseInt(e.target.value) : null })
+                  }
+                  placeholder="例如 2500"
+                />
+              </div>
+
+              {/* 上下文长度（自动探测/可选） */}
+              <div>
+                <label className="text-slate-700 dark:text-slate-300 text-sm font-medium block mb-2">
+                  上下文长度（自动探测，可手动覆盖）
+                </label>
+                <input
+                  type="number"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg px-4 py-2"
+                  value={formData.contextWindow ?? ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contextWindow: e.target.value ? parseInt(e.target.value) : null })
+                  }
+                  placeholder="例如 32768（用于约束输出与注入 Ollama num_ctx）"
+                />
+              </div>
+
+              {/* 流式响应开关 */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-slate-700 dark:text-slate-300 text-sm font-medium block">
+                    流式响应
+                  </label>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
+                    开启后对话类接口可逐字返回（当前训练舱答题流程仍走整块返回，不影响稳定性）
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, streamEnabled: !formData.streamEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer ${
+                    formData.streamEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      formData.streamEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  ></span>
+                </button>
               </div>
 
               {/* 测试连接按钮和结果 */}

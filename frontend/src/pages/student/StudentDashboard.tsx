@@ -34,9 +34,9 @@ export const StudentDashboard = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-row overflow-hidden bg-slate-50 dark:bg-slate-900">
+    <div className="relative flex min-h-screen w-full flex-row overflow-hidden bg-[#111722]">
       {/* 侧边栏 */}
-      <aside className="hidden w-72 flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 lg:flex">
+      <aside className="hidden w-72 flex-col border-r border-[#324467] bg-[#232f48] lg:flex">
         <div className="flex h-full flex-col justify-between p-4">
           <div className="flex flex-col gap-8">
             {/* Logo */}
@@ -45,8 +45,8 @@ export const StudentDashboard = () => {
                 <span className="text-white font-bold text-lg">E</span>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-slate-900 dark:text-white text-base font-bold leading-normal">EduSmart</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">学员中心</p>
+                <h1 className="text-white text-base font-bold leading-normal">EduSmart</h1>
+                <p className="text-[#5b6b8c] text-xs font-normal leading-normal">学员中心</p>
               </div>
             </div>
 
@@ -57,7 +57,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   location.pathname === '/student'
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">dashboard</span>
@@ -69,7 +69,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/profile')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">person</span>
@@ -81,7 +81,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/self-assessment')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">psychology</span>
@@ -93,7 +93,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/tasks')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">assignment_turned_in</span>
@@ -105,7 +105,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/errors')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">assignment_late</span>
@@ -117,7 +117,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/learning-state')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">menu_book</span>
@@ -129,7 +129,7 @@ export const StudentDashboard = () => {
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                   isActive('/student/points-wish')
                     ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    : 'text-[#92a4c9] hover:bg-[#1a2332]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[24px]">redeem</span>
@@ -142,7 +142,7 @@ export const StudentDashboard = () => {
           <div className="flex flex-col gap-2">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92a4c9] hover:text-white transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">logout</span>
               <span className="text-sm font-medium leading-normal">退出登录</span>
@@ -152,12 +152,12 @@ export const StudentDashboard = () => {
       </aside>
 
       {/* 主内容区 */}
-      <main className="flex flex-1 flex-col h-full min-h-screen relative overflow-y-auto bg-slate-50 dark:bg-slate-900">
+      <main className="flex flex-1 flex-col h-full min-h-screen relative overflow-y-auto bg-[#111722]">
         {/* 移动端顶部栏 */}
-        <div className="flex lg:hidden items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <span className="text-slate-900 dark:text-white font-bold text-lg">EduSmart</span>
+        <div className="flex lg:hidden items-center justify-between p-4 border-b border-[#324467] bg-[#232f48]">
+          <span className="text-white font-bold text-lg">EduSmart</span>
           <button 
-            className="text-slate-900 dark:text-white"
+            className="text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <span className="material-symbols-outlined">menu</span>
@@ -174,7 +174,7 @@ export const StudentDashboard = () => {
             />
             
             {/* 菜单内容 */}
-            <div className="fixed top-0 right-0 bottom-0 w-72 bg-white dark:bg-slate-800 z-50 lg:hidden overflow-y-auto border-l border-slate-200 dark:border-slate-700">
+            <div className="fixed top-0 right-0 bottom-0 w-72 bg-[#232f48] z-50 lg:hidden overflow-y-auto border-l border-[#324467]">
               <div className="flex h-full flex-col justify-between p-4">
                 <div className="flex flex-col gap-8">
                   {/* Logo */}
@@ -184,12 +184,12 @@ export const StudentDashboard = () => {
                         <span className="text-white font-bold text-lg">E</span>
                       </div>
                       <div className="flex flex-col">
-                        <h1 className="text-slate-900 dark:text-white text-base font-bold leading-normal">EduSmart</h1>
-                        <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">学员中心</p>
+                        <h1 className="text-white text-base font-bold leading-normal">EduSmart</h1>
+                        <p className="text-[#5b6b8c] text-xs font-normal leading-normal">学员中心</p>
                       </div>
                     </div>
                     <button 
-                      className="text-slate-900 dark:text-white"
+                      className="text-white"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <span className="material-symbols-outlined">close</span>
@@ -204,7 +204,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         location.pathname === '/student'
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">dashboard</span>
@@ -217,7 +217,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isActive('/student/profile')
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">person</span>
@@ -230,7 +230,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isActive('/student/self-assessment')
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">psychology</span>
@@ -243,7 +243,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isActive('/student/tasks')
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">assignment_turned_in</span>
@@ -256,7 +256,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isActive('/student/errors')
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">assignment_late</span>
@@ -269,7 +269,7 @@ export const StudentDashboard = () => {
                       className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
                         isActive('/student/points-wish')
                           ? 'bg-primary text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-[#92a4c9] hover:bg-[#1a2332]'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[24px]">redeem</span>
@@ -285,7 +285,7 @@ export const StudentDashboard = () => {
                       setMobileMenuOpen(false);
                       handleLogout();
                     }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92a4c9] hover:text-white transition-colors"
                   >
                     <span className="material-symbols-outlined text-[20px]">logout</span>
                     <span className="text-sm font-medium leading-normal">退出登录</span>
@@ -309,7 +309,7 @@ export const StudentDashboard = () => {
             <Route path="/learning-state" element={<SubjectLearningState />} />
             <Route path="/error-retry/:sessionId" element={<ErrorRetry />} />
             <Route path="/points-wish" element={<PointsWishMall />} />
-            <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-slate-900 dark:text-white">页面未找到</h1></div>} />
+            <Route path="*" element={<div className="p-6"><h1 className="text-2xl font-bold text-white">页面未找到</h1></div>} />
           </Routes>
         </Suspense>
       </main>

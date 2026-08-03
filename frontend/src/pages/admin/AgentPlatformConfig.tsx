@@ -404,13 +404,19 @@ const DocEditor: React.FC<{
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="如：初中数学"
-                className="w-full bg-[#0d1422] border border-[#324467] text-white rounded-lg px-3 py-2 text-sm"
+                disabled={type === 'INSTRUCTION'}
+                className="w-full bg-[#0d1422] border border-[#324467] text-white rounded-lg px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <datalist id="subject-hints">
                 {SUBJECT_HINTS.map((s) => (
                   <option key={s} value={s} />
                 ))}
               </datalist>
+              {type === 'INSTRUCTION' && (
+                <p className="text-[#5b6b8c] text-[11px] mt-1.5 leading-relaxed">
+                  学科级 AI 老师指令请在「科目指令配置」中设置；此处 INSTRUCTION 仅用于全局角色指令，指定科目无效。
+                </p>
+              )}
             </div>
           </div>
 

@@ -87,6 +87,8 @@ export default function AnswerZone() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [photoMap, setPhotoMap] = useState<Record<string, string>>({}); // questionId -> dataURL 缩略图
+  const [recognizingId, setRecognizingId] = useState<string | null>(null); // 正在视觉识别的题目
+  const [recognizeTips, setRecognizeTips] = useState<Record<string, string>>({}); // 每题识别结果提示
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<GradeResult | null>(null);
   const startedAt = useRef<number>(Date.now());
@@ -108,17 +110,17 @@ export default function AnswerZone() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-600">加载中...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#111722]">
+        <div className="text-[#92a4c9]">加载中...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-[#111722] p-6">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-400 mb-4">{error}</p>
           <button
             onClick={() => navigate('/student/tasks')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg"
@@ -135,19 +137,19 @@ export default function AnswerZone() {
   // ===== 提交后：展示批改结果 =====
   if (result) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-[#111722] py-8">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">答题完成</h1>
-            <p className="text-gray-600">
-              得分 <span className="text-2xl font-bold text-blue-600">{result.totalScore}</span> /{' '}
+          <div className="bg-[#232f48] rounded-lg shadow-sm p-6 mb-6 text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">答题完成</h1>
+            <p className="text-[#92a4c9]">
+              得分 <span className="text-2xl font-bold text-blue-400">{result.totalScore}</span> /{' '}
               {result.maxScore}（正确 {result.correctCount}/{result.total} 题）
             </p>
-            <p className={`mt-2 font-medium ${result.passed ? 'text-green-600' : 'text-amber-600'}`}>
+            <p className={`mt-2 font-medium ${result.passed ? 'text-green-400' : 'text-amber-400'}`}>
               {result.passed ? '恭喜，达到及格线！' : '未达及格线，继续加油！'}
             </p>
             {result.results.some((r) => r.needsGrading) && (
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-[#5b6b8c]">
                 标注「待批改」的题目将由老师 / AI 后续评定。
               </p>
             )}
@@ -158,20 +160,20 @@ export default function AnswerZone() {
               const q = exam.questions.find((x) => x.id === r.questionId);
               const badge =
                 r.isCorrect === true
-                  ? { cls: 'bg-green-100 text-green-700', text: '正确' }
+                  ? { cls: 'bg-green-500/15 text-green-300', text: '正确' }
                   : r.isCorrect === false
-                  ? { cls: 'bg-red-100 text-red-700', text: '错误' }
-                  : { cls: 'bg-amber-100 text-amber-700', text: '待批改' };
+                  ? { cls: 'bg-red-500/15 text-red-300', text: '错误' }
+                  : { cls: 'bg-amber-500/15 text-amber-300', text: '待批改' };
               return (
-                <div key={r.questionId} className="bg-white rounded-lg shadow-sm p-4">
+                <div key={r.questionId} className="bg-[#232f48] rounded-lg shadow-sm p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-white">
                         第 {i + 1} 题
-                        {q && <span className="ml-2 text-gray-400">（{TYPE_LABELS[q.type] || q.type}）</span>}
+                        {q && <span className="ml-2 text-[#5b6b8c]">（{TYPE_LABELS[q.type] || q.type}）</span>}
                       </p>
                       {q && (
-                        <p className="mt-1 text-sm text-gray-700 line-clamp-2">{stripLatex(q.stem)}</p>
+                        <p className="mt-1 text-sm text-[#c3cfe6] line-clamp-2">{stripLatex(q.stem)}</p>
                       )}
                     </div>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${badge.cls}`}>
@@ -179,14 +181,14 @@ export default function AnswerZone() {
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
+                    <span className="text-[#5b6b8c]">
                       得分 {r.score} / {r.maxScore}
                     </span>
                     {r.correctAnswer && (
-                      <span className="text-gray-600">参考答案：{r.correctAnswer}</span>
+                      <span className="text-[#92a4c9]">参考答案：{r.correctAnswer}</span>
                     )}
                   </div>
-                  {r.analysis && <p className="mt-1 text-xs text-gray-500">{r.analysis}</p>}
+                  {r.analysis && <p className="mt-1 text-xs text-[#5b6b8c]">{r.analysis}</p>}
                 </div>
               );
             })}
@@ -227,8 +229,47 @@ export default function AnswerZone() {
       const dataUrl = reader.result as string;
       setPhotoMap((prev) => ({ ...prev, [questionId]: dataUrl }));
       setAnswerData(questionId, { imageData: dataUrl, text: (answers[questionId]?.answerData.text as string) || '' }, 'photo');
+      void tryRecognize(questionId, file);
     };
     reader.readAsDataURL(file);
+  };
+
+  /** 调用非本地视觉模型识别图片内容，回填到答案文本（失败则保留图片兜底） */
+  const tryRecognize = async (questionId: string, file: File) => {
+    setRecognizingId(questionId);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await request.post<{ success: boolean; data: { text: string } }>(
+        '/student/vision/recognize',
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      const text = res?.data?.text;
+      if (text) {
+        setAnswers((p) => {
+          const prev = p[questionId];
+          return {
+            ...p,
+            [questionId]: {
+              answerData: { ...(p[questionId]?.answerData || {}), text, imageData: prev?.answerData.imageData },
+              inputMethod: prev?.inputMethod || 'photo',
+              timeSpent: prev?.timeSpent || 0,
+            },
+          };
+        });
+        setRecognizeTips((p) => ({ ...p, [questionId]: '已通过视觉模型识别图片内容并自动填入答案' }));
+      } else {
+        setRecognizeTips((p) => ({ ...p, [questionId]: '视觉识别未返回文本，图片将交由老师批改' }));
+      }
+    } catch (e) {
+      setRecognizeTips((p) => ({
+        ...p,
+        [questionId]: getErrorMessage(e, '未配置视觉识别模型，图片将交由老师批改'),
+      }));
+    } finally {
+      setRecognizingId(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -257,24 +298,24 @@ export default function AnswerZone() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
+    <div className="min-h-screen bg-[#111722] py-6">
       <div className="max-w-3xl mx-auto px-4">
         {/* 顶部栏 */}
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate('/student/tasks')}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]"
           >
             ← 返回
           </button>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-[#92a4c9]">
             {exam.subject} · 第 {currentIndex + 1}/{total} 题
           </div>
-          <div className="text-sm text-gray-400">满分 {exam.questions.reduce((s, q) => s + q.score, 0)}</div>
+          <div className="text-sm text-[#5b6b8c]">满分 {exam.questions.reduce((s, q) => s + q.score, 0)}</div>
         </div>
 
         {/* 进度条 */}
-        <div className="w-full h-2 bg-gray-200 rounded-full mb-4 overflow-hidden">
+        <div className="w-full h-2 bg-[#324467] rounded-full mb-4 overflow-hidden">
           <div
             className="h-full bg-blue-500 transition-all"
             style={{ width: `${((currentIndex + 1) / total) * 100}%` }}
@@ -282,28 +323,28 @@ export default function AnswerZone() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
             {error}
           </div>
         )}
 
         {/* 题目卡片 */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-[#232f48] rounded-lg shadow-sm p-6">
           <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 text-xs font-medium">
               {TYPE_LABELS[question.type] || question.type}
             </span>
-            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs">
+            <span className="px-2 py-0.5 rounded bg-[#1a2332] text-[#92a4c9] text-xs">
               {question.score} 分
             </span>
             {question.knowledgePoints.length > 0 && (
-              <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-xs">
+              <span className="px-2 py-0.5 rounded bg-[#1a2332] text-[#5b6b8c] text-xs">
                 {question.knowledgePoints.join('、')}
               </span>
             )}
           </div>
 
-          <h2 className="text-lg font-medium text-gray-900 whitespace-pre-wrap leading-relaxed">
+          <h2 className="text-lg font-medium text-white whitespace-pre-wrap leading-relaxed">
             {question.stem}
           </h2>
 
@@ -313,6 +354,8 @@ export default function AnswerZone() {
               question={question}
               value={currentAnswer?.answerData}
               photo={photoMap[question.id]}
+              recognizing={recognizingId === question.id}
+              recognizeTip={recognizeTips[question.id]}
               onChange={(answerData, inputMethod) => setAnswerData(question.id, answerData, inputMethod)}
               onPhoto={(file) => handlePhoto(question.id, file)}
             />
@@ -324,7 +367,7 @@ export default function AnswerZone() {
           <button
             onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
             disabled={currentIndex === 0}
-            className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 disabled:opacity-40 hover:bg-gray-50"
+            className="px-5 py-2 rounded-lg border border-[#324467] text-[#c3cfe6] disabled:opacity-40 hover:bg-[#1a2332]"
           >
             上一题
           </button>
@@ -332,7 +375,7 @@ export default function AnswerZone() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:bg-gray-400"
+              className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
             >
               {submitting ? '提交中...' : '提交整卷'}
             </button>
@@ -356,12 +399,16 @@ function AnswerInput({
   question,
   value,
   photo,
+  recognizing,
+  recognizeTip,
   onChange,
   onPhoto,
 }: {
   question: ExamQuestion;
   value?: Record<string, unknown>;
   photo?: string;
+  recognizing?: boolean;
+  recognizeTip?: string;
   onChange: (answerData: Record<string, unknown>, inputMethod: string) => void;
   onPhoto: (file: File) => void;
 }) {
@@ -369,8 +416,8 @@ function AnswerInput({
 
   // 拍照上传兜底（所有题型通用）
   const PhotoFallback = () => (
-    <div className="mt-4 pt-4 border-t border-gray-100">
-      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 text-sm text-gray-600 cursor-pointer hover:bg-gray-50">
+    <div className="mt-4 pt-4 border-t border-[#324467]">
+      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-[#324467] text-sm text-[#92a4c9] cursor-pointer hover:bg-[#1a2332]">
         <span className="material-symbols-outlined text-[18px]">photo_camera</span>
         拍照 / 上传图片（兜底）
         <input
@@ -384,8 +431,20 @@ function AnswerInput({
           }}
         />
       </label>
+
+      {recognizing && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-blue-400">
+          <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+          正在调用视觉模型识别图片内容...
+        </div>
+      )}
+
       {photo && (
-        <img src={photo} alt="作答图片" className="mt-2 max-h-40 rounded border border-gray-200" />
+        <img src={photo} alt="作答图片" className="mt-2 max-h-40 rounded border border-[#324467]" />
+      )}
+
+      {recognizeTip && !recognizing && (
+        <p className="mt-2 text-xs text-[#5b6b8c]">{recognizeTip}</p>
       )}
     </div>
   );
@@ -404,11 +463,11 @@ function AnswerInput({
                   type="button"
                   onClick={() => onChange({ selected: letter }, 'click')}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
-                    checked ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+                    checked ? 'border-blue-500 bg-blue-500/10' : 'border-[#324467] hover:bg-[#1a2332]'
                   }`}
                 >
-                  <span className="font-medium text-gray-500">{letter}.</span>
-                  <span className="text-gray-800">{opt}</span>
+                  <span className="font-medium text-[#5b6b8c]">{letter}.</span>
+                  <span className="text-[#e2e8f5]">{opt}</span>
                 </button>
               );
             })}
@@ -437,11 +496,11 @@ function AnswerInput({
                   type="button"
                   onClick={() => toggle(letter)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
-                    checked ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'
+                    checked ? 'border-blue-500 bg-blue-500/10' : 'border-[#324467] hover:bg-[#1a2332]'
                   }`}
                 >
-                  <span className="font-medium text-gray-500">{letter}.</span>
-                  <span className="text-gray-800">{opt}</span>
+                  <span className="font-medium text-[#5b6b8c]">{letter}.</span>
+                  <span className="text-[#e2e8f5]">{opt}</span>
                 </button>
               );
             })}
@@ -460,7 +519,7 @@ function AnswerInput({
               type="button"
               onClick={() => onChange({ value: true }, 'click')}
               className={`flex-1 py-4 rounded-lg border text-lg font-medium transition-colors ${
-                val === true ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 hover:bg-gray-50'
+                val === true ? 'border-green-500 bg-green-500/10 text-green-300' : 'border-[#324467] hover:bg-[#1a2332]'
               }`}
             >
               ✓ 正确
@@ -469,7 +528,7 @@ function AnswerInput({
               type="button"
               onClick={() => onChange({ value: false }, 'click')}
               className={`flex-1 py-4 rounded-lg border text-lg font-medium transition-colors ${
-                val === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-300 hover:bg-gray-50'
+                val === false ? 'border-red-500 bg-red-500/10 text-red-300' : 'border-[#324467] hover:bg-[#1a2332]'
               }`}
             >
               ✗ 错误
@@ -488,7 +547,7 @@ function AnswerInput({
             value={(value?.text as string) || ''}
             onChange={(e) => onChange({ text: e.target.value }, 'keyboard')}
             placeholder="请输入答案"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <PhotoFallback />
         </div>
@@ -502,9 +561,9 @@ function AnswerInput({
             value={(value?.latex as string) || ''}
             onChange={(e) => onChange({ latex: e.target.value }, 'formula')}
             placeholder="输入 LaTeX，例如 \frac{1}{2}"
-            className="w-full px-4 py-3 font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 font-mono border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-[#5b6b8c]">
             公式题：输入 LaTeX 表达式，提交后由公式验证服务判断是否与标准答案等价。
           </p>
           <PhotoFallback />
@@ -520,7 +579,7 @@ function AnswerInput({
             onChange={(e) => onChange({ text: e.target.value }, 'keyboard')}
             placeholder="请输入你的解答（可配合下方拍照上传）"
             rows={5}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <PhotoFallback />
         </div>

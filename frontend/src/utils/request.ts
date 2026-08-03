@@ -28,7 +28,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api
  */
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 30 秒超时
+  // 本地 Ollama 单题生成可达 120s，全局 30s 会让训练舱取题在前端先超时；
+  // 统一放宽到 180s（后端仍有按端点的独立超时与重试保护）。
+  timeout: 180000,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -5,6 +5,7 @@ import { adminAuthCodeController } from '../controllers/adminAuthCodeController'
 import { adminRelationController } from '../controllers/adminRelationController';
 import * as adminMaterialController from '../controllers/adminMaterialController';
 import * as adminAIController from '../controllers/adminAIController';
+import * as adminOcrController from '../controllers/adminOcrController';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import * as questionBankController from '../controllers/questionBankController';
 import * as adminAgentController from '../controllers/adminAgentController';
@@ -439,6 +440,18 @@ router.post('/ai-providers/test', (req, res) =>
 );
 
 /**
+ * @route   POST /api/admin/ai-providers/models
+ * @desc    列出指定端点上的可用模型（"识别模型"按钮）
+ * @access  Admin
+ * @body    type - 服务商类型（必填）
+ * @body    endpoint - API 端点（必填）
+ * @body    apiKey - API 密钥（可选，OpenAI 兼容需携带）
+ */
+router.post('/ai-providers/models', (req, res) =>
+  adminAIController.listModels(req, res)
+);
+
+/**
  * @route   GET /api/admin/ai-providers/:id
  * @desc    获取单个 AI 服务商
  * @access  Admin
@@ -487,6 +500,50 @@ router.put('/ai-providers/:id', (req, res) =>
 router.delete('/ai-providers/:id', (req, res) => 
   adminAIController.deleteProvider(req, res)
 );
+
+// ============ OCR / 视觉识别服务商路由 ============
+
+/**
+ * @route   GET /api/admin/ocr-providers
+ * @desc    获取所有 OCR / 视觉识别服务商
+ * @access  Admin
+ */
+router.get('/ocr-providers', (req, res) => adminOcrController.getAllProviders(req, res));
+
+/**
+ * @route   POST /api/admin/ocr-providers/test
+ * @desc    测试连通性（不保存到数据库）
+ * @access  Admin
+ */
+router.post('/ocr-providers/test', (req, res) => adminOcrController.testProvider(req, res));
+
+/**
+ * @route   GET /api/admin/ocr-providers/:id
+ * @desc    获取单个 OCR 服务商
+ * @access  Admin
+ */
+router.get('/ocr-providers/:id', (req, res) => adminOcrController.getProviderById(req, res));
+
+/**
+ * @route   POST /api/admin/ocr-providers
+ * @desc    创建 OCR 服务商
+ * @access  Admin
+ */
+router.post('/ocr-providers', (req, res) => adminOcrController.createProvider(req, res));
+
+/**
+ * @route   PUT /api/admin/ocr-providers/:id
+ * @desc    更新 OCR 服务商
+ * @access  Admin
+ */
+router.put('/ocr-providers/:id', (req, res) => adminOcrController.updateProvider(req, res));
+
+/**
+ * @route   DELETE /api/admin/ocr-providers/:id
+ * @desc    删除 OCR 服务商
+ * @access  Admin
+ */
+router.delete('/ocr-providers/:id', (req, res) => adminOcrController.deleteProvider(req, res));
 
 /**
  * @route   GET /api/admin/ai-instructions
@@ -634,6 +691,15 @@ router.post('/question-bank/papers/:id/publish', (req, res) =>
 );
 
 /**
+ * @route   PATCH /api/admin/question-bank/papers/:id
+ * @desc    调整试卷分类（EXERCISE 习题与试卷 / ASSESSMENT 初测与水平评估）
+ * @access  Admin
+ */
+router.patch('/question-bank/papers/:id', (req, res) =>
+  questionBankController.updatePaper(req, res)
+);
+
+/**
  * @route   POST /api/admin/question-bank/papers/:id/items
  * @desc    向试卷添加题目
  * @access  Admin
@@ -670,6 +736,25 @@ router.post('/question-bank/questions', (req, res) =>
 );
 
 /**
+ * @route   GET /api/admin/question-bank/questions/review-stats
+ * @desc    ④ AI 生成题审核概览（待审 / 已采纳 / 已驳回 / AI 题总数）
+ * @access  Admin
+ * @note    必须注册在 /questions/:id 之前，否则会被 :id 捕获
+ */
+router.get('/question-bank/questions/review-stats', (req, res) =>
+  questionBankController.getReviewStats(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/questions/review
+ * @desc    ④ 批量采纳 / 驳回 AI 生成题
+ * @access  Admin
+ */
+router.post('/question-bank/questions/review', (req, res) =>
+  questionBankController.reviewQuestions(req, res)
+);
+
+/**
  * @route   GET /api/admin/question-bank/questions/:id
  * @desc    题目详情
  * @access  Admin
@@ -703,6 +788,22 @@ router.post('/question-bank/import', questionBankController.uploadAndImport);
 router.get('/question-bank/import/:id', (req, res) =>
   questionBankController.getImportJob(req, res)
 );
+
+/**
+ * @route   GET /api/admin/question-bank/export
+ * @desc    导出题库为 .zxbank 自描述 JSON（按试卷筛选）
+ * @access  Admin
+ */
+router.get('/question-bank/export', (req, res) =>
+  questionBankController.exportBank(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/import-data
+ * @desc    导入 .zxbank 题库数据文件（按 id 幂等 upsert）
+ * @access  Admin
+ */
+router.post('/question-bank/import-data', ...questionBankController.importBank);
 
 /**
  * @route   POST /api/admin/question-bank/classify

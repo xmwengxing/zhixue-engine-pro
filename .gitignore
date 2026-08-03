@@ -43,6 +43,8 @@ docker-compose.override.yml
 # Python
 __pycache__/
 *.pyc
+.venv/
+services/ocr-unlimited/model/
 
 # GitNexus 索引
 .gitnexus/
@@ -52,3 +54,18 @@ __pycache__/
 .workbuddy/
 CLAUDE.md
 AGENTS.md
+
+# 调试/一次性脚本（非应用代码，不入库）
+.tmp*
+backend/.tmp-*
+backend/.tmp-papers/
+backend/scripts/smoke-*.mjs
+backend/scripts/diag-*.mjs
+backend/scripts/test-*.mjs
+backend/scripts/test-*.ts
+backend/scripts/verify-fallback-plan.ts
+backend/scripts/dump-paper-text.mjs
+backend/scripts/configure-extraction-provider.ts
+backend/scripts/import-real-papers.mjs
+backend/scripts/clean-dirty-data.mjs
+

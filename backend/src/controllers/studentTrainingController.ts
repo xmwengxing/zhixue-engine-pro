@@ -264,6 +264,55 @@ export const getNextQuestion = async (
 };
 
 /**
+ * ① 断点续答：获取「当前应该答的那道题」
+ * GET /api/student/training/resume/:sessionId
+ *
+ * 与 next-question 的区别：优先返回已下发但未提交的题目快照，
+ * 保证刷新页面 / 换设备继续时看到同一道题，且不会重复触发 AI 出题。
+ */
+export const resumeSession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?.userId;
+    const { sessionId } = req.params;
+
+    if (!userId) {
+      res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: '未授权访问' },
+      });
+      return;
+    }
+
+    if (!sessionId || Array.isArray(sessionId)) {
+      res.status(400).json({
+        error: { code: 'INVALID_INPUT', message: '会话 ID 为必填项' },
+      });
+      return;
+    }
+
+    const data = await studentTrainingService.resumeSession(sessionId, userId);
+
+    res.json({ success: true, data });
+  } catch (error: any) {
+    logger.error('断点续答失败:', error);
+
+    if (error.message === '训练会话不存在') {
+      res.status(404).json({ error: { code: 'SESSION_NOT_FOUND', message: error.message } });
+      return;
+    }
+    if (error.message === '无权访问此会话') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: error.message } });
+      return;
+    }
+
+    next(error);
+  }
+};
+
+/**
  * 获取训练会话详情
  * GET /api/student/training/session/:sessionId
  */
@@ -986,14 +1035,14 @@ export const aiChat = async (
       return;
     }
 
-    // 检查会话状态，考试期间禁用 AI 助手
+    // 考试模式：综合考试进行中 AI 助教暂时收起，交卷后（phase → COMPLETED）自动解锁逐题精讲
     const session = await studentTrainingService.getSession(sessionId, userId);
-    
+
     if (session.phase === 'FINAL_EXAM') {
       res.status(403).json({
         error: {
-          code: 'AI_DISABLED',
-          message: '综合考试期间 AI 助手不可用',
+          code: 'AI_EXAM_MODE',
+          message: '考试模式进行中，交卷后我会立刻解锁为你逐题精讲',
         },
       });
       return;

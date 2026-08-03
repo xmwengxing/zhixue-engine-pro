@@ -22,7 +22,9 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/scripts/seed-test-data.ts"
+    "db:seed": "tsx src/scripts/seed-test-data.ts",
+    "db:check-dirty": "node scripts/clean-dirty-data.mjs --ci",
+    "db:clean-dirty": "node scripts/clean-dirty-data.mjs --fix"
   },
   "keywords": [
     "education",

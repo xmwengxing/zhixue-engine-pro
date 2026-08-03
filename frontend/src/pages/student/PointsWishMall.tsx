@@ -49,10 +49,10 @@ const PointsWishMall: React.FC = () => {
   // 获取愿望状态标签
   const getStatusBadge = (status: string) => {
     const badges = {
-      PENDING: { text: '审核中', className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' },
-      APPROVED: { text: '待确认', className: 'bg-green-100 text-green-600 dark:bg-green-900/20' },
-      REJECTED: { text: '已拒绝', className: 'bg-red-100 text-red-600 dark:bg-red-900/20' },
-      FULFILLED: { text: '已兑现', className: 'bg-gray-100 text-gray-600 dark:bg-gray-900/20' },
+      PENDING: { text: '审核中', className: 'bg-blue-500/15 text-blue-400' },
+      APPROVED: { text: '待确认', className: 'bg-green-500/15 text-green-400' },
+      REJECTED: { text: '已拒绝', className: 'bg-red-500/15 text-red-400' },
+      FULFILLED: { text: '已兑现', className: 'bg-[#1a2332] text-[#92a4c9]' },
     };
     return badges[status as keyof typeof badges] || badges.PENDING;
   };
@@ -84,16 +84,16 @@ const PointsWishMall: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">加载中...</p>
+          <p className="text-[#92a4c9]">加载中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-[#111722]">
       {/* 导航栏 */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 lg:px-20 py-3">
+      <header className="sticky top-0 z-50 bg-[#232f48]/80 backdrop-blur-md border-b border-[#324467] px-4 lg:px-20 py-3">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
@@ -121,7 +121,7 @@ const PointsWishMall: React.FC = () => {
       <main className="flex-1 max-w-[1200px] mx-auto w-full px-4 lg:px-10 py-8">
         {/* 积分统计卡片 */}
         <div className="mb-8 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-blue-500 to-blue-600 p-8 rounded-xl shadow-lg text-white">
-          <div className="bg-white/20 p-4 rounded-full">
+          <div className="bg-[#232f48]/20 p-4 rounded-full">
             <span className="material-symbols-outlined text-[48px]">database</span>
           </div>
           <div className="flex-1 text-center md:text-left">
@@ -134,7 +134,7 @@ const PointsWishMall: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-4">
-            <button className="bg-white text-blue-500 px-6 py-2.5 rounded-full font-bold hover:bg-blue-50 transition-colors shadow-md">
+            <button className="bg-[#232f48] text-blue-500 px-6 py-2.5 rounded-full font-bold hover:bg-blue-500/10 transition-colors shadow-md">
               积分明细
             </button>
             <button className="bg-black/20 text-white px-6 py-2.5 rounded-full font-bold hover:bg-black/30 transition-colors">
@@ -156,21 +156,21 @@ const PointsWishMall: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {/* 现金奖励卡片 */}
               <div
-                className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl border-2 border-amber-200 dark:border-amber-800 hover:shadow-lg transition-all cursor-pointer group"
+                className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border-2 border-amber-500/30 hover:shadow-lg transition-all cursor-pointer group"
                 onClick={() => {
                   setWishFormType('CASH');
                   setShowWishForm(true);
                 }}
               >
                 <div className="flex flex-col items-center text-center py-4">
-                  <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform mb-4">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform mb-4">
                     <span className="material-symbols-outlined text-[32px]">payments</span>
                   </div>
-                  <h4 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-2">兑换现金</h4>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                  <h4 className="text-lg font-bold text-amber-300 mb-2">兑换现金</h4>
+                  <p className="text-sm text-amber-300">
                     10 积分 = 1 元
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  <p className="text-xs text-amber-400 mt-2">
                     实时到账微信/支付宝
                   </p>
                 </div>
@@ -178,21 +178,21 @@ const PointsWishMall: React.FC = () => {
 
               {/* 自定义愿望卡片 */}
               <div
-                className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border-2 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all cursor-pointer group"
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-500/30 hover:shadow-lg transition-all cursor-pointer group"
                 onClick={() => {
                   setWishFormType('CUSTOM');
                   setShowWishForm(true);
                 }}
               >
                 <div className="flex flex-col items-center text-center py-4">
-                  <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform mb-4">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform mb-4">
                     <span className="material-symbols-outlined text-[32px]">add_circle</span>
                   </div>
-                  <h4 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">自定义愿望</h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <h4 className="text-lg font-bold text-blue-300 mb-2">自定义愿望</h4>
+                  <p className="text-sm text-blue-300">
                     设定你的目标
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                  <p className="text-xs text-blue-400 mt-2">
                     乐高、运动鞋或出去玩
                   </p>
                 </div>
@@ -212,7 +212,7 @@ const PointsWishMall: React.FC = () => {
             {/* 愿望列表 */}
             <div className="space-y-4">
               {wishes && wishes.length === 0 ? (
-                <div className="bg-white dark:bg-slate-800 p-8 rounded-xl text-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                <div className="bg-[#232f48] p-8 rounded-xl text-center text-[#5b6b8c] border border-[#324467]">
                   <p>还没有愿望，快去创建一个吧！</p>
                 </div>
               ) : (
@@ -227,13 +227,13 @@ const PointsWishMall: React.FC = () => {
                       key={wish.id}
                       className={`p-5 rounded-xl shadow-sm border relative overflow-hidden ${
                         isCash
-                          ? 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800'
-                          : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800'
+                          ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-500/30'
+                          : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-500/30'
                       }`}
                     >
                       <div className="flex gap-4">
                         {wish.imageUrl && (
-                          <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-slate-700">
+                          <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-[#1a2332]">
                             <img
                               src={wish.imageUrl}
                               alt={wish.description}
@@ -244,11 +244,11 @@ const PointsWishMall: React.FC = () => {
                         <div className="flex-1">
                           <div className="flex justify-between items-start mb-1">
                             <div>
-                              <p className="font-bold text-lg text-slate-900 dark:text-white">
+                              <p className="font-bold text-lg text-white">
                                 {isCash ? `兑换现金 ¥${cashAmount}` : wish.description}
                               </p>
                               {isCash && wish.description && (
-                                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                                <p className="text-xs text-[#92a4c9] mt-1">
                                   {wish.description}
                                 </p>
                               )}
@@ -263,7 +263,7 @@ const PointsWishMall: React.FC = () => {
                             <span className={`material-symbols-outlined text-sm ${isCash ? 'text-amber-500' : 'text-blue-500'}`}>
                               {isCash ? 'payments' : 'stars'}
                             </span>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                            <span className="text-xs font-bold text-[#5b6b8c]">
                               目标: {wish.requiredPoints} 积分
                               {isCash && ` (¥${cashAmount})`}
                             </span>
@@ -272,14 +272,14 @@ const PointsWishMall: React.FC = () => {
                           {/* 进度条（仅已批准的愿望显示） */}
                           {wish.status === 'APPROVED' && (
                             <>
-                              <div className="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden mb-2">
+                              <div className="w-full bg-[#1a2332] h-2.5 rounded-full overflow-hidden mb-2">
                                 <div
                                   className={`h-full rounded-full transition-all ${isCash ? 'bg-amber-500' : 'bg-blue-500'}`}
                                   style={{ width: `${progress}%` }}
                                 ></div>
                               </div>
                               <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                                <span className="text-[10px] font-bold text-[#5b6b8c]">
                                   {pointsData?.available ?? 0} / {wish.requiredPoints}
                                 </span>
                                 <span className={`text-[10px] font-bold ${isCash ? 'text-amber-500' : 'text-blue-500'}`}>
@@ -304,7 +304,7 @@ const PointsWishMall: React.FC = () => {
 
                           {/* 审核理由 */}
                           {wish.reviewReason && (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 italic">
+                            <p className="text-xs text-[#5b6b8c] mt-2 italic">
                               {wish.reviewReason}
                             </p>
                           )}
@@ -319,7 +319,7 @@ const PointsWishMall: React.FC = () => {
         </div>
 
         {/* 推广横幅 */}
-        <div className="mt-16 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl p-8 relative overflow-hidden border border-slate-700">
+        <div className="mt-16 bg-[#1a2332] text-white rounded-2xl p-8 relative overflow-hidden border border-[#324467]">
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h4 className="text-2xl font-black mb-2 italic">邀请同学一起进步!</h4>
@@ -443,10 +443,10 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#232f48] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* 表单头部 */}
-        <div className={`p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between ${
-          isCash ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20' : 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'
+        <div className={`p-6 border-b border-[#324467] flex items-center justify-between ${
+          isCash ? 'bg-gradient-to-r from-amber-50 to-orange-50' : 'bg-gradient-to-r from-blue-50 to-indigo-50'
         }`}>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${isCash ? 'bg-amber-500/20' : 'bg-blue-500/20'}`}>
@@ -454,13 +454,13 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
                 {isCash ? 'payments' : 'edit_square'}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-xl font-bold text-white">
               {isCash ? '兑换现金' : '提交新愿望'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            className="text-[#5b6b8c] hover:text-[#92a4c9] transition-colors"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -469,7 +469,7 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
         {/* 表单内容 */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -478,11 +478,11 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
           {isCash ? (
             <>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">兑换积分</label>
+                <label className="text-sm font-semibold text-[#c3cfe6]">兑换积分</label>
                 <div className="relative">
                   <input
                     type="number"
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 px-4 py-3 pl-11 outline-none transition-all"
+                    className="w-full rounded-lg border border-[#324467] bg-[#232f48] text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 px-4 py-3 pl-11 outline-none transition-all"
                     placeholder="输入积分数值"
                     value={requiredPoints || ''}
                     onChange={(e) => setRequiredPoints(parseInt(e.target.value) || 0)}
@@ -494,19 +494,19 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
                     monetization_on
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className="text-xs text-[#5b6b8c]">
                   当前积分: {currentPoints} | 10 积分 = 1 元
                 </p>
               </div>
 
               {/* 显示兑换金额 */}
               {requiredPoints > 0 && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    <span className="text-sm font-semibold text-amber-300">
                       兑换金额
                     </span>
-                    <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                    <span className="text-2xl font-bold text-amber-400">
                       ¥{cashAmount}
                     </span>
                   </div>
@@ -515,11 +515,11 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
 
               {/* 备注（可选） */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <label className="text-sm font-semibold text-[#c3cfe6]">
                   备注（可选）
                 </label>
                 <textarea
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 px-4 py-3 outline-none transition-all resize-none"
+                  className="w-full rounded-lg border border-[#324467] bg-[#232f48] text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 px-4 py-3 outline-none transition-all resize-none"
                   placeholder="例如：用于购买学习用品"
                   rows={2}
                   value={description}
@@ -532,25 +532,25 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
             <>
               {/* 自定义愿望模式 */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">愿望描述</label>
+                <label className="text-sm font-semibold text-[#c3cfe6]">愿望描述</label>
                 <textarea
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 outline-none transition-all resize-none"
+                  className="w-full rounded-lg border border-[#324467] bg-[#232f48] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 outline-none transition-all resize-none"
                   placeholder="请详细描述你的愿望，为什么想要这个愿望呢？"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={500}
                 />
-                <p className="text-xs text-slate-400 dark:text-slate-500">{description.length} / 500</p>
+                <p className="text-xs text-[#5b6b8c]">{description.length} / 500</p>
               </div>
 
               {/* 所需积分 */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">所需积分</label>
+                <label className="text-sm font-semibold text-[#c3cfe6]">所需积分</label>
                 <div className="relative">
                   <input
                     type="number"
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 pl-11 outline-none transition-all"
+                    className="w-full rounded-lg border border-[#324467] bg-[#232f48] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-3 pl-11 outline-none transition-all"
                     placeholder="输入积分数值"
                     value={requiredPoints || ''}
                     onChange={(e) => setRequiredPoints(parseInt(e.target.value) || 0)}
@@ -561,18 +561,18 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
                     stars
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">当前积分: {currentPoints}</p>
+                <p className="text-xs text-[#5b6b8c]">当前积分: {currentPoints}</p>
               </div>
 
               {/* 图片上传 */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <label className="text-sm font-semibold text-[#c3cfe6]">
                   愿望图片
                 </label>
                 
                 {/* 图片预览 */}
                 {imageUrl && (
-                  <div className="relative w-full h-48 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700 mb-2">
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden bg-[#1a2332] mb-2">
                     <img
                       src={imageUrl}
                       alt="预览"
@@ -594,14 +594,14 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
                 {/* 上传按钮 */}
                 <div className="flex gap-2">
                   <label className="flex-1 cursor-pointer">
-                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
-                      <span className="material-symbols-outlined text-slate-400 text-3xl mb-2">
+                    <div className="border-2 border-dashed border-[#324467] rounded-lg p-4 text-center hover:border-blue-500 transition-colors">
+                      <span className="material-symbols-outlined text-[#5b6b8c] text-3xl mb-2">
                         upload
                       </span>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <p className="text-sm text-[#92a4c9]">
                         点击上传图片
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      <p className="text-xs text-[#5b6b8c] mt-1">
                         支持 JPG、PNG，最大 5MB
                       </p>
                     </div>
@@ -616,10 +616,10 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
 
                 {/* 或者输入 URL */}
                 <div className="relative">
-                  <span className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">或输入图片链接</span>
+                  <span className="text-xs text-[#5b6b8c] mb-1 block">或输入图片链接</span>
                   <input
                     type="url"
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-2 outline-none transition-all text-sm"
+                    className="w-full rounded-lg border border-[#324467] bg-[#232f48] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-4 py-2 outline-none transition-all text-sm"
                     placeholder="https://example.com/image.jpg"
                     value={imageFile ? '' : imageUrl}
                     onChange={(e) => {
@@ -636,14 +636,14 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
           {/* 提示信息 */}
           <div className={`border rounded-xl p-4 flex gap-3 ${
             isCash 
-              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' 
-              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+              ? 'bg-amber-500/10 border-amber-500/30' 
+              : 'bg-blue-500/10 border-blue-500/30'
           }`}>
             <span className={`material-symbols-outlined shrink-0 ${isCash ? 'text-amber-500' : 'text-blue-500'}`}>
               tips_and_updates
             </span>
             <p className={`text-xs leading-relaxed ${
-              isCash ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'
+              isCash ? 'text-amber-300' : 'text-blue-300'
             }`}>
               <strong>提示：</strong> 
               {isCash 
@@ -658,7 +658,7 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="px-6 py-2.5 rounded-lg text-[#92a4c9] text-sm font-bold hover:bg-[#1a2332] transition-colors"
             >
               取消
             </button>

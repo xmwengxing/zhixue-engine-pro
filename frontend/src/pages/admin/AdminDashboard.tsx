@@ -8,6 +8,7 @@ import AuthCodeManagement from './AuthCodeManagement';
 import ParentChildRelationManagement from './ParentChildRelationManagement';
 import MaterialSystemManagement from './MaterialSystemManagement';
 import AIServiceConfig from './AIServiceConfig';
+import OcrProviderConfig from './OcrProviderConfig';
 import SubjectInstructionConfig from './SubjectInstructionConfig';
 import AgentPlatformConfig from './AgentPlatformConfig';
 import APIMonitoring from './APIMonitoring';
@@ -146,6 +147,18 @@ export const AdminDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[24px]">smart_toy</span>
                 <span className="text-sm font-medium leading-normal">AI 服务配置</span>
+              </Link>
+
+              <Link
+                to="/admin/ocr-providers"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/admin/ocr-providers')
+                    ? 'bg-primary text-white'
+                    : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">document_scanner</span>
+                <span className="text-sm font-medium leading-normal">OCR 识别配置</span>
               </Link>
 
               <Link
@@ -450,6 +463,7 @@ export const AdminDashboard = () => {
           <Route path="/materials" element={<MaterialSystemManagement />} />
           <Route path="/question-bank" element={<QuestionBankManagement />} />
           <Route path="/ai-services" element={<AIServiceConfig />} />
+          <Route path="/ocr-providers" element={<OcrProviderConfig />} />
           <Route path="/subject-instructions" element={<SubjectInstructionConfig />} />
           <Route path="/agent-platform" element={<AgentPlatformConfig />} />
           <Route path="/api-monitoring" element={<APIMonitoring />} />

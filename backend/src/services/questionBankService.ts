@@ -111,6 +111,7 @@ export interface PaperQuery {
   subject?: string;
   status?: PaperStatus;
   paperType?: 'UNIT' | 'MIDTERM' | 'FINAL' | 'ZHONGKAO' | 'GAOKAO';
+  category?: 'EXERCISE' | 'ASSESSMENT';
   page?: number;
   limit?: number;
 }
@@ -122,6 +123,8 @@ export async function listPapers(query: PaperQuery) {
   if (query.subject) where.subject = query.subject;
   if (query.status) where.status = query.status;
   if (query.paperType) where.paperType = query.paperType;
+  // 题库分类筛选：习题与试卷(EXERCISE) / 初测与水平评估(ASSESSMENT)
+  if (query.category) where.category = query.category;
 
   const [items, total] = await Promise.all([
     prisma.questionPaper.findMany({
@@ -187,6 +190,7 @@ export async function createPaper(data: {
   sourceFile?: string;
   textbookId?: string;
   paperType?: 'UNIT' | 'MIDTERM' | 'FINAL' | 'ZHONGKAO' | 'GAOKAO';
+  category?: 'EXERCISE' | 'ASSESSMENT';
   term?: string;
   version?: string;
   unitIds?: string[];
@@ -212,6 +216,7 @@ export async function createPaper(data: {
       sourceFile: data.sourceFile,
       status: PaperStatus.DRAFT,
       paperType: (data.paperType ?? 'UNIT') as any,
+      category: (data.category ?? 'EXERCISE') as any,
       unitIds: data.unitIds ?? [],
       textbookId: data.textbookId ?? null,
     },
@@ -220,6 +225,16 @@ export async function createPaper(data: {
 
 export async function deletePaper(id: string) {
   return prisma.questionPaper.delete({ where: { id } });
+}
+
+/**
+ * 调整试卷分类：EXERCISE（习题与试卷）/ ASSESSMENT（初测与水平评估）
+ */
+export async function updatePaperCategory(id: string, category: 'EXERCISE' | 'ASSESSMENT') {
+  return prisma.questionPaper.update({
+    where: { id },
+    data: { category: category as any },
+  });
 }
 
 export async function publishPaper(id: string) {
@@ -254,6 +269,10 @@ export interface QuestionQuery {
   grade?: string;
   term?: string;
   unitId?: string;
+  /** 来源筛选：IMPORT | MANUAL | AI_GENERATED */
+  source?: string;
+  /** ④ 审核状态筛选：PENDING | APPROVED | REJECTED | NONE(无需审核) */
+  reviewStatus?: string;
   page?: number;
   limit?: number;
 }
@@ -274,6 +293,11 @@ export async function listQuestions(query: QuestionQuery) {
   }
   if (query.grade) where.grade = query.grade;
   if (query.term) where.term = query.term;
+  if (query.source) where.source = query.source;
+  if (query.reviewStatus) {
+    // NONE = 导入/手动题（reviewStatus 为空，无需审核）
+    where.reviewStatus = query.reviewStatus === 'NONE' ? null : query.reviewStatus;
+  }
   if (query.unitId) {
     where.OR = [{ materialNodeId: query.unitId }, { unitIds: { has: query.unitId } }];
   }
@@ -289,6 +313,48 @@ export async function listQuestions(query: QuestionQuery) {
   ]);
 
   return { items: items.map(serializeQuestion), total, page, limit };
+}
+
+/**
+ * ④ AI 生成题审核概览：各状态计数，供管理端题库页顶部角标使用
+ */
+export async function getReviewStats() {
+  const [pending, approved, rejected, aiTotal] = await Promise.all([
+    prisma.question.count({ where: { reviewStatus: 'PENDING' } }),
+    prisma.question.count({ where: { reviewStatus: 'APPROVED' } }),
+    prisma.question.count({ where: { reviewStatus: 'REJECTED' } }),
+    prisma.question.count({ where: { source: 'AI_GENERATED' } }),
+  ]);
+  return { pending, approved, rejected, aiTotal };
+}
+
+/**
+ * ④ 批量审核 AI 生成题
+ * APPROVED → 转为正式题库题，可被自动抽题命中
+ * REJECTED → 保留记录（供追溯 AI 质量），但不再参与任何抽题
+ */
+export async function reviewQuestions(input: {
+  ids: string[];
+  action: 'APPROVE' | 'REJECT';
+  reviewerId?: string;
+  note?: string;
+}) {
+  const ids = Array.from(new Set((input.ids || []).filter((x) => typeof x === 'string' && x)));
+  if (ids.length === 0) {
+    return { updated: 0, ids: [] as string[] };
+  }
+
+  const result = await prisma.question.updateMany({
+    where: { id: { in: ids } },
+    data: {
+      reviewStatus: input.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+      reviewedAt: new Date(),
+      reviewedBy: input.reviewerId ?? null,
+      reviewNote: input.note ?? null,
+    },
+  });
+
+  return { updated: result.count, ids };
 }
 
 export async function getQuestion(id: string) {
@@ -500,9 +566,10 @@ export async function updateImportJob(
 
 /**
  * 获取已发布的试卷列表（家长端选卷用）
+ * @param category 题库分类：EXERCISE(组卷用习题卷，默认) / ASSESSMENT(初测与水平评估卷)
  */
-export async function listPublishedPapers(subject?: string) {
-  const where: Prisma.QuestionPaperWhereInput = { status: PaperStatus.PUBLISHED };
+export async function listPublishedPapers(subject?: string, category: 'EXERCISE' | 'ASSESSMENT' = 'EXERCISE') {
+  const where: Prisma.QuestionPaperWhereInput = { status: PaperStatus.PUBLISHED, category };
   if (subject) where.subject = subject;
   const items = await prisma.questionPaper.findMany({
     where,

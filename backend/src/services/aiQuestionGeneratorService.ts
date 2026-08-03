@@ -91,16 +91,25 @@ export class AIQuestionGeneratorService {
   ): Promise<Question> {
     try {
       // 构建 Prompt
+      // 兼容两种 context 形态：扁平（grade/materialVersion/learningFoundation）与嵌套 studentProfile，
+      // 避免 studentProfile 为 undefined 时读取 .grade 抛错（题目加载失败 500 的根因）
+      const ctx = context as any;
+      const studentProfile = ctx.studentProfile || {
+        grade: ctx.grade,
+        materialVersion: ctx.materialVersion,
+        learningFoundation: ctx.learningFoundation,
+      };
       const prompt = aiPromptBuilder.buildDiagnosticQuestionPrompt({
-        ...context,
+        studentProfile,
+        trainingGoal: ctx.trainingGoal,
         questionNumber,
+        totalQuestions: ctx.totalQuestions,
       });
 
       // 调用 AI 服务
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.7,
-        maxTokens: 1000,
-        timeout: 10000, // 10 秒超时
+        maxTokens: 2500,
       });
 
       // 解析 JSON 响应
@@ -144,8 +153,7 @@ export class AIQuestionGeneratorService {
       // 调用 AI 服务
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.3, // 降低温度，使评估更稳定
-        maxTokens: 500,
-        timeout: 5000, // 5 秒超时
+        maxTokens: 1500,
       });
 
       // 解析 JSON 响应
@@ -198,8 +206,7 @@ export class AIQuestionGeneratorService {
       // 调用 AI 服务
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.7,
-        maxTokens: 1000,
-        timeout: 10000, // 10 秒超时
+        maxTokens: 2500,
       });
 
       // 解析 JSON 响应
@@ -240,7 +247,6 @@ export class AIQuestionGeneratorService {
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.7,
         maxTokens: 4000,
-        timeout: 30000, // 30 秒超时
       });
 
       // 解析 JSON 数组响应
@@ -294,7 +300,6 @@ export class AIQuestionGeneratorService {
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.7,
         maxTokens: 3000,
-        timeout: 30000, // 30 秒超时
       });
 
       // 解析 JSON 响应（结构与类型已由 zod schema 校验）
@@ -329,8 +334,7 @@ export class AIQuestionGeneratorService {
       // 调用 AI 服务
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.8, // 对话可以更灵活
-        maxTokens: 500,
-        timeout: 5000, // 5 秒超时
+        maxTokens: 1500,
       });
 
       return response.trim();
@@ -369,7 +373,6 @@ export class AIQuestionGeneratorService {
       const response = await aiServiceManager.callAI(prompt, {
         temperature: 0.7,
         maxTokens: 3000,
-        timeout: 30000, // 30 秒超时
       });
 
       // 提取 Markdown 内容
@@ -459,8 +462,28 @@ export class AIQuestionGeneratorService {
   /**
    * 解析题目 JSON（zod 严格校验，防注入结构破坏）
    */
+  /**
+   * 规整题目，兼容本地推理模型把选项写成 "A: 4" 而 correctAnswer 写成 "A" 的写法：
+   * 当 correctAnswer 不在 options 中但其为单个字母时，对齐到对应序号的完整选项串，
+   * 使 QuestionSchema 的 refine 通过（不改变通过严格校验的正常输出）。
+   */
+  private normalizeQuestion(q: any): any {
+    if (q && Array.isArray(q.options) && typeof q.correctAnswer === 'string') {
+      if (!q.options.includes(q.correctAnswer)) {
+        const letter = q.correctAnswer.trim().toUpperCase();
+        if (/^[A-Z]$/.test(letter)) {
+          const idx = letter.charCodeAt(0) - 65;
+          if (idx >= 0 && idx < q.options.length) {
+            q.correctAnswer = q.options[idx];
+          }
+        }
+      }
+    }
+    return q;
+  }
+
   private parseQuestionJSON(response: string): Question {
-    const result = parseAIJson(response, QuestionSchema);
+    const result = parseAIJson(response, QuestionSchema, this.normalizeQuestion.bind(this));
     if (!result.ok) {
       console.error('解析题目 JSON 失败:', result.error);
       console.error('原始响应:', response);
@@ -473,7 +496,11 @@ export class AIQuestionGeneratorService {
    * 解析题目数组 JSON（zod 严格校验，防注入结构破坏）
    */
   private parseQuestionsArrayJSON(response: string): Question[] {
-    const result = parseAIJson(response, QuestionArraySchema);
+    const result = parseAIJson(
+      response,
+      QuestionArraySchema,
+      (arr) => (Array.isArray(arr) ? arr.map((q) => this.normalizeQuestion(q)) : arr)
+    );
     if (!result.ok) {
       console.error('解析题目数组 JSON 失败:', result.error);
       console.error('原始响应:', response);

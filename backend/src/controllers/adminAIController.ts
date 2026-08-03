@@ -91,7 +91,7 @@ export const getProviderById = async (req: Request, res: Response) => {
 // 创建 AI 服务商
 export const createProvider = async (req: Request, res: Response) => {
   try {
-    const { name, type, apiKey, endpoint, model, priority, status } = req.body;
+    const { name, type, apiKey, endpoint, model, priority, status, contextWindow, maxTokens, streamEnabled, supportsReasoning } = req.body;
 
     // 验证必填字段
     if (!name || !type || !apiKey || !endpoint || !model) {
@@ -117,6 +117,10 @@ export const createProvider = async (req: Request, res: Response) => {
       model,
       priority,
       status,
+      contextWindow: contextWindow ?? null,
+      maxTokens: maxTokens ?? null,
+      streamEnabled: !!streamEnabled,
+      supportsReasoning: supportsReasoning ?? undefined,
     });
 
     return res.status(201).json({
@@ -145,7 +149,7 @@ export const updateProvider = async (req: Request, res: Response) => {
       });
     }
     
-    const { name, type, apiKey, endpoint, model, priority, status } = req.body;
+    const { name, type, apiKey, endpoint, model, priority, status, contextWindow, maxTokens, streamEnabled, supportsReasoning } = req.body;
 
     // 验证类型（如果提供）
     if (type && !Object.values(AIProviderType).includes(type)) {
@@ -163,15 +167,13 @@ export const updateProvider = async (req: Request, res: Response) => {
       });
     }
 
-    const provider = await adminAIService.updateProvider(id, {
-      name,
-      type,
-      apiKey,
-      endpoint,
-      model,
-      priority,
-      status,
-    });
+    const updateData: any = { name, type, apiKey, endpoint, model, priority, status };
+    if (contextWindow !== undefined) updateData.contextWindow = contextWindow;
+    if (maxTokens !== undefined) updateData.maxTokens = maxTokens;
+    if (streamEnabled !== undefined) updateData.streamEnabled = !!streamEnabled;
+    if (supportsReasoning !== undefined) updateData.supportsReasoning = !!supportsReasoning;
+
+    const provider = await adminAIService.updateProvider(id, updateData);
 
     return res.json({
       success: true,
@@ -288,6 +290,35 @@ export const testProvider = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: '测试 AI 服务商连通性失败',
+      error: error.message,
+    });
+  }
+};
+
+// 列出指定端点上的可用模型（识别模型按钮）
+export const listModels = async (req: Request, res: Response) => {
+  try {
+    const { type, apiKey, endpoint } = req.body;
+
+    if (!type || !endpoint) {
+      return res.status(400).json({
+        success: false,
+        message: '缺少必填字段：type / endpoint',
+      });
+    }
+
+    const result = await adminAIService.fetchProviderModels({ type, apiKey, endpoint });
+
+    return res.json({
+      success: true,
+      message: '模型列表获取成功',
+      data: result.models,
+    });
+  } catch (error: any) {
+    console.error('获取模型列表失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '获取模型列表失败',
       error: error.message,
     });
   }

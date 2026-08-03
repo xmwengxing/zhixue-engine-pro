@@ -45,10 +45,10 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
 
   if (!question) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-[#1a2332]">
         <div className="text-center">
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-[#5b6b8c]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -60,24 +60,24 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p className="mt-2 text-sm text-gray-500">加载题目中...</p>
+          <p className="mt-2 text-sm text-[#5b6b8c]">加载题目中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-white p-6 overflow-y-auto">
+    <div className="h-full flex flex-col bg-[#232f48] p-6 overflow-y-auto">
       {/* 题目头部 */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+            <span className="px-3 py-1 bg-blue-500/15 text-blue-300 text-sm font-medium rounded-full">
               {question.type === 'CHOICE' && '选择题'}
               {question.type === 'FILL' && '填空题'}
               {question.type === 'ESSAY' && '问答题'}
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-[#5b6b8c]">
               难度: {'★'.repeat(question.difficulty)}{'☆'.repeat(5 - question.difficulty)}
             </span>
           </div>
@@ -89,7 +89,7 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
             {question.knowledgePoints.map((point, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
+                className="px-2 py-1 bg-[#1a2332] text-[#92a4c9] text-xs rounded"
               >
                 {point}
               </span>
@@ -113,8 +113,8 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
         <div
           className={`mb-4 p-4 rounded-lg ${
             feedback.correct
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
+              ? 'bg-green-500/10 border border-green-500/30'
+              : 'bg-red-500/10 border border-red-500/30'
           }`}
         >
           <div className="flex items-center space-x-2">
@@ -145,7 +145,7 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
             )}
             <span
               className={`font-medium ${
-                feedback.correct ? 'text-green-700' : 'text-red-700'
+                feedback.correct ? 'text-green-300' : 'text-red-300'
               }`}
             >
               {feedback.message}
@@ -162,7 +162,7 @@ const QuestionArea: React.FC<QuestionAreaProps> = ({
             disabled={isSubmitting || !answer.trim()}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               isSubmitting || !answer.trim()
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-[#324467] text-[#5b6b8c] cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-600'
             }`}
           >

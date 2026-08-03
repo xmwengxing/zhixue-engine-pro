@@ -110,9 +110,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
   };
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-900 lg:border-l border-gray-200 dark:border-gray-800 flex flex-col">
+    <div className="h-full bg-[#1a2332] lg:border-l border-[#324467] flex flex-col">
       {/* 头部 - 仅在桌面端显示（移动端由抽屉头部处理） */}
-      <div className="hidden lg:block p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <div className="hidden lg:block p-4 bg-[#232f48] border-b border-[#324467]">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
             <svg
@@ -130,8 +130,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-800 dark:text-white">AI 学习助手</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">启发式引导</p>
+            <h3 className="font-semibold text-[#e2e8f5]">AI 学习助手</h3>
+            <p className="text-xs text-[#5b6b8c]">启发式引导</p>
           </div>
         </div>
       </div>
@@ -143,11 +143,11 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
         ))}
         {isSending && (
           <div className="flex justify-start">
-            <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
+            <div className="bg-[#232f48] text-[#e2e8f5] border border-[#324467] rounded-lg p-3 shadow-sm">
               <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 bg-[#5b6b8c] rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-[#5b6b8c] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-2 h-2 bg-[#5b6b8c] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
               </div>
             </div>
           </div>
@@ -156,14 +156,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
       </div>
 
       {/* 输入框 */}
-      <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      <div className="p-4 bg-[#232f48] border-t border-[#324467]">
         <div className="flex space-x-2">
           <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="向 AI 助手提问..."
-            className="flex-1 p-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+            className="flex-1 p-3 border border-[#324467] bg-[#232f48] text-white rounded-lg focus:outline-none focus:border-blue-500 resize-none"
             rows={2}
             disabled={isSending || !sessionId}
           />
@@ -172,7 +172,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
             disabled={!inputMessage.trim() || isSending || !sessionId}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
               !inputMessage.trim() || isSending || !sessionId
-                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                ? 'bg-[#324467] text-[#5b6b8c] cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-600'
             }`}
           >
@@ -191,7 +191,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
             </svg>
           </button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        <p className="text-xs text-[#5b6b8c] mt-2">
           提示：按 Enter 发送，Shift + Enter 换行
         </p>
       </div>

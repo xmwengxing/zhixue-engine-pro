@@ -30,15 +30,15 @@ const MobileNavigationDrawer: React.FC<MobileNavigationDrawerProps> = ({
       />
 
       {/* 抽屉内容 */}
-      <div className="w-80 max-w-[85vw] bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-slide-in">
+      <div className="w-80 max-w-[85vw] bg-[#232f48] shadow-2xl flex flex-col animate-slide-in">
         {/* 抽屉头部 */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between border-b border-[#324467] px-6 py-4">
+          <h2 className="text-lg font-bold text-white">
             训练进度
           </h2>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-[#1a2332] text-[#92a4c9] hover:bg-[#324467]"
             aria-label="关闭"
           >
             <svg

@@ -159,15 +159,30 @@ export interface DiagnosticResults {
   weakPoints: string[];
 }
 
+// 考试逐题评估（交卷后由后端返回，用于 AI 逐题精讲）
+export interface ExamEvaluation {
+  questionIndex: number;
+  question: Question;
+  studentAnswer: string;
+  correctAnswer?: string;
+  isCorrect: boolean;
+  score?: number;
+  feedback?: string;
+}
+
 // 考试结果接口
 export interface ExamResults {
   totalScore: number;
+  maxScore?: number;
   accuracy: number;
+  correctCount?: number;
+  totalQuestions?: number;
   knowledgePointScores: {
     point: string;
     score: number;
     accuracy: number;
   }[];
+  evaluations?: ExamEvaluation[];
 }
 
 const TrainingCabin: React.FC = () => {
@@ -179,6 +194,8 @@ const TrainingCabin: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 移动端单栏切换：题目 / 进度 / AI 助手
+  const [mobileTab, setMobileTab] = useState<'question' | 'progress' | 'ai'>('question');
 
   // 初始化训练会话
   useEffect(() => {
@@ -233,10 +250,10 @@ const TrainingCabin: React.FC = () => {
   // 加载中状态
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
+      <div className="h-screen flex items-center justify-center bg-[#111722]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto" />
-          <p className="mt-4 text-gray-600">正在初始化训练舱...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3b82f6] mx-auto" />
+          <p className="mt-4 text-[#92a4c9]">正在初始化训练舱...</p>
         </div>
       </div>
     );
@@ -245,10 +262,10 @@ const TrainingCabin: React.FC = () => {
   // 错误状态
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md">
+      <div className="h-screen flex items-center justify-center bg-[#111722]">
+        <div className="text-center max-w-md bg-[#232f48] border border-[#324467] rounded-xl p-8">
           <svg
-            className="mx-auto h-12 w-12 text-red-500"
+            className="mx-auto h-12 w-12 text-red-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -260,13 +277,21 @@ const TrainingCabin: React.FC = () => {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="mt-4 text-red-600">{error}</p>
-          <button
-            onClick={() => navigate('/student/dashboard')}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            返回首页
-          </button>
+          <p className="mt-4 text-red-300">{error}</p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#3b82f6] text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              重试
+            </button>
+            <button
+              onClick={() => navigate('/student/tasks')}
+              className="px-4 py-2 bg-[#1a2332] text-[#92a4c9] border border-[#324467] rounded-lg hover:border-[#3b82f6] transition-colors"
+            >
+              返回任务中心
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -277,19 +302,19 @@ const TrainingCabin: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className="h-screen flex flex-col bg-[#111722]">
       {/* 顶部导航栏 */}
-      <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4 flex-shrink-0">
+      <header className="bg-[#232f48] border-b border-[#324467] px-4 lg:px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 lg:space-x-4">
             {/* 返回按钮 */}
             <button
               onClick={() => {
                 if (window.confirm('确定要退出训练吗？进度将会保存。')) {
-                  navigate('/student/dashboard');
+                  navigate('/student/tasks');
                 }
               }}
-              className="text-gray-600 hover:text-gray-800 transition-colors"
+              className="text-[#92a4c9] hover:text-white transition-colors"
               aria-label="返回"
             >
               <svg
@@ -306,12 +331,12 @@ const TrainingCabin: React.FC = () => {
                 />
               </svg>
             </button>
-            <h1 className="text-lg lg:text-xl font-semibold text-gray-800">
+            <h1 className="text-lg lg:text-xl font-semibold text-white">
               {session.task?.title || '智能训练舱'}
             </h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-xs lg:text-sm text-gray-600 font-medium">
+            <span className="text-xs lg:text-sm text-[#92a4c9] font-medium px-3 py-1 rounded-full bg-[#1a2332] border border-[#324467]">
               {session.phase === 'DIAGNOSTIC_TEST' && '诊断测试'}
               {session.phase === 'PLANNING' && '生成训练计划'}
               {session.phase === 'GUIDED_TRAINING' && '引导式训练'}
@@ -322,10 +347,10 @@ const TrainingCabin: React.FC = () => {
         </div>
       </header>
 
-      {/* 三栏布局 - 桌面端 */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* 三栏布局 - 桌面端（lg 以下隐藏，避免与移动端布局重复挂载导致重复请求） */}
+      <div className="hidden lg:flex flex-1 overflow-hidden">
         {/* 左侧栏：任务信息和进度 (20%) */}
-        <aside className="hidden lg:block lg:w-1/5 bg-white border-r border-gray-200 overflow-y-auto">
+        <aside className="w-1/5 bg-[#232f48] border-r border-[#324467] overflow-y-auto">
           <TrainingLeftPanel
             session={session}
             onSessionUpdate={handleSessionUpdate}
@@ -333,7 +358,7 @@ const TrainingCabin: React.FC = () => {
         </aside>
 
         {/* 中间栏：题目区域 (50%) */}
-        <main className="flex-1 lg:w-1/2 bg-gray-50 overflow-y-auto">
+        <main className="flex-1 bg-[#111722] overflow-y-auto">
           <TrainingCenterPanel
             session={session}
             currentQuestion={currentQuestion}
@@ -343,7 +368,7 @@ const TrainingCabin: React.FC = () => {
         </main>
 
         {/* 右侧栏：AI 助手 (30%) */}
-        <aside className="hidden lg:block lg:w-3/10 bg-white border-l border-gray-200 overflow-y-auto">
+        <aside className="w-[30%] bg-[#232f48] border-l border-[#324467] overflow-y-auto">
           <TrainingRightPanel
             session={session}
             currentQuestion={currentQuestion}
@@ -354,35 +379,43 @@ const TrainingCabin: React.FC = () => {
       {/* 移动端布局 - 单栏，使用标签页切换 */}
       <div className="lg:hidden flex-1 flex flex-col overflow-hidden">
         {/* 移动端内容区域 */}
-        <div className="flex-1 overflow-y-auto">
-          <TrainingCenterPanel
-            session={session}
-            currentQuestion={currentQuestion}
-            onSessionUpdate={handleSessionUpdate}
-            onQuestionUpdate={handleQuestionUpdate}
-          />
+        <div className="flex-1 overflow-y-auto bg-[#111722]">
+          {mobileTab === 'question' && (
+            <TrainingCenterPanel
+              session={session}
+              currentQuestion={currentQuestion}
+              onSessionUpdate={handleSessionUpdate}
+              onQuestionUpdate={handleQuestionUpdate}
+            />
+          )}
+          {mobileTab === 'progress' && (
+            <TrainingLeftPanel session={session} onSessionUpdate={handleSessionUpdate} />
+          )}
+          {mobileTab === 'ai' && (
+            <TrainingRightPanel session={session} currentQuestion={currentQuestion} />
+          )}
         </div>
 
         {/* 移动端底部导航 */}
-        <nav className="bg-white border-t border-gray-200 px-4 py-2 flex justify-around">
-          <button className="flex flex-col items-center py-2 text-blue-600">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-xs mt-1">题目</span>
-          </button>
-          <button className="flex flex-col items-center py-2 text-gray-600">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span className="text-xs mt-1">进度</span>
-          </button>
-          <button className="flex flex-col items-center py-2 text-gray-600">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <span className="text-xs mt-1">AI助手</span>
-          </button>
+        <nav className="bg-[#232f48] border-t border-[#324467] px-4 py-2 flex justify-around">
+          {([
+            { key: 'question', label: '题目', d: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+            { key: 'progress', label: '进度', d: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { key: 'ai', label: 'AI助手', d: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setMobileTab(t.key)}
+              className={`flex flex-col items-center py-2 transition-colors ${
+                mobileTab === t.key ? 'text-[#3b82f6]' : 'text-[#92a4c9] hover:text-white'
+              }`}
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={t.d} />
+              </svg>
+              <span className="text-xs mt-1">{t.label}</span>
+            </button>
+          ))}
         </nav>
       </div>
     </div>

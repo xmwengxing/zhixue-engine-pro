@@ -147,7 +147,7 @@ export default function ParentProfileCenter() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">加载中...</p>
+          <p className="mt-4 text-[#92a4c9]">加载中...</p>
         </div>
       </div>
     );
@@ -157,7 +157,7 @@ export default function ParentProfileCenter() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-slate-600 dark:text-slate-400">无法加载个人信息</p>
+          <p className="text-[#92a4c9]">无法加载个人信息</p>
           <Button onClick={loadProfile} className="mt-4">重试</Button>
         </div>
       </div>
@@ -167,14 +167,14 @@ export default function ParentProfileCenter() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">个人中心</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">管理您的个人信息和账户设置</p>
+        <h1 className="text-2xl font-bold text-white">个人中心</h1>
+        <p className="text-[#92a4c9] mt-1">管理您的个人信息和账户设置</p>
       </div>
 
       {/* 基本信息卡片 */}
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">基本信息</h2>
+          <h2 className="text-lg font-semibold text-white">基本信息</h2>
           {!editMode ? (
             <Button onClick={() => setEditMode(true)} variant="outline" size="sm">
               <span className="material-symbols-outlined text-[18px] mr-1">edit</span>
@@ -195,19 +195,19 @@ export default function ParentProfileCenter() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* 账户名（只读） */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               账户名
             </label>
             <Input
               value={profile.username}
               disabled
-              className="bg-slate-100 dark:bg-slate-700"
+              className="bg-[#1a2332]"
             />
           </div>
 
           {/* 邮箱 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               邮箱
             </label>
             <Input
@@ -221,7 +221,7 @@ export default function ParentProfileCenter() {
 
           {/* 姓名 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               姓名
             </label>
             <Input
@@ -234,14 +234,14 @@ export default function ParentProfileCenter() {
 
           {/* 性别 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               性别
             </label>
             <select
               value={editForm.gender}
               onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
               disabled={!editMode}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-slate-100 dark:disabled:bg-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full h-10 rounded-lg border border-[#324467] bg-[#1a2332] px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
             >
               <option value="">请选择</option>
               <option value="男">男</option>
@@ -251,7 +251,7 @@ export default function ParentProfileCenter() {
 
           {/* 联系方式 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               联系方式
             </label>
             <Input
@@ -264,7 +264,7 @@ export default function ParentProfileCenter() {
 
           {/* 从事行业 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               从事行业
             </label>
             <Input
@@ -277,7 +277,7 @@ export default function ParentProfileCenter() {
 
           {/* 家庭住址 */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
               家庭住址
             </label>
             <Input
@@ -292,12 +292,12 @@ export default function ParentProfileCenter() {
 
       {/* 账户安全卡片 */}
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">账户安全</h2>
+        <h2 className="text-lg font-semibold text-white mb-6">账户安全</h2>
         
-        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-[#1a2332] rounded-lg">
           <div>
-            <h3 className="font-medium text-slate-900 dark:text-white">登录密码</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <h3 className="font-medium text-white">登录密码</h3>
+            <p className="text-sm text-[#92a4c9] mt-1">
               定期修改密码可以提高账户安全性
             </p>
           </div>
@@ -306,10 +306,10 @@ export default function ParentProfileCenter() {
           </Button>
         </div>
 
-        <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+        <div className="mt-4 p-4 bg-[#1a2332] rounded-lg">
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-slate-400 text-[20px] mt-0.5">info</span>
-            <div className="text-sm text-slate-600 dark:text-slate-400">
+            <span className="material-symbols-outlined text-[#5b6b8c] text-[20px] mt-0.5">info</span>
+            <div className="text-sm text-[#92a4c9]">
               <p className="font-medium mb-1">账户信息</p>
               <p>注册时间: {new Date(profile.createdAt).toLocaleString('zh-CN')}</p>
               {profile.lastLoginAt && (
@@ -331,8 +331,8 @@ export default function ParentProfileCenter() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              原密码 <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+              原密码 <span className="text-red-400">*</span>
             </label>
             <Input
               type="password"
@@ -343,8 +343,8 @@ export default function ParentProfileCenter() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              新密码 <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+              新密码 <span className="text-red-400">*</span>
             </label>
             <Input
               type="password"
@@ -355,8 +355,8 @@ export default function ParentProfileCenter() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              确认新密码 <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+              确认新密码 <span className="text-red-400">*</span>
             </label>
             <Input
               type="password"
@@ -366,10 +366,10 @@ export default function ParentProfileCenter() {
             />
           </div>
 
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <div className="border border-amber-500/30 bg-amber-500/10 rounded-lg p-3">
             <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-yellow-600 dark:text-yellow-500 text-[20px] mt-0.5">warning</span>
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <span className="material-symbols-outlined text-amber-400 text-[20px] mt-0.5">warning</span>
+              <p className="text-sm text-amber-200">
                 修改密码后需要重新登录
               </p>
             </div>

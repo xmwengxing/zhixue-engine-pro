@@ -1,7 +1,21 @@
 import { PrismaClient, AIProviderType, ProviderStatus } from '@prisma/client';
 import { safeJsonParse } from '../utils/aiJson';
+import { clearAICaches } from './aiServiceManager';
 
 const prisma = new PrismaClient();
+
+// 在 model_info 对象中递归查找 *context_length 键
+function findContextLength(info: any): number | undefined {
+  if (!info || typeof info !== 'object') return undefined;
+  for (const [k, v] of Object.entries(info)) {
+    if (/context_length$/i.test(k) && typeof v === 'number') return v;
+    if (typeof v === 'object') {
+      const found = findContextLength(v);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
 
 // AI 服务商服务
 export class AdminAIService {
@@ -30,21 +44,24 @@ export class AdminAIService {
     model: string;
     priority?: number;
     status?: ProviderStatus;
+    contextWindow?: number | null;
+    maxTokens?: number | null;
+    streamEnabled?: boolean;
+    supportsReasoning?: boolean;
   }) {
     // 如果没有指定优先级，设置为当前最大优先级 + 1
     if (data.priority === undefined) {
       const maxPriority = await prisma.aIProvider.findFirst({
-        orderBy: {
-          priority: 'desc',
-        },
-        select: {
-          priority: true,
-        },
+        orderBy: { priority: 'desc' },
+        select: { priority: true },
       });
       data.priority = (maxPriority?.priority || 0) + 1;
     }
 
-    return await prisma.aIProvider.create({
+    const supportsReasoning =
+      data.supportsReasoning ?? /reasoner|r1|deepseek-reason|thinking|qwq|o1|o3/i.test(data.model || '');
+
+    const provider = await prisma.aIProvider.create({
       data: {
         name: data.name,
         type: data.type,
@@ -53,8 +70,14 @@ export class AdminAIService {
         model: data.model,
         priority: data.priority,
         status: data.status || ProviderStatus.ACTIVE,
+        contextWindow: data.contextWindow ?? null,
+        maxTokens: data.maxTokens ?? null,
+        streamEnabled: data.streamEnabled ?? false,
+        supportsReasoning,
       },
     });
+    clearAICaches();
+    return provider;
   }
 
   // 更新 AI 服务商
@@ -68,19 +91,105 @@ export class AdminAIService {
       model?: string;
       priority?: number;
       status?: ProviderStatus;
+      contextWindow?: number | null;
+      maxTokens?: number | null;
+      streamEnabled?: boolean;
+      supportsReasoning?: boolean;
     }
   ) {
-    return await prisma.aIProvider.update({
+    // 修复：编辑时若 apiKey 是后端掩码值（含 "..."），说明管理员未改密钥，
+    // 不能把它原样写回数据库，否则会覆盖真实密钥。
+    if (typeof data.apiKey === 'string' && data.apiKey.includes('...')) {
+      delete data.apiKey;
+    }
+    const updated = await prisma.aIProvider.update({
       where: { id },
       data,
     });
+    clearAICaches();
+    return updated;
   }
 
   // 删除 AI 服务商
   async deleteProvider(id: string) {
-    return await prisma.aIProvider.delete({
+    const result = await prisma.aIProvider.delete({
       where: { id },
     });
+    clearAICaches();
+    return result;
+  }
+
+  // 列出指定端点上的可用模型（供管理端"识别模型"按钮调用）
+  async fetchProviderModels(input: {
+    type: string;
+    apiKey?: string;
+    endpoint: string;
+  }): Promise<{ models: { id: string; name: string; contextWindow?: number }[] }> {
+    const { type, apiKey, endpoint } = input;
+    const base = (endpoint || '').replace(/\/v1\/?$/, '').replace(/\/$/, '');
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      if (type === 'OLLAMA' || /localhost|127\.0\.0\.1|0\.0\.0\.0|ollama/i.test(endpoint || '')) {
+        const res = await fetch(`${base}/api/tags`, { signal: controller.signal });
+        clearTimeout(tid);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json: any = await res.json();
+        const models: { id: string; name: string; contextWindow?: number }[] = ((json?.models as any[]) || []).map(
+          (m) => ({ id: m.name, name: m.name })
+        );
+        // 逐个探测上下文长度（/api/show），失败则跳过
+        for (const m of models) {
+          try {
+            const r2 = await fetch(`${base}/api/show`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: m.name }),
+              signal: controller.signal,
+            });
+            if (r2.ok) {
+              const d: any = await r2.json();
+              const cw = findContextLength(d?.model_info);
+              if (cw) m.contextWindow = cw;
+            }
+          } catch {
+            /* 探测失败不影响列表 */
+          }
+        }
+        return { models };
+      }
+
+      if (type === 'CLAUDE') {
+        const res = await fetch(`${base || 'https://api.anthropic.com/v1'}/models`, {
+          headers: { 'x-api-key': apiKey || '', 'anthropic-version': '2023-06-01' },
+          signal: controller.signal,
+        });
+        clearTimeout(tid);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json: any = await res.json();
+        const models = ((json?.data as any[]) || []).map((m) => ({ id: m.id, name: m.id }));
+        return { models };
+      }
+
+      // OpenAI 兼容 /v1/models
+      const res = await fetch(`${base}/models`, {
+        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+        signal: controller.signal,
+      });
+      clearTimeout(tid);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json: any = await res.json();
+      const models = ((json?.data as any[]) || []).map((m) => ({
+        id: m.id,
+        name: m.id,
+        contextWindow: typeof m.context_window === 'number' ? m.context_window : undefined,
+      }));
+      return { models };
+    } catch (e: any) {
+      clearTimeout(tid);
+      throw new Error(e?.message || '获取模型列表失败');
+    }
   }
 
   // 测试所有 AI 服务商连通性

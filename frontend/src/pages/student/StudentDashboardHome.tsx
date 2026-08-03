@@ -100,10 +100,10 @@ export const StudentDashboardHome = () => {
    */
   const getDeadlineStatus = (task: Task): { text: string; color: string } => {
     if (task.status === 'COMPLETED') {
-      return { text: '已完成', color: 'bg-green-100 text-green-600 dark:bg-green-900/20' };
+      return { text: '已完成', color: 'bg-green-500/15 text-green-400' };
     }
     // 简化处理，实际应该根据截止时间判断
-    return { text: '今天截止', color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/20' };
+    return { text: '今天截止', color: 'bg-orange-500/15 text-orange-400' };
   };
 
   if (loading) {
@@ -119,23 +119,23 @@ export const StudentDashboardHome = () => {
       {/* 页面标题 */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white font-display">
             下午好！ 👋
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-lg">
+          <p className="text-[#5b6b8c] text-lg">
             准备好开启今天的学习之旅了吗？
           </p>
         </div>
-        <div className="flex items-center gap-4 bg-white dark:bg-card-dark px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-4 bg-[#232f48] px-4 py-2 rounded-xl shadow-sm border border-[#324467]">
           <div className="flex flex-col items-end">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
+            <span className="text-xs text-[#5b6b8c] font-medium uppercase tracking-wider">
               连续打卡
             </span>
             <div className="flex items-center gap-1">
               <span className="material-symbols-outlined text-orange-500 text-lg">
                 local_fire_department
               </span>
-              <span className="font-bold text-xl text-slate-900 dark:text-white font-display">
+              <span className="font-bold text-xl text-white font-display">
                 {stats.streakDays} 天
               </span>
             </div>
@@ -148,14 +148,14 @@ export const StudentDashboardHome = () => {
         {/* 各科平均分 */}
         <Card className="p-6 flex flex-col justify-between h-40 group hover:border-primary/50 transition-colors">
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-primary">
+            <div className="p-2 bg-blue-500/10 rounded-lg text-primary">
               <span className="material-symbols-outlined">monitoring</span>
             </div>
             <div
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold font-display ${
                 stats.scoreChange >= 0
-                  ? 'text-green-600 bg-green-100 dark:bg-green-900/20'
-                  : 'text-red-600 bg-red-100 dark:bg-red-900/20'
+                  ? 'text-green-400 bg-green-500/15'
+                  : 'text-red-400 bg-red-500/15'
               }`}
             >
               <span className="material-symbols-outlined text-sm">
@@ -165,10 +165,10 @@ export const StudentDashboardHome = () => {
             </div>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">
+            <p className="text-[#5b6b8c] text-sm font-medium mb-1">
               各科平均分
             </p>
-            <h3 className="text-3xl font-bold text-slate-900 dark:text-white font-display">
+            <h3 className="text-3xl font-bold text-white font-display">
               {stats.averageScore}分
             </h3>
           </div>
@@ -177,25 +177,25 @@ export const StudentDashboardHome = () => {
         {/* 训练时间表 */}
         <Card className="p-6 flex flex-col justify-between h-40 group hover:border-primary/50 transition-colors">
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-purple-500">
+            <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
               <span className="material-symbols-outlined">schedule</span>
             </div>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">
+            <p className="text-[#5b6b8c] text-sm font-medium mb-1">
               训练时间表
             </p>
             {stats.nextTraining ? (
               <div className="flex items-baseline gap-2">
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <h3 className="text-2xl font-bold text-white">
                   {stats.nextTraining.subject}
                 </h3>
-                <span className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+                <span className="text-[#5b6b8c] font-medium text-sm">
                   {stats.nextTraining.time}
                 </span>
               </div>
             ) : (
-              <h3 className="text-xl font-medium text-slate-400">暂无安排</h3>
+              <h3 className="text-xl font-medium text-[#5b6b8c]">暂无安排</h3>
             )}
           </div>
         </Card>
@@ -206,14 +206,14 @@ export const StudentDashboardHome = () => {
           onClick={handleViewErrors}
         >
           <div className="flex justify-between items-start">
-            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-500">
+            <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500">
               <span className="material-symbols-outlined">assignment_late</span>
             </div>
             <div
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold font-display ${
                 stats.errorChange <= 0
-                  ? 'text-green-600 bg-green-100 dark:bg-green-900/20'
-                  : 'text-orange-600 bg-orange-100 dark:bg-orange-900/20'
+                  ? 'text-green-400 bg-green-500/15'
+                  : 'text-orange-400 bg-orange-500/15'
               }`}
             >
               <span className="material-symbols-outlined text-sm">
@@ -223,12 +223,12 @@ export const StudentDashboardHome = () => {
             </div>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">
+            <p className="text-[#5b6b8c] text-sm font-medium mb-1">
               历史错题数
             </p>
-            <h3 className="text-3xl font-bold text-slate-900 dark:text-white font-display">
+            <h3 className="text-3xl font-bold text-white font-display">
               {stats.errorCount}{' '}
-              <span className="text-lg font-normal text-slate-400">待订正</span>
+              <span className="text-lg font-normal text-[#5b6b8c]">待订正</span>
             </h3>
           </div>
         </Card>
@@ -237,7 +237,7 @@ export const StudentDashboardHome = () => {
       {/* 任务中心 */}
       <section>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">
               assignment_turned_in
             </span>
@@ -283,21 +283,21 @@ export const StudentDashboardHome = () => {
                   <div className="p-5 flex flex-col flex-1 gap-4">
                     <div>
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                        <h3 className="text-lg font-bold text-white">
                           {task.title}
                         </h3>
                         <Badge className={`text-xs font-medium ${deadline.color} px-2 py-1 rounded`}>
                           {deadline.text}
                         </Badge>
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                      <p className="text-sm text-[#5b6b8c] line-clamp-2">
                         {task.config.questionCount} 道题目 · 难度 {task.config.difficulty}
                       </p>
                     </div>
 
                     {/* 进度条 */}
                     <div className="mt-auto flex flex-col gap-2">
-                      <div className="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+                      <div className="flex justify-between text-xs font-medium text-[#5b6b8c]">
                         <span>学习进度</span>
                         <span>{progress}%</span>
                       </div>

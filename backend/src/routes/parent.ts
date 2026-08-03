@@ -15,6 +15,7 @@ import {
 } from '../middlewares/ownership';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
+import { parentDashboardService } from '../services/parentDashboardService';
 
 const router = Router();
 
@@ -27,6 +28,28 @@ const router = Router();
 // 应用认证和家长权限中间件
 router.use(authenticate);
 router.use(requireParent);
+
+// ============ 首页统计 ============
+
+/**
+ * @route   GET /api/parent/dashboard/stats
+ * @desc    家长首页统计（子女数 / 待完成任务 / 待审批愿望 / 近 7 天报告）
+ * @access  Parent
+ */
+router.get('/dashboard/stats', async (req, res, next) => {
+  try {
+    const parentId = req.user?.userId;
+    if (!parentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未认证' } });
+      return;
+    }
+    const stats = await parentDashboardService.getStats(parentId);
+    res.json({ success: true, data: stats });
+    return;
+  } catch (error) {
+    next(error);
+  }
+});
 
 // ============ 个人中心路由 ============
 

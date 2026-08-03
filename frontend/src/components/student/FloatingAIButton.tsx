@@ -113,20 +113,20 @@ const FloatingAIButton: React.FC<FloatingAIButtonProps> = ({
           {/* 抽屉内容 */}
           <div
             ref={drawerRef}
-            className="bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up touch-none"
+            className="bg-[#232f48] rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up touch-none"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             {/* 拖动指示条 */}
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full" />
+              <div className="w-12 h-1.5 bg-[#324467] rounded-full" />
             </div>
 
             {/* 抽屉头部 */}
-            <div className="flex items-center justify-between bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800 px-6 py-3">
+            <div className="flex items-center justify-between bg-[#232f48]/80 backdrop-blur-md sticky top-0 z-10 border-b border-[#324467] px-6 py-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500/15 text-blue-400">
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -141,13 +141,13 @@ const FloatingAIButton: React.FC<FloatingAIButtonProps> = ({
                     />
                   </svg>
                 </div>
-                <h2 className="text-gray-900 dark:text-white text-lg font-bold">
+                <h2 className="text-white text-lg font-bold">
                   AI 助教
                 </h2>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-95 transition-all"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-[#1a2332] text-[#92a4c9] hover:bg-[#324467] active:scale-95 transition-all"
                 aria-label="关闭"
               >
                 <svg
@@ -177,8 +177,8 @@ const FloatingAIButton: React.FC<FloatingAIButtonProps> = ({
             </div>
 
             {/* iPhone 指示条 */}
-            <div className="flex justify-center py-2 bg-white dark:bg-gray-900">
-              <div className="w-32 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full" />
+            <div className="flex justify-center py-2 bg-[#232f48]">
+              <div className="w-32 h-1.5 bg-[#324467] rounded-full" />
             </div>
           </div>
         </div>

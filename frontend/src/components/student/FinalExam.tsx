@@ -39,18 +39,18 @@ export const FinalExam = ({
   return (
     <div className="flex flex-col h-full">
       {/* 顶部进度条 */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4">
+      <div className="bg-[#232f48] border-b border-[#324467] p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-orange-500">
                 quiz
               </span>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-lg font-bold text-white">
                 综合考试
               </h3>
             </div>
-            <div className="text-sm text-slate-600 dark:text-slate-400">
+            <div className="text-sm text-[#92a4c9]">
               第 {currentQuestionIndex + 1} / {questions.length} 题
             </div>
           </div>
@@ -64,10 +64,10 @@ export const FinalExam = ({
           <Card className="p-8">
             {/* 题目标签 */}
             <div className="flex items-center gap-2 mb-6">
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 dark:bg-orange-900/20 text-xs font-bold rounded-full">
+              <span className="px-3 py-1 bg-orange-500/15 text-orange-400 text-xs font-bold rounded-full">
                 综合测试
               </span>
-              <span className="px-3 py-1 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-xs font-medium rounded-full">
+              <span className="px-3 py-1 bg-[#1a2332] text-[#92a4c9] text-xs font-medium rounded-full">
                 难度: {currentQuestion?.difficulty || 3}
               </span>
             </div>
@@ -113,16 +113,16 @@ export const FinalExam = ({
           </Card>
 
           {/* 提示信息 */}
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
+              <span className="material-symbols-outlined text-blue-400">
                 info
               </span>
               <div className="flex-1">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                <p className="text-sm font-medium text-blue-300 mb-1">
                   考试提示
                 </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="text-sm text-blue-300">
                   这是综合考试环节，请认真作答。完成后将生成详细的学习报告。
                 </p>
               </div>

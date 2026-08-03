@@ -132,11 +132,11 @@ const ErrorBook: React.FC = () => {
   // 获取掌握度颜色
   const getMasteryColor = (mastery: string) => {
     const colorMap: Record<string, string> = {
-      UNMASTERED: 'bg-red-100 text-red-800',
-      MASTERING: 'bg-yellow-100 text-yellow-800',
-      MASTERED: 'bg-green-100 text-green-800',
+      UNMASTERED: 'bg-red-500/15 text-red-300',
+      MASTERING: 'bg-yellow-500/15 text-yellow-300',
+      MASTERED: 'bg-green-500/15 text-green-300',
     };
-    return colorMap[mastery] || 'bg-gray-100 text-gray-800';
+    return colorMap[mastery] || 'bg-[#1a2332] text-[#e2e8f5]';
   };
 
   // 获取题型文本
@@ -174,23 +174,23 @@ const ErrorBook: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
+    <div className="min-h-screen bg-[#111722] p-6">
       {/* 页面标题 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">错题本中心</h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        <h1 className="text-2xl font-bold text-white">错题本中心</h1>
+        <p className="mt-1 text-sm text-[#92a4c9]">
           系统自动收集您的错题，帮助您针对性攻克薄弱知识点
         </p>
       </div>
 
       {/* 今日待复习（艾宾浩斯间隔重复） */}
-      <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+      <div className="mb-6 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-500/30 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg font-semibold text-indigo-900 dark:text-indigo-200">
+            <h2 className="text-lg font-semibold text-indigo-300">
               今日待复习
             </h2>
-            <p className="text-xs text-indigo-700 dark:text-indigo-300">
+            <p className="text-xs text-indigo-300">
               基于艾宾浩斯遗忘曲线，连续 {cyclesToMaster} 个周期答对即可彻底掌握
             </p>
           </div>
@@ -200,7 +200,7 @@ const ErrorBook: React.FC = () => {
         </div>
 
         {dueReviews.length === 0 ? (
-          <p className="text-sm text-indigo-700 dark:text-indigo-300">
+          <p className="text-sm text-indigo-300">
             🎉 今天没有待复习的错题，继续保持！
           </p>
         ) : (
@@ -208,19 +208,19 @@ const ErrorBook: React.FC = () => {
             {dueReviews.map((error) => (
               <div
                 key={error.id}
-                className="bg-white dark:bg-slate-800 rounded-lg border border-indigo-200 dark:border-indigo-700 p-3 flex flex-col"
+                className="bg-[#232f48] rounded-lg border border-indigo-500/30 p-3 flex flex-col"
               >
-                <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">
+                <div className="text-sm font-medium text-white mb-1">
                   {error.subject}
-                  <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="ml-2 text-xs text-[#5b6b8c]">
                     {getQuestionTypeText(error.question.type)}
                   </span>
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
+                <div className="text-xs text-[#5b6b8c] mb-3 line-clamp-2">
                   {getQuestionPreview(error)}
                 </div>
                 <div className="mt-auto flex items-center justify-between">
-                  <span className="text-xs text-indigo-600 dark:text-indigo-300">
+                  <span className="text-xs text-indigo-400">
                     {getReviewStageText(error)}
                   </span>
                   <button
@@ -240,11 +240,11 @@ const ErrorBook: React.FC = () => {
       </div>
 
       {/* 筛选器 */}
-      <div className="mb-6 bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-4">
+      <div className="mb-6 bg-[#232f48] rounded-lg shadow border border-[#324467] p-4">
         <div className="flex flex-wrap gap-4">
           {/* 科目筛选 */}
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#c3cfe6] mb-2">
               科目筛选
             </label>
             <select
@@ -253,7 +253,7 @@ const ErrorBook: React.FC = () => {
                 setSelectedSubject(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#324467] rounded-md bg-[#232f48] text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">全部科目</option>
               {subjects.map((subject) => (
@@ -266,7 +266,7 @@ const ErrorBook: React.FC = () => {
 
           {/* 掌握度筛选 */}
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-[#c3cfe6] mb-2">
               掌握度筛选
             </label>
             <select
@@ -275,7 +275,7 @@ const ErrorBook: React.FC = () => {
                 setSelectedMastery(e.target.value);
                 setPage(1);
               }}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#324467] rounded-md bg-[#232f48] text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">全部状态</option>
               <option value="UNMASTERED">未掌握</option>
@@ -286,8 +286,8 @@ const ErrorBook: React.FC = () => {
 
           {/* 统计信息 */}
           <div className="flex-1 min-w-[200px] flex items-end">
-            <div className="text-sm text-slate-600 dark:text-slate-400">
-              共 <span className="font-semibold text-blue-600">{total}</span> 道错题
+            <div className="text-sm text-[#92a4c9]">
+              共 <span className="font-semibold text-blue-400">{total}</span> 道错题
             </div>
           </div>
         </div>
@@ -296,12 +296,12 @@ const ErrorBook: React.FC = () => {
       {/* 错题列表 */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-slate-500 dark:text-slate-400">加载中...</div>
+          <div className="text-[#5b6b8c]">加载中...</div>
         </div>
       ) : errors.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-12 text-center">
-          <div className="text-slate-400 dark:text-slate-500 text-lg mb-2">暂无错题</div>
-          <div className="text-slate-500 dark:text-slate-400 text-sm">
+        <div className="bg-[#232f48] rounded-lg shadow border border-[#324467] p-12 text-center">
+          <div className="text-[#5b6b8c] text-lg mb-2">暂无错题</div>
+          <div className="text-[#5b6b8c] text-sm">
             继续努力学习，争取不出错！
           </div>
         </div>
@@ -310,16 +310,16 @@ const ErrorBook: React.FC = () => {
           {errors.map((error) => (
             <div
               key={error.id}
-              className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow p-4 cursor-pointer"
+              className="bg-[#232f48] rounded-lg shadow border border-[#324467] hover:shadow-lg transition-shadow p-4 cursor-pointer"
               onClick={() => handleViewDetail(error)}
             >
               {/* 错题卡片头部 */}
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">
+                  <span className="text-sm font-medium text-white">
                     {error.subject}
                   </span>
-                  <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="ml-2 text-xs text-[#5b6b8c]">
                     {getQuestionTypeText(error.question.type)}
                   </span>
                 </div>
@@ -334,7 +334,7 @@ const ErrorBook: React.FC = () => {
 
               {/* 题目内容预览 */}
               <div className="mb-3">
-                <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                <div className="text-sm text-[#c3cfe6] line-clamp-2">
                   {typeof error.question.content === 'string'
                     ? error.question.content
                     : (error.question.content.text ||
@@ -344,13 +344,13 @@ const ErrorBook: React.FC = () => {
               </div>
 
               {/* 错题信息 */}
-              <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400 mb-3">
+              <div className="flex justify-between items-center text-xs text-[#5b6b8c] mb-3">
                 <span>难度: {'★'.repeat(error.question.difficulty)}</span>
                 <span>重做 {error.retryCount} 次</span>
               </div>
 
               {/* 间隔重复信息 */}
-              <div className="flex justify-between items-center text-xs text-indigo-600 dark:text-indigo-300 mb-3">
+              <div className="flex justify-between items-center text-xs text-indigo-400 mb-3">
                 <span>{getReviewStageText(error)}</span>
                 <span>{formatNextReview(error.nextReviewAt)}</span>
               </div>
@@ -392,17 +392,17 @@ const ErrorBook: React.FC = () => {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#232f48] border border-[#324467] rounded text-sm font-medium text-[#c3cfe6] hover:bg-[#1a2332] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               上一页
             </button>
-            <span className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-300">
+            <span className="px-4 py-2 bg-[#232f48] border border-[#324467] rounded text-sm text-[#c3cfe6]">
               第 {page} 页 / 共 {Math.ceil(total / limit)} 页
             </span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= Math.ceil(total / limit)}
-              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#232f48] border border-[#324467] rounded text-sm font-medium text-[#c3cfe6] hover:bg-[#1a2332] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               下一页
             </button>
@@ -417,15 +417,15 @@ const ErrorBook: React.FC = () => {
           onClick={handleCloseDetail}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="bg-[#232f48] rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 弹窗头部 */}
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">错题详情</h2>
+            <div className="sticky top-0 bg-[#232f48] border-b border-[#324467] px-6 py-4 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-white">错题详情</h2>
               <button
                 onClick={handleCloseDetail}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                className="text-[#5b6b8c] hover:text-[#92a4c9]"
               >
                 <svg
                   className="w-6 h-6"
@@ -448,13 +448,13 @@ const ErrorBook: React.FC = () => {
               {/* 题目信息 */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-medium text-[#c3cfe6]">
                     {selectedError.subject}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-[#5b6b8c]">
                     {getQuestionTypeText(selectedError.question.type)}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-[#5b6b8c]">
                     难度: {'★'.repeat(selectedError.question.difficulty)}
                   </span>
                   <span
@@ -468,11 +468,11 @@ const ErrorBook: React.FC = () => {
               </div>
 
               {/* 题目内容 */}
-              <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <div className="bg-[#1a2332] rounded-lg p-4">
+                <div className="text-sm font-medium text-[#c3cfe6] mb-2">
                   题目内容：
                 </div>
-                <div className="text-sm text-slate-900 dark:text-white">
+                <div className="text-sm text-white">
                   {typeof selectedError.question.content === 'string'
                     ? selectedError.question.content
                     : (selectedError.question.content.text ||
@@ -482,21 +482,21 @@ const ErrorBook: React.FC = () => {
               </div>
 
               {/* 您的答案 */}
-              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-                <div className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
+              <div className="bg-red-500/10 rounded-lg p-4">
+                <div className="text-sm font-medium text-red-300 mb-2">
                   您的答案：
                 </div>
-                <div className="text-sm text-slate-900 dark:text-white">
+                <div className="text-sm text-white">
                   {selectedError.answer.studentAnswer}
                 </div>
               </div>
 
               {/* 正确答案 */}
-              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
+              <div className="bg-green-500/10 rounded-lg p-4">
+                <div className="text-sm font-medium text-green-300 mb-2">
                   正确答案：
                 </div>
-                <div className="text-sm text-slate-900 dark:text-white">
+                <div className="text-sm text-white">
                   {selectedError.question.answer}
                 </div>
               </div>
@@ -504,14 +504,14 @@ const ErrorBook: React.FC = () => {
               {/* 知识点 */}
               {selectedError.question.knowledgePoints.length > 0 && (
                 <div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <div className="text-sm font-medium text-[#c3cfe6] mb-2">
                     相关知识点：
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedError.question.knowledgePoints.map((point, index) => (
                       <span
                         key={index}
-                        className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded"
+                        className="px-2 py-1 bg-blue-500/15 text-blue-300 text-xs rounded"
                       >
                         {point}
                       </span>
@@ -521,22 +521,22 @@ const ErrorBook: React.FC = () => {
               )}
 
               {/* 统计信息 */}
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <div className="border-t border-[#324467] pt-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-slate-600 dark:text-slate-400">收集时间：</span>
-                    <span className="text-slate-900 dark:text-white">
+                    <span className="text-[#92a4c9]">收集时间：</span>
+                    <span className="text-white">
                       {new Date(selectedError.collectedAt).toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-600 dark:text-slate-400">重做次数：</span>
-                    <span className="text-slate-900 dark:text-white">{selectedError.retryCount} 次</span>
+                    <span className="text-[#92a4c9]">重做次数：</span>
+                    <span className="text-white">{selectedError.retryCount} 次</span>
                   </div>
                   {selectedError.lastRetryAt && (
                     <div className="col-span-2">
-                      <span className="text-slate-600 dark:text-slate-400">最后重做：</span>
-                      <span className="text-slate-900 dark:text-white">
+                      <span className="text-[#92a4c9]">最后重做：</span>
+                      <span className="text-white">
                         {new Date(selectedError.lastRetryAt).toLocaleString()}
                       </span>
                     </div>
@@ -546,10 +546,10 @@ const ErrorBook: React.FC = () => {
             </div>
 
             {/* 弹窗底部操作 */}
-            <div className="sticky bottom-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-[#232f48] border-t border-[#324467] px-6 py-4 flex justify-end gap-3">
               <button
                 onClick={handleCloseDetail}
-                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                className="px-4 py-2 border border-[#324467] rounded text-sm font-medium text-[#c3cfe6] hover:bg-[#1a2332]"
               >
                 关闭
               </button>

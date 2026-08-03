@@ -20,10 +20,10 @@ const SelfAssessment = () => {
 
   // 能力等级选项
   const levels = [
-    { value: 'weak', label: '薄弱', color: 'bg-red-100 text-red-800 border-red-300' },
-    { value: 'average', label: '一般', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-    { value: 'good', label: '良好', color: 'bg-blue-100 text-blue-800 border-blue-300' },
-    { value: 'excellent', label: '优秀', color: 'bg-green-100 text-green-800 border-green-300' },
+    { value: 'weak', label: '薄弱', color: 'bg-red-500/15 text-red-300 border-red-500/40' },
+    { value: 'average', label: '一般', color: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/40' },
+    { value: 'good', label: '良好', color: 'bg-blue-500/15 text-blue-300 border-blue-500/40' },
+    { value: 'excellent', label: '优秀', color: 'bg-green-500/15 text-green-300 border-green-500/40' },
   ];
 
   // 加载档案数据
@@ -82,10 +82,10 @@ const SelfAssessment = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="flex items-center justify-center min-h-screen bg-[#111722]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">加载中...</p>
+          <p className="mt-4 text-[#92a4c9]">加载中...</p>
         </div>
       </div>
     );
@@ -93,10 +93,10 @@ const SelfAssessment = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8">
+      <div className="min-h-screen bg-[#111722] py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-            <p className="text-yellow-800 dark:text-yellow-300">请先完善基本档案信息，然后再进行学习基础自评。</p>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6">
+            <p className="text-yellow-300">请先完善基本档案信息，然后再进行学习基础自评。</p>
           </div>
         </div>
       </div>
@@ -104,19 +104,19 @@ const SelfAssessment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8">
+    <div className="min-h-screen bg-[#111722] py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 页面标题 */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">学习基础自评</h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">
+          <h1 className="text-3xl font-bold text-white">学习基础自评</h1>
+          <p className="mt-2 text-[#92a4c9]">
             请根据你的实际学习情况，对各科目进行能力等级评估
           </p>
         </div>
 
         {/* 错误提示 */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg
@@ -132,7 +132,7 @@ const SelfAssessment = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-red-800">{error}</p>
+                <p className="text-sm text-red-300">{error}</p>
               </div>
             </div>
           </div>
@@ -140,7 +140,7 @@ const SelfAssessment = () => {
 
         {/* 成功提示 */}
         {successMessage && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg
@@ -156,7 +156,7 @@ const SelfAssessment = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-green-800">{successMessage}</p>
+                <p className="text-sm text-green-300">{successMessage}</p>
               </div>
             </div>
           </div>
@@ -168,11 +168,11 @@ const SelfAssessment = () => {
             const currentLevel = getSubjectLevel(subject);
             
             return (
-              <div key={subject} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+              <div key={subject} className="bg-[#232f48] rounded-lg shadow-sm border border-[#324467] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{subject}</h3>
+                  <h3 className="text-lg font-semibold text-white">{subject}</h3>
                   {currentLevel && (
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-500/15 text-blue-300">
                       当前: {getLevelLabel(currentLevel)}
                     </span>
                   )}
@@ -189,7 +189,7 @@ const SelfAssessment = () => {
                         ${
                           currentLevel === level.value
                             ? level.color + ' ring-2 ring-offset-2 ring-blue-500'
-                            : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'border-[#324467] hover:border-[#324467] text-[#c3cfe6] hover:bg-[#1a2332]'
                         }
                         disabled:opacity-50 disabled:cursor-not-allowed
                       `}
@@ -200,7 +200,7 @@ const SelfAssessment = () => {
                 </div>
 
                 {!currentLevel && (
-                  <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">请选择你在该科目的能力等级</p>
+                  <p className="mt-3 text-sm text-[#5b6b8c]">请选择你在该科目的能力等级</p>
                 )}
               </div>
             );
@@ -208,7 +208,7 @@ const SelfAssessment = () => {
         </div>
 
         {/* 提示信息 */}
-        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
@@ -224,8 +224,8 @@ const SelfAssessment = () => {
               </svg>
             </div>
             <div className="ml-3">
-              <h4 className="text-sm font-medium text-blue-800 mb-1">评估说明</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
+              <h4 className="text-sm font-medium text-blue-300 mb-1">评估说明</h4>
+              <ul className="text-sm text-blue-300 space-y-1">
                 <li>• 薄弱：该科目基础较差，需要重点加强</li>
                 <li>• 一般：该科目基础一般，有提升空间</li>
                 <li>• 良好：该科目基础较好，可以进一步巩固</li>

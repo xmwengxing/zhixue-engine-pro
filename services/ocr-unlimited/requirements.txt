@@ -1,0 +1,29 @@
+# 本地 OCR 服务依赖（baidu/Unlimited-OCR）
+# 官方验证环境：python 3.12.3 + CUDA12.9，transformers 4.57.1
+# 本机 GTX 1080 Ti(Pascal) 无 bf16/flash-attn，用 fp16 + eager；GPU 路线受阻，当前走 CPU 路线。
+
+# —— 推理框架（torch 单独装，见 INSTALL.md「步骤 2」）——
+# CPU 路线（本机当前）：
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# GPU 路线（需 Python3.12 + 兼容显卡）：
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# 注意：不要从 PyPI 默认源直接 pip install torch（会是残缺的 CPU 版且可能不兼容 CUDA）。
+
+transformers==4.57.1
+einops==0.8.2
+addict==2.4.0
+easydict==1.13
+Pillow==12.1.1
+matplotlib==3.10.8
+psutil==7.2.2
+
+# —— 模型下载（含 Xet 分块，避免代理对单文件 >62MB 断流）——
+huggingface_hub>=0.30
+hf_xet>=1.0
+
+# —— PDF 转图片（扫描卷多页解析）——
+pymupdf==1.27.2.2
+
+# —— 服务框架 ——
+fastapi==0.115.0
+uvicorn[standard]==0.30.0

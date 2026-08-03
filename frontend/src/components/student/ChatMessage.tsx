@@ -21,13 +21,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         className={`max-w-[80%] rounded-lg p-3 ${
           message.role === 'user'
             ? 'bg-blue-500 text-white'
-            : 'bg-white text-gray-800 border border-gray-200 shadow-sm'
+            : 'bg-[#232f48] text-[#e2e8f5] border border-[#324467] shadow-sm'
         }`}
       >
         <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.message}</p>
         <p
           className={`text-xs mt-1 ${
-            message.role === 'user' ? 'text-blue-100' : 'text-gray-400'
+            message.role === 'user' ? 'text-blue-100' : 'text-[#5b6b8c]'
           }`}
         >
           {message.timestamp.toLocaleTimeString('zh-CN', {

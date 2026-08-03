@@ -28,22 +28,22 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
   const isFinalExamCompleted = currentStep >= totalSteps;
 
   return (
-    <div className="h-full bg-white border-r border-gray-200 p-4 flex flex-col">
+    <div className="h-full bg-[#232f48] border-r border-[#324467] p-4 flex flex-col">
       {/* 标题 */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-800">训练进度</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-lg font-semibold text-[#e2e8f5]">训练进度</h2>
+        <p className="text-sm text-[#5b6b8c] mt-1">
           {currentStep} / {totalSteps} 题
         </p>
       </div>
 
       {/* 进度条 */}
       <div className="mb-6">
-        <div className="flex justify-between text-xs text-gray-600 mb-2">
+        <div className="flex justify-between text-xs text-[#92a4c9] mb-2">
           <span>进度</span>
           <span>{progress}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-[#324467] rounded-full h-2">
           <div
             className="bg-blue-500 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -57,10 +57,10 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
         <div
           className={`p-3 rounded-lg border-2 transition-all ${
             isPreTestActive
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-blue-500 bg-blue-500/10'
               : isPreTestCompleted
-              ? 'border-green-500 bg-green-50'
-              : 'border-gray-200 bg-gray-50'
+              ? 'border-green-500 bg-green-500/10'
+              : 'border-[#324467] bg-[#1a2332]'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -80,27 +80,27 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
               ) : (
                 <div
                   className={`w-5 h-5 rounded-full border-2 ${
-                    isPreTestActive ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                    isPreTestActive ? 'border-blue-500 bg-blue-500' : 'border-[#324467]'
                   }`}
                 />
               )}
               <span
                 className={`font-medium ${
                   isPreTestActive
-                    ? 'text-blue-700'
+                    ? 'text-blue-300'
                     : isPreTestCompleted
-                    ? 'text-green-700'
-                    : 'text-gray-600'
+                    ? 'text-green-300'
+                    : 'text-[#92a4c9]'
                 }`}
               >
                 训前测试
               </span>
             </div>
             {isPreTestActive && (
-              <span className="text-xs text-blue-600 font-medium">进行中</span>
+              <span className="text-xs text-blue-400 font-medium">进行中</span>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1 ml-7">
+          <p className="text-xs text-[#5b6b8c] mt-1 ml-7">
             第 1-{preTestEnd} 题
           </p>
         </div>
@@ -109,10 +109,10 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
         <div
           className={`p-3 rounded-lg border-2 transition-all ${
             isTrainingActive
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-blue-500 bg-blue-500/10'
               : isTrainingCompleted
-              ? 'border-green-500 bg-green-50'
-              : 'border-gray-200 bg-gray-50'
+              ? 'border-green-500 bg-green-500/10'
+              : 'border-[#324467] bg-[#1a2332]'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -132,27 +132,27 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
               ) : (
                 <div
                   className={`w-5 h-5 rounded-full border-2 ${
-                    isTrainingActive ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                    isTrainingActive ? 'border-blue-500 bg-blue-500' : 'border-[#324467]'
                   }`}
                 />
               )}
               <span
                 className={`font-medium ${
                   isTrainingActive
-                    ? 'text-blue-700'
+                    ? 'text-blue-300'
                     : isTrainingCompleted
-                    ? 'text-green-700'
-                    : 'text-gray-600'
+                    ? 'text-green-300'
+                    : 'text-[#92a4c9]'
                 }`}
               >
                 动态训练
               </span>
             </div>
             {isTrainingActive && (
-              <span className="text-xs text-blue-600 font-medium">进行中</span>
+              <span className="text-xs text-blue-400 font-medium">进行中</span>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1 ml-7">
+          <p className="text-xs text-[#5b6b8c] mt-1 ml-7">
             第 {preTestEnd + 1}-{trainingEnd} 题
           </p>
         </div>
@@ -161,10 +161,10 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
         <div
           className={`p-3 rounded-lg border-2 transition-all ${
             isFinalExamActive
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-blue-500 bg-blue-500/10'
               : isFinalExamCompleted
-              ? 'border-green-500 bg-green-50'
-              : 'border-gray-200 bg-gray-50'
+              ? 'border-green-500 bg-green-500/10'
+              : 'border-[#324467] bg-[#1a2332]'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -184,35 +184,35 @@ const TrainingNavigation: React.FC<TrainingNavigationProps> = ({
               ) : (
                 <div
                   className={`w-5 h-5 rounded-full border-2 ${
-                    isFinalExamActive ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                    isFinalExamActive ? 'border-blue-500 bg-blue-500' : 'border-[#324467]'
                   }`}
                 />
               )}
               <span
                 className={`font-medium ${
                   isFinalExamActive
-                    ? 'text-blue-700'
+                    ? 'text-blue-300'
                     : isFinalExamCompleted
-                    ? 'text-green-700'
-                    : 'text-gray-600'
+                    ? 'text-green-300'
+                    : 'text-[#92a4c9]'
                 }`}
               >
                 综合考试
               </span>
             </div>
             {isFinalExamActive && (
-              <span className="text-xs text-blue-600 font-medium">进行中</span>
+              <span className="text-xs text-blue-400 font-medium">进行中</span>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-1 ml-7">
+          <p className="text-xs text-[#5b6b8c] mt-1 ml-7">
             第 {trainingEnd + 1}-{totalSteps} 题
           </p>
         </div>
       </div>
 
       {/* 提示信息 */}
-      <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <p className="text-xs text-blue-700">
+      <div className="mt-6 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+        <p className="text-xs text-blue-300">
           {phase === 'PRE_TEST' && '正在进行训前测试，了解你的基础水平'}
           {phase === 'TRAINING' && '根据你的表现动态调整难度'}
           {phase === 'FINAL_EXAM' && '最后冲刺，检验学习成果'}

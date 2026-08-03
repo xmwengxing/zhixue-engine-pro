@@ -41,8 +41,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
               key={index}
               className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
                 answer === optionKey
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-blue-500 bg-blue-500/10'
+                  : 'border-[#324467] hover:border-blue-500/40'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <input
@@ -55,8 +55,8 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 disabled={disabled}
               />
               <div className="flex-1">
-                <span className="font-medium text-gray-700">{optionKey}. </span>
-                <span className="text-gray-700">{optionText}</span>
+                <span className="font-medium text-[#c3cfe6]">{optionKey}. </span>
+                <span className="text-[#c3cfe6]">{optionText}</span>
               </div>
             </label>
           );
@@ -73,11 +73,11 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="请输入你的答案..."
-          className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+          className="w-full p-4 border-2 border-[#324467] rounded-lg focus:border-blue-500 focus:outline-none resize-none"
           rows={3}
           disabled={disabled}
         />
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-[#5b6b8c] mt-2">
           提示：填空题答案应简洁明了
         </p>
       </div>
@@ -92,15 +92,15 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="请详细阐述你的答案..."
-          className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+          className="w-full p-4 border-2 border-[#324467] rounded-lg focus:border-blue-500 focus:outline-none resize-none"
           rows={8}
           disabled={disabled}
         />
         <div className="flex justify-between items-center mt-2">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[#5b6b8c]">
             提示：问答题需要详细说明你的思路和理由
           </p>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-[#5b6b8c]">
             {answer.length} 字
           </span>
         </div>
@@ -112,7 +112,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     <div>
       {/* 题目文本 */}
       <div className="mb-6">
-        <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
+        <div className="text-lg text-[#e2e8f5] leading-relaxed whitespace-pre-wrap">
           {content.question || content.text || '题目内容'}
         </div>
 
@@ -122,7 +122,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <img
               src={content.image}
               alt="题目图片"
-              className="max-w-full rounded-lg border border-gray-200"
+              className="max-w-full rounded-lg border border-[#324467]"
             />
           </div>
         )}
