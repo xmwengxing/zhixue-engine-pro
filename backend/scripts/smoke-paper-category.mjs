@@ -653,6 +653,68 @@ async function main() {
     bad('知识点图谱接口', `status=${kg.status} ${JSON.stringify(kg.body).slice(0, 200)}`);
   }
 
+  // ───────── I. 学员主动创建专项任务（主动学习入口） ─────────
+  console.log('\n════════ I. 学员主动创建专项（功能与家长端一致） ════════');
+  let stuAuth2 = null;
+  try {
+    stuAuth2 = await login('student1', ['password123', 'student1']);
+  } catch {
+    console.log('  ⚠️  student1 登录失败，跳过');
+  }
+  if (stuAuth2) {
+    // 学员端教材接口
+    const stb = await api(stuAuth2.token, 'GET', `/student/question-bank/textbooks`);
+    if (stb.status === 200 && Array.isArray(stb.body?.data)) {
+      ok('学员端教材接口可用', `${stb.body.data.length} 本`);
+      const subj = pickTb.subject || SUBJECT;
+
+      // 主链路：学员自建 PAPER 随机组卷（题库按学科有题，必成功）
+      const sCreate = await api(stuAuth2.token, 'POST', '/student/tasks/special', {
+        subject: subj,
+        specialType: 'PAPER',
+        questionCount: 5,
+        title: '冒烟·学员自建组卷专项',
+        examConfig: { source: 'RANDOM', subject: subj, questionCount: 5, difficultyMin: 1, difficultyMax: 5 },
+      });
+      if (sCreate.status === 201 && sCreate.body?.success) {
+        const st = sCreate.body.data;
+        cleanup.taskIds.push(st.id);
+        ok('学员自建组卷专项成功', `id=${st.id}, title=${st.title}`);
+        if (st.category === 'SPECIAL' && st.specialType === 'PAPER' && st.createdBy === stuAuth2.user?.id)
+          ok('字段正确（SPECIAL+PAPER+createdBy=自己）');
+        else bad('自建专项字段', JSON.stringify({ category: st.category, specialType: st.specialType, createdBy: st.createdBy }));
+        if (Array.isArray(st.config?.questionIds) && st.config.questionIds.length > 0)
+          ok('题集已固化', `${st.config.questionIds.length} 题`);
+        else bad('题集固化', JSON.stringify(st.config));
+        // 学员任务中心应能看到自己创建的专项（过滤调整）
+        const sList = await api(stuAuth2.token, 'GET', `/student/tasks?category=SPECIAL&limit=50`);
+        const list = sList.body?.data?.tasks || [];
+        const found = list.find((t) => t.id === st.id);
+        if (found) ok('学员任务中心可见自建专项（过滤已放开）');
+        else bad('学员任务中心可见自建专项', '列表未包含刚创建的任务');
+      } else {
+        bad('学员自建组卷专项', `status=${sCreate.status} ${JSON.stringify(sCreate.body).slice(0, 250)}`);
+      }
+
+      // 边界：单元无题时给出明确提示（与家长端行为一致，现网单元题库标注缺失）
+      const tb = stb.body.data.find((t) => t.subject === subj);
+      if (tb && Array.isArray(tb.units) && tb.units.length > 0) {
+        const sUnit = await api(stuAuth2.token, 'POST', '/student/tasks/special', {
+          subject: subj,
+          specialType: 'UNIT',
+          unitIds: [tb.units[0].id],
+          questionCount: 5,
+          title: '冒烟·学员自建单元专项',
+        });
+        if (sUnit.status >= 400 && /暂无题目/.test(sUnit.body?.error?.message || ''))
+          ok('单元无题给出明确提示', sUnit.body?.error?.message);
+        else bad('单元无题提示', `status=${sUnit.status} ${JSON.stringify(sUnit.body).slice(0, 150)}`);
+      }
+    } else {
+      bad('学员端教材接口', `status=${stb.status} ${JSON.stringify(stb.body).slice(0, 200)}`);
+    }
+  }
+
   // ───────── 清理 ─────────
   console.log('\n════════ 清理测试数据 ════════');
   for (const id of cleanup.taskIds) {

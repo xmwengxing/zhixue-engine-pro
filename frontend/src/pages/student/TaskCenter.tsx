@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Badge, Empty, Loading } from '../../components/shared';
 import { getStudentTasks, type Task } from '../../services/studentTrainingService';
+import StudentSpecialTaskModal from '../../components/student/StudentSpecialTaskModal';
 
 /** P3 双轨：专项类型中文标签 */
 const SPECIAL_TYPE_LABELS: Record<string, string> = {
   UNIT: '单元专项',
   KNOWLEDGE_POINT: '知识点专项',
   ERROR_BOOK: '错题本专项',
+  PAPER: '题库组卷',
 };
 
 /**
@@ -19,6 +21,8 @@ export const TaskCenter = () => {
   const [mainTasks, setMainTasks] = useState<Task[]>([]);
   const [specialTasks, setSpecialTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  // 主动学习入口：新建专项任务弹窗
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -274,18 +278,37 @@ export const TaskCenter = () => {
           <span className="material-symbols-outlined text-purple-400 text-2xl">target</span>
           <h2 className="text-xl font-bold text-white">专项攻克任务</h2>
           <span className="text-sm text-[#5b6b8c]">
-            （单元 / 知识点 / 错题本短期专项）
+            （单元 / 知识点 / 错题本 / 组卷短期专项）
           </span>
+          <div className="flex-1" />
+          {/* 主动学习入口：与家长端一致的专项创建 */}
+          <Button
+            variant="outline"
+            onClick={() => setCreateOpen(true)}
+            className="border-purple-500/60 text-purple-300 hover:bg-purple-500/10"
+          >
+            ＋ 新建任务
+          </Button>
         </div>
 
         {specialTasks.length === 0 ? (
-          <Empty description="暂无专项攻克任务" />
+          <Empty description="暂无专项攻克任务，点击右上角「新建任务」主动发起" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {specialTasks.map((task) => renderTaskCard(task, true))}
           </div>
         )}
       </div>
+
+      {/* 主动学习入口：新建专项任务弹窗 */}
+      <StudentSpecialTaskModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          void loadTasks();
+        }}
+      />
     </div>
   );
 };

@@ -9,6 +9,8 @@ import { studentWishController } from '../controllers/studentWishController';
 import { reportStatusController } from '../controllers/reportStatusController';
 import * as answerZoneController from '../controllers/answerZoneController';
 import { recognize as visionRecognize } from '../controllers/visionRecognitionController';
+import * as adminMaterialController from '../controllers/adminMaterialController';
+import { parentTaskController } from '../controllers/parentTaskController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
@@ -105,6 +107,37 @@ router.get('/learning-state', async (req, res, next) => {
  * @query   status - 状态（可选）
  */
 router.get('/tasks', studentTrainingController.getTasks);
+
+/**
+ * @route   POST /api/student/tasks/special
+ * @desc    学员主动创建专项攻克任务（主动学习入口，功能与家长端一致）
+ * @access  Private (Student)
+ * @body    subject, specialType(UNIT/KNOWLEDGE_POINT/ERROR_BOOK/PAPER),
+ *          unitIds?/knowledgePoints?/errorQuestionIds?/questionCount?/title?/examConfig?
+ */
+router.post('/tasks/special', studentTrainingController.createSpecialTask);
+
+/**
+ * @route   GET /api/student/question-bank/textbooks
+ * @desc    教材列表（学员主动创建单元/知识点专项的数据源）
+ * @access  Private (Student)
+ */
+router.get('/question-bank/textbooks', adminMaterialController.listTextbooks);
+
+/**
+ * @route   GET /api/student/question-bank/textbooks/:id/units
+ * @desc    教材下单元列表（只读）
+ * @access  Private (Student)
+ */
+router.get('/question-bank/textbooks/:id/units', adminMaterialController.getTextbookUnits);
+
+/**
+ * @route   GET /api/student/question-bank/papers
+ * @desc    已发布试卷列表（学员主动创建题库组卷专项选卷用）
+ * @access  Private (Student)
+ * @query   subject - 科目（可选）；category - EXERCISE/ASSESSMENT（默认 EXERCISE）
+ */
+router.get('/question-bank/papers', parentTaskController.listExamPapers);
 
 /**
  * @route   POST /api/student/training/start/:taskId

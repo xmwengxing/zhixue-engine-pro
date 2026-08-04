@@ -79,10 +79,13 @@ export class StudentTrainingService {
       const where: any = { studentId };
       if (category) {
         where.category = category;
-        // 专项区排除学员自己发起的错题重做临时任务（createdBy=自己），只展示家长布置的专项
-        // 注：错题重做任务仍归 SPECIAL，但入口在错题本，不在任务列表重复展示
+        // 专项区：展示「家长/系统布置的专项」+「学员主动创建的专项（config.source='SPECIAL'）」；
+        // 排除错题重做临时任务（createdBy=自己 且无 source 标记，入口在错题本，不重复展示）
         if (category === 'SPECIAL') {
-          where.createdBy = { not: studentId };
+          where.OR = [
+            { createdBy: { not: studentId } },
+            { createdBy: studentId, config: { path: ['source'], equals: 'SPECIAL' } },
+          ];
         }
       }
       if (subject) {

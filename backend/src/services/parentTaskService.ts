@@ -747,14 +747,22 @@ export class ParentTaskService {
       title?: string;
       /** PAPER：组卷配置（整卷或随机抽题） */
       examConfig?: ExamPaperConfig;
-    }
+    },
+    /** 学员主动发起（主动学习入口）：asStudent=true 时调用者即学员本人，跳过亲子关系校验 */
+    options?: { asStudent?: boolean }
   ) {
-    // 校验亲子关系
-    const relation = await prisma.parentChildRelation.findFirst({
-      where: { parentId, studentId: data.studentId, status: 'ACTIVE' },
-    });
-    if (!relation) {
-      throw new Error('无权为该学员创建任务');
+    // 学员自建：仅允许为自己创建；家长：校验亲子关系
+    if (options?.asStudent === true) {
+      if (data.studentId !== parentId) {
+        throw new Error('学员只能为自己创建专项任务');
+      }
+    } else {
+      const relation = await prisma.parentChildRelation.findFirst({
+        where: { parentId, studentId: data.studentId, status: 'ACTIVE' },
+      });
+      if (!relation) {
+        throw new Error('无权为该学员创建任务');
+      }
     }
 
     if (!data.subject) {

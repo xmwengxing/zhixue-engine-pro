@@ -91,6 +91,59 @@ export const getTasks = async (
 };
 
 /**
+ * 学员主动创建专项攻克任务（主动学习入口，功能与家长端一致）
+ * POST /api/student/tasks/special
+ * body: { subject, specialType, unitIds?, knowledgePoints?, errorQuestionIds?, questionCount?, title?, examConfig? }
+ */
+export const createSpecialTask = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未授权访问' } });
+      return;
+    }
+    const {
+      subject,
+      specialType,
+      unitIds,
+      knowledgePoints,
+      errorQuestionIds,
+      questionCount,
+      title,
+      examConfig,
+    } = req.body ?? {};
+    if (!subject || !specialType) {
+      res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '专项任务必须指定学科与类型' } });
+      return;
+    }
+    const { parentTaskService } = await import('../services/parentTaskService');
+    const task = await parentTaskService.createSpecialTask(
+      studentId,
+      {
+        studentId,
+        subject: String(subject),
+        specialType,
+        unitIds,
+        knowledgePoints,
+        errorQuestionIds,
+        questionCount,
+        title,
+        examConfig,
+      },
+      { asStudent: true }
+    );
+    res.status(201).json({ success: true, data: task });
+  } catch (error) {
+    logger.error('学员创建专项任务失败:', error);
+    next(error);
+  }
+};
+
+/**
  * 开始训练
  * POST /api/student/training/start/:taskId
  */
