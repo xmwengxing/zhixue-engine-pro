@@ -12,6 +12,7 @@ import { recognize as visionRecognize } from '../controllers/visionRecognitionCo
 import * as adminMaterialController from '../controllers/adminMaterialController';
 import { parentTaskController } from '../controllers/parentTaskController';
 import { wordTaskController } from '../controllers/wordTaskController';
+import { dailyCalendarController } from '../controllers/dailyCalendarController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
@@ -209,6 +210,13 @@ router.get('/question-bank/papers', parentTaskController.listExamPapers);
  * @access  Private (Student)
  */
 router.post('/training/start/:taskId', studentTrainingController.startTraining);
+
+/**
+ * @route   GET /api/student/training/daily-calendar/:taskId?days=14
+ * @desc    学科总任务最近 N 天日程表（每日题量/时长 + 达标 √/×）
+ * @access  Private (Student)
+ */
+router.get('/training/daily-calendar/:taskId', dailyCalendarController.getDailyCalendar);
 
 /**
  * @route   GET /api/student/answer-zone/:taskId

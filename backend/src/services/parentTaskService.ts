@@ -110,6 +110,8 @@ export interface CreateTaskRequest {
   initialTest?: InitialTestOption;
   /** 家长激励寄语（可选，<=200 字） */
   parentEncouragement?: string;
+  /** 每日训练体量约束（可选）：{ questions: 每日题数, minutes: 每日时长分钟 } */
+  dailyGoal?: { questions?: number | null; minutes?: number | null };
   /**
    * P3 双轨（内部使用）：任务大类，默认 SUBJECT_MAIN。
    * smartAssign 等日常巩固通道传 SPECIAL，不占用 Q1 总任务名额。
@@ -593,6 +595,12 @@ export class ParentTaskService {
       const encouragement = (data.parentEncouragement || '').trim();
       if (encouragement.length > 200) {
         throw new Error('激励寄语不能超过 200 字');
+      }
+
+      // 每日训练体量约束（可选）：写入任务配置，训练舱日程表 + 终测前置校验使用
+      if (data.dailyGoal && (data.dailyGoal.questions || data.dailyGoal.minutes)) {
+        const { validateDailyGoal } = await import('./dailyTrainingService');
+        taskConfig.dailyGoal = validateDailyGoal(data.dailyGoal);
       }
 
       // ===== P3 双轨 Q1 约束：同一学科同时只允许 1 个进行中的学科总任务 =====

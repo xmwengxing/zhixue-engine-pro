@@ -2179,6 +2179,17 @@ export class StudentTrainingService {
       },
     });
 
+    // 每日训练记录聚合（日程表 √/× 与终测前置校验数据源；非致命）
+    try {
+      const { dailyTrainingService } = await import('./dailyTrainingService');
+      await dailyTrainingService.recordDailyTraining(session.taskId, studentId, {
+        questions: 1,
+        timeSpent: timeSpent || 0,
+      });
+    } catch (error) {
+      logger.warn('[daily] 每日训练聚合失败:', (error as Error).message);
+    }
+
     // 错题本联动（艾宾浩斯间隔重复）：
     // - 答错 → 收集/重置错题复习周期
     // - 答对 → 若该题在错题本中，推进复习周期（连续 3 周期答对才归档）
@@ -2281,6 +2292,17 @@ export class StudentTrainingService {
               } as any),
         },
       });
+
+      // 每日训练记录聚合（日程表 √/× 与终测前置校验数据源；非致命）
+      try {
+        const { dailyTrainingService } = await import('./dailyTrainingService');
+        await dailyTrainingService.recordDailyTraining(session.taskId, session.studentId, {
+          questions: 1,
+          timeSpent,
+        });
+      } catch (error) {
+        logger.warn('[daily] 每日训练聚合失败:', (error as Error).message);
+      }
 
       if (!questionId) {
         logger.warn(`会话 ${session.id} 作答已落库但无 questionId（快照兜底），跳过错题本联动`);
@@ -2705,6 +2727,25 @@ export class StudentTrainingService {
 
       if (session.phase !== 'GUIDED_TRAINING') {
         throw new Error('必须完成引导式训练后才能开始综合考试');
+      }
+
+      // 每日训练体量约束：家长配置了 dailyGoal 时，当日训练量达标才允许参加终测
+      try {
+        const { dailyTrainingService } = await import('./dailyTrainingService');
+        const goal = dailyTrainingService.getDailyGoal(session.task.config as any);
+        if (goal.questions || goal.minutes) {
+          const calendar = await dailyTrainingService.getDailyCalendar(session.taskId, studentId, 1);
+          if (!calendar?.todayMet) {
+            const hint = [
+              goal.questions ? `题量 ≥ ${goal.questions} 题` : '',
+              goal.minutes ? `时长 ≥ ${goal.minutes} 分钟` : '',
+            ].filter(Boolean).join(' 且 ');
+            throw new Error(`今日训练量未达标（需${hint}），完成每日目标后才能参加期末测试`);
+          }
+        }
+      } catch (e: any) {
+        if (e instanceof Error && e.message.includes('训练量未达标')) throw e;
+        // 非致命：聚合服务异常时不阻塞终测
       }
 
       const trainingProgress = session.trainingProgress as any;

@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import TrainingLeftPanel from '../../components/student/TrainingLeftPanel';
 import TrainingCenterPanel from '../../components/student/TrainingCenterPanel';
 import TrainingRightPanel from '../../components/student/TrainingRightPanel';
+import DailyCalendarBar from '../../components/student/DailyCalendarBar';
 import { getErrorMessage } from '../../types/error';
 
 // 训练阶段类型
@@ -57,6 +58,7 @@ export interface TrainingSession {
   task?: {
     id: string;
     title: string;
+    category?: 'SUBJECT_MAIN' | 'SPECIAL';
     config: {
       trainingGoal?: string;
       diagnosticQuestionCount?: number;
@@ -346,6 +348,9 @@ const TrainingCabin: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* 学科总任务：每日训练日程表（√/×） */}
+      {session.task?.category === 'SUBJECT_MAIN' && taskId && <DailyCalendarBar taskId={taskId} />}
 
       {/* 三栏布局 - 桌面端（lg 以下隐藏，避免与移动端布局重复挂载导致重复请求） */}
       <div className="hidden lg:flex flex-1 overflow-hidden">

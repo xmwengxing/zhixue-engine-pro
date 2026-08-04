@@ -805,6 +805,22 @@ model WordSession {
   @@map("word_sessions")
 }
 
+// 学科总任务每日训练记录（日程表 + 每日体量约束达标判定）
+model DailyTrainingRecord {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  studentId String   @map("student_id")
+  date      DateTime @db.Date // 训练日期（当天 0 点）
+  questions Int      @default(0) // 当日完成题数
+  minutes   Int      @default(0) // 当日训练时长（分钟，按答题 timeSpent 累计）
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([taskId, studentId, date])
+  @@index([studentId, date])
+  @@map("daily_training_records")
+}
+
 enum TaskStatus {
   PENDING
   IN_PROGRESS

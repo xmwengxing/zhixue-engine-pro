@@ -219,6 +219,9 @@ export default function TaskConfigCenter() {
 
   // 家长激励寄语（两种模式共用）
   const [encouragement, setEncouragement] = useState('');
+  // 每日训练体量约束（学科总任务可选）：每日目标题数 / 每日目标时长（分钟），留空 = 不设
+  const [dailyGoalQuestions, setDailyGoalQuestions] = useState('');
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState('');
   const [generatingEncouragement, setGeneratingEncouragement] = useState(false);
 
   // 组卷模式表单数据
@@ -757,6 +760,15 @@ export default function TaskConfigCenter() {
       let requestBody: any = {
         mode,
         parentEncouragement: encouragement.trim() || undefined,
+        // 每日训练体量约束（学科总任务可选）：题量/时长任一填写即生效
+        ...(dailyGoalQuestions !== '' || dailyGoalMinutes !== ''
+          ? {
+              dailyGoal: {
+                questions: dailyGoalQuestions === '' ? null : Number(dailyGoalQuestions),
+                minutes: dailyGoalMinutes === '' ? null : Number(dailyGoalMinutes),
+              },
+            }
+          : {}),
       };
 
       if (mode === 'CUSTOM') {
@@ -2524,6 +2536,48 @@ export default function TaskConfigCenter() {
               />
               <p className="mt-1 text-sm text-[#5b6b8c]">{encouragement.length}/200 字</p>
             </div>
+            )}
+
+            {/* 每日训练体量约束（学科总任务） */}
+            {taskCategory === 'SUBJECT_MAIN' && (
+              <div className="bg-[#1a2332] border border-[#324467] rounded-lg p-4">
+                <label className="block text-sm font-medium text-[#92a4c9] mb-1">
+                  每日训练体量约束（可选）
+                </label>
+                <p className="text-xs text-[#5b6b8c] mb-3">
+                  设置后，学员需先完成当日目标（题量或时长任一达标）才能参加期末测试；训练舱内会显示每日完成日程表（√ / ×）
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-[#92a4c9] mb-1.5">
+                      每日目标题数（1-200，留空不设）
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={dailyGoalQuestions}
+                      onChange={(e) => setDailyGoalQuestions(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
+                      placeholder="如：20"
+                      className="w-full px-3 py-2 border border-[#324467] rounded-lg bg-[#111722] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#92a4c9] mb-1.5">
+                      每日目标时长（分钟，1-180，留空不设）
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={dailyGoalMinutes}
+                      onChange={(e) => setDailyGoalMinutes(e.target.value.replace(/[^\d]/g, '').slice(0, 3))}
+                      placeholder="如：30"
+                      className="w-full px-3 py-2 border border-[#324467] rounded-lg bg-[#111722] text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* 提交按钮 */}
