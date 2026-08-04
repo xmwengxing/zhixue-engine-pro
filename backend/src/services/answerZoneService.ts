@@ -315,7 +315,88 @@ async function gradeOne(q: any, a: StudentAnswerInput): Promise<GradedResult> {
         studentAnswerRaw: studentLatex,
       };
     }
-    // 主观题 / 几何 / 函数 / 排序 / 连线：暂不支持自动批改，标记待批改
+    // 排序题：比对期望顺序（支持「选项内容」或「序号（1 基）」两种标准答案格式）
+    case 'SORTING': {
+      const studentOrder = Array.isArray(ad.order)
+        ? ad.order.map((x: unknown) => String(x).trim()).filter(Boolean)
+        : [];
+      const expectedRaw = String(q.answer || '').trim();
+      const expected = expectedRaw
+        .split(/[,，;；、|]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      let correct = false;
+      if (expected.length > 0 && studentOrder.length === expected.length) {
+        const mapped = expected.every((e) => /^\d+$/.test(e))
+          ? expected.map((e) => {
+              const idx = parseInt(e, 10) - 1;
+              const opts = Array.isArray((q.answerConfig as any)?.options) ? (q.answerConfig as any).options : (q as any).options;
+              return Array.isArray(opts) && opts[idx] ? String(opts[idx]).trim() : e;
+            })
+          : expected;
+        correct = mapped.every((e, i) => e === studentOrder[i]);
+      }
+      return {
+        isCorrect: studentOrder.length === 0 ? null : correct,
+        needsGrading: studentOrder.length === 0,
+        correctAnswer: expectedRaw,
+        analysis: correct ? '' : `标准顺序：${expectedRaw}`,
+        studentAnswerRaw: studentOrder.join(' → '),
+      };
+    }
+    // 连线题：比对左→右映射（顺序无关）
+    case 'MATCHING': {
+      const pairs: Array<{ left: string; right: string }> = Array.isArray(ad.pairs)
+        ? (ad.pairs as Array<{ left: string; right: string }>).filter(
+            (p) => p && p.left != null && p.right != null
+          )
+        : [];
+      const expectedRaw = String(q.answer || '').trim();
+      const expectedMap = new Map<string, string>();
+      for (const part of expectedRaw.split(/[;；,，]/)) {
+        const m = part.match(/^\s*(.+?)\s*(?:[-—→:：])\s*(.+?)\s*$/);
+        if (m) expectedMap.set(m[1].trim(), m[2].trim());
+      }
+      let correct = false;
+      if (expectedMap.size > 0 && pairs.length === expectedMap.size) {
+        const studentMap = new Map(pairs.map((p) => [String(p.left).trim(), String(p.right).trim()]));
+        let allMatch = true;
+        for (const [l, r] of expectedMap) {
+          if (studentMap.get(l) !== r) {
+            allMatch = false;
+            break;
+          }
+        }
+        correct = allMatch;
+      }
+      const joined = pairs.map((p) => `${p.left}—${p.right}`).join('；');
+      return {
+        isCorrect: pairs.length === 0 ? null : correct,
+        needsGrading: pairs.length === 0,
+        correctAnswer: expectedRaw,
+        analysis: correct ? '' : `标准配对：${expectedRaw}`,
+        studentAnswerRaw: joined,
+      };
+    }
+    // 证明题：分步输入 → 拼接为文本，标记待批改（老师 / AI 评定）
+    case 'PROOF': {
+      const steps: Array<{ text?: string; latex?: string }> = Array.isArray(ad.steps)
+        ? (ad.steps as Array<{ text?: string; latex?: string }>)
+        : [];
+      const text = steps
+        .map((s, i) => `${i + 1}. ${s.text || ''}${s.latex ? ` ${s.latex}` : ''}`.trim())
+        .filter(Boolean)
+        .join('\n');
+      const raw = text || (ad.imageData ? '[拍照上传]' : '');
+      return {
+        isCorrect: null,
+        needsGrading: true,
+        correctAnswer: undefined,
+        analysis: '已提交，等待老师 / AI 批改',
+        studentAnswerRaw: raw,
+      };
+    }
+    // 主观题 / 几何 / 函数：暂不支持自动批改，标记待批改
     default: {
       const raw = ad.imageData
         ? '[拍照上传]'

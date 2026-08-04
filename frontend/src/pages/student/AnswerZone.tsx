@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import request from '../../utils/request';
 import { getErrorMessage } from '../../types/error';
 import { LatexText, FormulaEditor } from '../../components/common/MathFormula';
+import { SortingInput, MatchingInput, ProofStepsInput } from '../../components/common/InteractiveInputs';
 
 /**
  * 电子答题专区（EXAM_PAPER 模式）
@@ -580,6 +581,42 @@ function AnswerInput({
       );
 
     // 主观 / 几何 / 函数 / 排序 / 连线：自由文本 + 拍照兜底，提交后待批改
+    case 'SORTING':
+      return (
+        <div>
+          <SortingInput
+            items={options.length > 0 ? options : [String(value?.text || '')]}
+            value={value as { order?: string[] } | undefined}
+            onChange={onChange}
+          />
+          <PhotoFallback />
+        </div>
+      );
+
+    case 'MATCHING':
+      return (
+        <div>
+          <MatchingInput
+            items={options.length > 0 ? options : [String(value?.text || '')]}
+            value={value as { pairs?: unknown[] } | undefined}
+            onChange={onChange}
+          />
+          <PhotoFallback />
+        </div>
+      );
+
+    case 'PROOF':
+      return (
+        <div>
+          <ProofStepsInput
+            value={value as { steps?: unknown[] } | undefined}
+            onChange={onChange}
+          />
+          <PhotoFallback />
+        </div>
+      );
+
+    // 简答 / 几何 / 函数：自由文本 + 拍照兜底，提交后待批改
     default:
       return (
         <div>
