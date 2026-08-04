@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import request from '../../utils/request';
 import { getErrorMessage } from '../../types/error';
+import { LatexText, FormulaEditor } from '../../components/common/MathFormula';
 
 /**
  * 电子答题专区（EXAM_PAPER 模式）
@@ -9,7 +10,7 @@ import { getErrorMessage } from '../../types/error';
  *
  * 设计原则（阶段 D「规则引擎优先」）：
  * - 客观题（选择/判断/填空）即时规则批改，0 成本
- * - 公式题：LaTeX 纯文本输入 + 调用后端 sympy 微服务做等价判断
+ * - 公式题/含公式填空：MathLive 所见即所得编辑器 + 后端 sympy 微服务等价判断
  * - 主观/几何/函数/排序/连线：提交后标记「待批改」，不依赖商业 SDK
  * - 所有题型均提供「拍照上传」兜底
  */
@@ -345,7 +346,7 @@ export default function AnswerZone() {
           </div>
 
           <h2 className="text-lg font-medium text-white whitespace-pre-wrap leading-relaxed">
-            {question.stem}
+            <LatexText text={question.stem} />
           </h2>
 
           {/* 答题输入区 */}
@@ -542,13 +543,23 @@ function AnswerInput({
     case 'FILL':
       return (
         <div>
+          {/* 填空：文本或公式输入（含公式的答案切到公式编辑器，判对走 sympy 等价） */}
           <input
             type="text"
             value={(value?.text as string) || ''}
-            onChange={(e) => onChange({ text: e.target.value }, 'keyboard')}
-            placeholder="请输入答案"
+            onChange={(e) =>
+              onChange({ ...(value || {}), text: e.target.value }, 'keyboard')
+            }
+            placeholder="请输入答案（可切换到下方公式输入）"
             className="w-full px-4 py-3 border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+          <div className="mt-2">
+            <FormulaEditor
+              value={(value?.latex as string) || ''}
+              placeholder="公式填空：用公式编辑器输入（如分数、根号）"
+              onChange={(latex) => onChange({ ...(value || {}), latex }, 'formula')}
+            />
+          </div>
           <PhotoFallback />
         </div>
       );
@@ -556,15 +567,13 @@ function AnswerInput({
     case 'FORMULA':
       return (
         <div>
-          <input
-            type="text"
+          <FormulaEditor
             value={(value?.latex as string) || ''}
-            onChange={(e) => onChange({ latex: e.target.value }, 'formula')}
-            placeholder="输入 LaTeX，例如 \frac{1}{2}"
-            className="w-full px-4 py-3 font-mono border border-[#324467] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="输入公式，如 \frac{1}{2}"
+            onChange={(latex) => onChange({ latex }, 'formula')}
           />
           <p className="mt-1 text-xs text-[#5b6b8c]">
-            公式题：输入 LaTeX 表达式，提交后由公式验证服务判断是否与标准答案等价。
+            使用公式编辑器输入，提交后由公式验证服务判断是否与标准答案等价。
           </p>
           <PhotoFallback />
         </div>

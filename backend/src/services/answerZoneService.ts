@@ -260,6 +260,27 @@ async function gradeOne(q: any, a: StudentAnswerInput): Promise<GradedResult> {
     }
     case 'FILL': {
       const text = String(ad.text ?? '').trim();
+      const latex = String(ad.latex ?? '').trim();
+      // 含公式的填空（如分数/根号答案）：优先走 sympy 等价判断；否则文本比对
+      if (latex) {
+        const expectedLatex = (q.answerConfig as any)?.expectedLatex || q.answer;
+        if (expectedLatex) {
+          const r = await gradeFormula(latex, expectedLatex);
+          return {
+            isCorrect: r.isCorrect,
+            correctAnswer: expectedLatex,
+            method: r.method,
+            needsGrading: r.method === 'service_down',
+            analysis:
+              r.method === 'service_down'
+                ? '公式验证服务暂不可用，已标记为待批改'
+                : r.isCorrect
+                  ? ''
+                  : `正确答案：${expectedLatex}`,
+            studentAnswerRaw: latex,
+          };
+        }
+      }
       const correct = gradeFill(text, q.answer);
       return {
         isCorrect: correct,
