@@ -11,7 +11,8 @@ on:
       - develop
 
 env:
-  NODE_VERSION: '18'
+  # vite 7 要求 Node >= 20.19（18 会构建失败）
+  NODE_VERSION: '20'
 
 jobs:
   # 后端代码检查和测试
@@ -138,7 +139,7 @@ jobs:
       
       - name: 安装依赖
         working-directory: frontend
-        run: npm ci
+        run: npm install --no-audit --no-fund
       
       - name: 代码格式检查
         working-directory: frontend
@@ -190,7 +191,7 @@ jobs:
       
       - name: 安装前端依赖
         working-directory: frontend
-        run: npm ci
+        run: npm install --no-audit --no-fund
       
       # 可选：集成 SonarCloud 代码质量分析
       # - name: SonarCloud 扫描

@@ -4,8 +4,9 @@
 
 # ==========================================
 # 阶段 1: 构建阶段
+# 说明：vite 7 要求 Node >= 20.19，故用 node:20-alpine（18 会构建失败）
 # ==========================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -13,8 +14,9 @@ WORKDIR /app
 # 复制 package.json 和 package-lock.json
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci
+# 安装依赖（用 npm install：package-lock.json 与 package.json 存在不同步
+# 场景（如手工登记新依赖），npm ci 严格校验会直接失败）
+RUN npm install --no-audit --no-fund
 
 # 复制源代码
 COPY . .
