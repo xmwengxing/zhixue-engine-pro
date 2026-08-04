@@ -18,6 +18,15 @@ export function getQueueConnection(): IORedis {
       db: parseInt(process.env.REDIS_DB || '0', 10),
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
+      // 有限重连：最多 10 次后停止（返回 null），避免 Redis 未启动时 ioredis
+      // 默认「无限重试」持续刷屏；上层（幂等中间件/AI 队列）已有降级放行。
+      retryStrategy: (times: number) => {
+        if (times > 10) {
+          logger.warn('BullMQ Redis 重连次数超限，停止重试（降级为无 Redis 运行）');
+          return null;
+        }
+        return Math.min(times * 1000, 10000);
+      },
     });
 
     connection.on('error', (err) => {

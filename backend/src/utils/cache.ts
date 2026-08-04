@@ -48,18 +48,31 @@ export class CacheManager {
    */
   private async initializeClient(config: CacheConfig) {
     try {
+      // 有限重连：指数退避，最多 8 次（约 1+2+4+...+128 秒 ≈ 4.3 分钟）后停止，
+      // 避免 Redis 未启动时 node-redis 默认「无限自动重连」持续刷屏。
+      let errorPrinted = false;
       this.client = createClient({
         socket: {
           host: config.host,
           port: config.port,
+          reconnectStrategy: (retries: number) => {
+            if (retries > 8) {
+              this.isConnected = false;
+              return new Error('Redis 重连次数超限，停止重试（降级为无缓存运行）');
+            }
+            return Math.min(1000 * 2 ** retries, 15000);
+          },
         },
         password: config.password,
         database: config.db || 0,
       });
 
-      // 错误处理
+      // 错误处理（只打印首次，避免重连期间刷屏）
       this.client.on('error', (err) => {
-        console.error('Redis 客户端错误:', err);
+        if (!errorPrinted) {
+          console.error('Redis 客户端错误:', err);
+          errorPrinted = true;
+        }
         this.isConnected = false;
       });
 
