@@ -72,6 +72,44 @@ export async function extractText(
   return file.buffer.toString('utf-8');
 }
 
+/** 题目切块正则：匹配「换行 + 数字序号 + 标点」的题首（兼容「1.【单选题】」与「1. 题干」两种格式） */
+const QUESTION_SPLIT_RE = /(?=\n\s*\d{1,3}\s*[.、．]\s*)/;
+
+/**
+ * 试卷文本按题目切块（每块最多 maxPerBlock 题）。
+ * 规避本地推理模型（如 Qwen3.5-9B）长文本归一化时"思考未结束即截断
+ * （done_reason=length，输出全进 thinking，content 为空）"的健壮性问题。
+ * - 题号切分成功：按题切块（说明/非题目块由 zod 校验丢弃，容错跳过）
+ * - 题号切分失败（无题号标记/单块过大）：按字符分块兜底（尽量在换行处切）
+ */
+export function splitQuestionBlocks(text: string, maxPerBlock = 6, charChunk = 2400): string[] {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return [];
+  const parts = trimmed
+    .split(QUESTION_SPLIT_RE)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const blocks: string[] = [];
+  if (parts.length >= 2) {
+    for (let i = 0; i < parts.length; i += maxPerBlock) {
+      blocks.push(parts.slice(i, i + maxPerBlock).join('\n'));
+    }
+  }
+  if (blocks.length === 0) {
+    // 字符分块兜底：尽量在换行处切，避免从句子中间断开
+    for (let i = 0; i < trimmed.length; i += charChunk) {
+      let end = Math.min(i + charChunk, trimmed.length);
+      if (end < trimmed.length) {
+        const nl = trimmed.lastIndexOf('\n', end);
+        if (nl > i + charChunk * 0.6) end = nl;
+      }
+      const chunk = trimmed.slice(i, end).trim();
+      if (chunk) blocks.push(chunk);
+    }
+  }
+  return blocks;
+}
+
 /** 未配置视觉模型时的标准报错文案（与管理端导入提示一致） */
 export const NO_VISION_MODEL_MESSAGE =
   '未配置视觉模型，无法识别图片/扫描件。请上传 .doc/.docx/.xlsx/.md/.txt 等文本格式或数字版（PDF）试卷。';
@@ -349,10 +387,26 @@ async function processImport(
   }
   await updateImportJob(jobId, { rawText });
 
-  // 2) LLM 归一化
-  let normalized: NormalizedQuestion[];
+  // 2) LLM 归一化（分块执行，规避本地推理模型长文本思考截断；坏块跳过，保留合法题）
+  let normalized: NormalizedQuestion[] = [];
   try {
-    normalized = await normalizeWithLLM(subject, rawText);
+    const blocks = splitQuestionBlocks(rawText);
+    let badBlocks = 0;
+    for (const [i, block] of blocks.entries()) {
+      try {
+        const part = await normalizeWithLLM(subject, block);
+        normalized = normalized.concat(part);
+        console.log(`[import] 分块 ${i + 1}/${blocks.length} 归一化完成：${part.length} 题`);
+      } catch (e: any) {
+        badBlocks += 1;
+        console.warn(`[import] 分块 ${i + 1}/${blocks.length} 归一化失败（跳过该块）:`, e.message);
+      }
+    }
+    if (normalized.length === 0) {
+      throw new Error(
+        `AI 归一化失败：${blocks.length} 个分块均未产出合法题目${badBlocks ? `（${badBlocks} 块失败）` : ''}（原文已保留，可手动录入题目）`
+      );
+    }
   } catch (e: any) {
     // 解析成功但归一化失败：保留原文，等待人工录入
     await updateImportJob(jobId, {

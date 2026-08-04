@@ -696,7 +696,7 @@ async function main() {
         bad('学员自建组卷专项', `status=${sCreate.status} ${JSON.stringify(sCreate.body).slice(0, 250)}`);
       }
 
-      // 边界：单元无题时给出明确提示（与家长端行为一致，现网单元题库标注缺失）
+      // 单元专项（题库已补全单元标注：02-06/02-07 试卷已导入第十一章/十二章等）
       const tb = stb.body.data.find((t) => t.subject === subj);
       if (tb && Array.isArray(tb.units) && tb.units.length > 0) {
         const sUnit = await api(stuAuth2.token, 'POST', '/student/tasks/special', {
@@ -706,9 +706,18 @@ async function main() {
           questionCount: 5,
           title: '冒烟·学员自建单元专项',
         });
-        if (sUnit.status >= 400 && /暂无题目/.test(sUnit.body?.error?.message || ''))
-          ok('单元无题给出明确提示', sUnit.body?.error?.message);
-        else bad('单元无题提示', `status=${sUnit.status} ${JSON.stringify(sUnit.body).slice(0, 150)}`);
+        if (sUnit.status === 201 && sUnit.body?.success) {
+          const stU = sUnit.body.data;
+          cleanup.taskIds.push(stU.id);
+          const ql = stU.config?.questionIds?.length;
+          ok('学员自建单元专项成功（题库单元已补全）', `题数=${ql}`);
+          if (ql > 0) ok('单元专项题集已固化', `${ql} 题`);
+          else bad('单元专项题集固化', JSON.stringify(stU.config));
+        } else {
+          bad('学员自建单元专项', `status=${sUnit.status} ${JSON.stringify(sUnit.body).slice(0, 200)}`);
+        }
+      } else {
+        console.log('  ⚠️  无教材/单元，跳过单元专项用例');
       }
     } else {
       bad('学员端教材接口', `status=${stb.status} ${JSON.stringify(stb.body).slice(0, 200)}`);
