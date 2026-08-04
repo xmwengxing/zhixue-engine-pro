@@ -43,45 +43,66 @@ export const startWord = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-/** POST /student/word-task/group/:sessionId — 提交上一组结果并获取下一组 */
+/** POST /student/word-task/submit-word/:sessionId — 逐词提交（落库错题 + 推进进度，支持组中途退出恢复） */
+export const submitWord = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) { unauthorized(res); return; }
+    const sessionId = String(req.params.sessionId);
+    const { wordId, input } = req.body ?? {};
+    if (!wordId || typeof input !== 'string') {
+      res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '缺少 wordId 或 input' } });
+      return;
+    }
+    const session = await prisma.wordSession.findFirst({ where: { id: sessionId, studentId } });
+    if (!session) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
+      return;
+    }
+    const word = await prisma.word.findUnique({ where: { id: String(wordId) } });
+    if (!word) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '单词不存在' } });
+      return;
+    }
+    const correct = wordTaskService.checkWordInput(input, word.word);
+    await wordTaskService.recordWordResult(studentId, word.id, correct);
+    // 推进进度 + 记录组内已答（逐词落库）
+    const doneInGroup: string[] = Array.isArray(session.doneInGroup) ? (session.doneInGroup as string[]) : [];
+    if (!doneInGroup.includes(word.id)) doneInGroup.push(word.id);
+    const nextIndex = Math.min(session.index + 1, session.total);
+    await prisma.wordSession.update({
+      where: { id: session.id },
+      data: { index: nextIndex, doneInGroup },
+    });
+    res.json({ success: true, data: { correct } });
+  } catch (e) {
+    next(e);
+  }
+};
+
+/** POST /student/word-task/group/:sessionId — 进入下一组（单词判定已由逐词提交完成） */
 export const nextGroup = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
     const sessionId = String(req.params.sessionId);
-    const { answers, groupIndex } = req.body ?? {};
+    const { groupIndex } = req.body ?? {};
     const session = await prisma.wordSession.findFirst({ where: { id: sessionId, studentId } });
     if (!session) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
       return;
     }
     const config = (await prisma.task.findUnique({ where: { id: session.taskId } }))?.config as any as WordTaskConfig;
-    // 记录本组结果（answers: [{wordId, input}]）
-    if (Array.isArray(answers)) {
-      for (const a of answers) {
-        const word = await prisma.word.findUnique({ where: { id: a.wordId } });
-        if (!word) continue;
-        const correct = wordTaskService.checkWordInput(a.input, word.word);
-        await wordTaskService.recordWordResult(studentId, word.id, correct);
-      }
-    }
-    // 更新已训练词数
-    const advance = Array.isArray(answers) ? answers.length : (config?.groupSize ?? 1);
-    await prisma.wordSession.update({
-      where: { id: session.id },
-      data: { index: session.index + advance },
-    });
-    const updated = await prisma.wordSession.findUnique({ where: { id: session.id } });
     const groups = wordTaskService.buildGroups(session, config?.groupSize ?? 1);
     const nextIdx = (groupIndex ?? 0) + 1;
-    const done = nextIdx >= groups.length || (updated?.index ?? 0) >= (updated?.total ?? 0);
+    const done = nextIdx >= groups.length;
     if (done) {
       // 单词听写/默写完成 → 强制进入短语填空
       const learned = (await loadWords(groups.flat())).map((w) => ({ word: w.word, meaning: w.meaning }));
       const cloze = await wordTaskService.generateCloze(learned);
       await prisma.wordSession.update({
         where: { id: session.id },
-        data: { clozeJson: cloze as any, status: 'IN_PROGRESS' },
+        data: { clozeJson: cloze as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
       });
       res.json({
         success: true,
@@ -89,6 +110,8 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
       });
       return;
     }
+    // 进入新组：清空组内进度
+    await prisma.wordSession.update({ where: { id: session.id }, data: { doneInGroup: [] as any } });
     const group = await loadWords(groups[nextIdx] || []);
     res.json({ success: true, data: { done: false, groupIndex: nextIdx, group } });
   } catch (e) {
@@ -137,8 +160,12 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       }
     } else {
       const currentGroupIdx = Math.floor(session.index / (config?.groupSize ?? 1));
+      // 当前组内未答的词（逐词落库后，组中途退出只从未答词继续）
+      const doneInGroup: string[] = Array.isArray(session.doneInGroup) ? (session.doneInGroup as string[]) : [];
+      const all = await loadWords(groups[currentGroupIdx] || []);
       data.groupIndex = currentGroupIdx;
-      data.group = await loadWords(groups[currentGroupIdx] || []);
+      data.group = all.filter((w) => !doneInGroup.includes(w.id));
+      data.groupWordIndex = 0;
     }
     res.json({ success: true, data });
   } catch (e) {
@@ -263,6 +290,7 @@ export const wordTaskController = {
   getStages,
   startWord,
   nextGroup,
+  submitWord,
   resumeWord,
   clozeCheck,
   finishWord,

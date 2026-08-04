@@ -133,8 +133,15 @@ router.get('/word-bank/stages', wordTaskController.getStages);
 router.post('/word-task/start/:taskId', wordTaskController.startWord);
 
 /**
+ * @route   POST /api/student/word-task/submit-word/:sessionId
+ * @desc    逐词提交（判定落库错题 + 推进进度，支持组中途退出恢复）
+ * @access  Private (Student)
+ */
+router.post('/word-task/submit-word/:sessionId', wordTaskController.submitWord);
+
+/**
  * @route   POST /api/student/word-task/group/:sessionId
- * @desc    提交本组结果并获取下一组；最后一组完成后自动进入 AI 短语填空
+ * @desc    进入下一组（单词判定已由逐词提交完成）；最后一组完成后自动进入 AI 短语填空
  * @access  Private (Student)
  */
 router.post('/word-task/group/:sessionId', wordTaskController.nextGroup);

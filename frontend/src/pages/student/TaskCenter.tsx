@@ -338,11 +338,12 @@ export const TaskCenter = () => {
           </Button>
         </div>
 
-        {specialTasks.length === 0 ? (
+        {/* 专项攻克任务区：排除单词任务（单词任务在下方独立版块展示） */}
+        {specialTasks.filter((t) => t.mode !== 'WORD').length === 0 ? (
           <Empty description="暂无专项攻克任务，点击右上角「新建任务」主动发起" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {specialTasks.map((task) => renderTaskCard(task, true))}
+            {specialTasks.filter((t) => t.mode !== 'WORD').map((task) => renderTaskCard(task, true))}
           </div>
         )}
       </div>

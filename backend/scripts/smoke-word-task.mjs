@@ -64,15 +64,19 @@ async function main() {
       if (Array.isArray(d.group) && d.group.length === 2) ok('首组 2 词（组数配置生效）');
       else bad('首组词数', JSON.stringify(d.group));
 
-      // 4) 提交首组（1 对 1 错）→ 下一组
+      // 4) 逐词提交首组（1 对 1 错）→ 下一组
       const g0 = d.group;
-      const answers = g0.map((w, i) => ({ wordId: w.id, input: i === 0 ? w.word : 'wronginput' }));
+      for (let i = 0; i < g0.length; i++) {
+        await api(stu.token, 'POST', `/student/word-task/submit-word/${d.sessionId}`, {
+          wordId: g0[i].id,
+          input: i === 0 ? g0[i].word : 'wronginput',
+        });
+      }
       const g1 = await api(stu.token, 'POST', `/student/word-task/group/${d.sessionId}`, {
-        answers,
         groupIndex: 0,
       });
       if (g1.status === 200 && g1.body?.data?.done === false && Array.isArray(g1.body.data.group)) {
-        ok('提交首组→下一组', `组 ${g1.body.data.groupIndex}`);
+        ok('逐词提交→下一组', `组 ${g1.body.data.groupIndex}`);
       } else bad('提交首组', JSON.stringify(g1.body).slice(0, 200));
 
       // 5) 连续提交剩余组直到 done（进入短语填空）
@@ -84,9 +88,13 @@ async function main() {
         const cur = gi === 1 ? g1.body.data : lastResp.body.data;
         const curGroup = cur.group;
         if (!curGroup || curGroup.length === 0) break;
-        const ans = curGroup.map((w) => ({ wordId: w.id, input: w.word }));
+        for (const w of curGroup) {
+          await api(stu.token, 'POST', `/student/word-task/submit-word/${d.sessionId}`, {
+            wordId: w.id,
+            input: w.word,
+          });
+        }
         lastResp = await api(stu.token, 'POST', `/student/word-task/group/${d.sessionId}`, {
-          answers: ans,
           groupIndex: gi,
         });
         const rd = lastResp.body?.data;

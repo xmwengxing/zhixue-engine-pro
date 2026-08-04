@@ -196,6 +196,15 @@ export default function WordTraining() {
     setFeedback({ word: currentWord.word, correct });
     setResults((prev) => [...prev, { word: currentWord.word, correct, input: input.trim() }]);
     if (config?.mode === 'DICTATION') speechSynthesis.cancel();
+    // 逐词落库（异步，不阻塞答题）：判定 + 错题集 + 进度推进（组中途退出可恢复）
+    void request
+      .post(`/student/word-task/submit-word/${sessionId}`, {
+        wordId: currentWord.id,
+        input: input.trim(),
+      })
+      .catch(() => {
+        /* 落库失败不影响本次答题 */
+      });
     // 0.8s 后进入下一词
     setTimeout(() => {
       setFeedback(null);
@@ -203,7 +212,7 @@ export default function WordTraining() {
       if (wordIndex + 1 < group.length) {
         setWordIndex(wordIndex + 1);
       } else {
-        // 本组完成 → 提交并取下一组（组间隔倒计时）
+        // 本组完成 → 进入下一组（组间隔倒计时）
         void submitGroup();
       }
     }, 800);
@@ -211,12 +220,7 @@ export default function WordTraining() {
 
   const submitGroup = async () => {
     try {
-      const answers = results.slice(-group.length).map((r) => {
-        const w = group.find((g) => g.word === r.word);
-        return { wordId: w?.id, input: r.input };
-      });
       const res = await request.post(`/student/word-task/group/${sessionId}`, {
-        answers,
         groupIndex,
       });
       const d = res.data;
