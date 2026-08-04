@@ -186,9 +186,9 @@ export async function startWordSession(
   if (wordIds.length === 0) {
     throw new Error(`「${taskConfig.stage}」阶段暂无可用单词，请先导入词库`);
   }
-  // 覆盖已有进行中会话（新会话开始）
+  // 覆盖【本任务】已有进行中会话（同一任务重新开始）；不影响其他任务的进行中会话
   await prisma.wordSession.updateMany({
-    where: { studentId, status: 'IN_PROGRESS' },
+    where: { studentId, taskId, status: 'IN_PROGRESS' },
     data: { status: 'COMPLETED' },
   });
   const session = await prisma.wordSession.create({
@@ -202,6 +202,8 @@ export async function startWordSession(
       status: 'IN_PROGRESS',
     },
   });
+  // 任务状态同步：开始训练 → IN_PROGRESS（任务列表显示「继续训练」）
+  await prisma.task.update({ where: { id: taskId }, data: { status: 'IN_PROGRESS' } });
   return session;
 }
 

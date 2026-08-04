@@ -96,13 +96,19 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-/** POST /student/word-task/resume/:sessionId — 恢复进行中会话（含未完成填空） */
+/** POST /student/word-task/resume/:taskId — 恢复指定任务的进行中会话（含未完成填空） */
 export const resumeWord = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
+    const taskId = String(req.params.sessionId || req.params.taskId || '');
+    if (!taskId) {
+      res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '缺少任务 id' } });
+      return;
+    }
+    // 仅恢复「本任务」的进行中会话（避免多任务间串会话）
     const session = await prisma.wordSession.findFirst({
-      where: { studentId, status: 'IN_PROGRESS' },
+      where: { studentId, taskId, status: 'IN_PROGRESS' },
       orderBy: { updatedAt: 'desc' },
     });
     if (!session) {
@@ -165,13 +171,18 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
       return;
     }
+    const completed = clozeDone === true || session.clozeDone;
     await prisma.wordSession.update({
       where: { id: session.id },
       data: {
-        clozeDone: clozeDone === true || session.clozeDone,
-        status: clozeDone === true || session.clozeDone ? 'COMPLETED' : 'IN_PROGRESS',
+        clozeDone: completed,
+        status: completed ? 'COMPLETED' : 'IN_PROGRESS',
       },
     });
+    // 任务状态同步：填空完成 → 任务 COMPLETED；仅保存进度 → 保持 IN_PROGRESS
+    if (completed) {
+      await prisma.task.update({ where: { id: session.taskId }, data: { status: 'COMPLETED' } });
+    }
     res.json({ success: true, data: { status: 'OK' } });
   } catch (e) {
     next(e);

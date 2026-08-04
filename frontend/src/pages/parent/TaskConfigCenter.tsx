@@ -96,6 +96,7 @@ const SPECIAL_TYPE_OPTIONS = [
   { value: 'KNOWLEDGE_POINT', label: '按知识点攻克', desc: '针对薄弱知识点做专项练习' },
   { value: 'ERROR_BOOK', label: '按错题本攻克', desc: '从孩子错题本挑选题目重新练习' },
   { value: 'PAPER', label: '题库组卷', desc: '选择整卷或按条件随机抽题，进行专项练习' },
+  { value: 'WORD', label: '英语单词', desc: '听写/默写背单词，AI 词汇老师出短语填空' },
 ] as const;
 
 /**
@@ -133,13 +134,20 @@ export default function TaskConfigCenter() {
   const [specialForm, setSpecialForm] = useState({
     studentId: '',
     subject: '',
-    specialType: 'UNIT' as 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER',
+    specialType: 'UNIT' as 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER' | 'WORD',
     textbookId: '',
     unitIds: [] as string[],
     knowledgePoints: [] as string[],
     errorQuestionIds: [] as string[],
     questionCount: 10,
     title: '',
+    // WORD：英语单词任务配置
+    wordMode: 'DICTATION' as 'DICTATION' | 'SPELLING',
+    wordStage: '初中',
+    wordOrderMode: 'SEQUENCE' as 'SEQUENCE' | 'RANDOM',
+    wordGroupSize: 2,
+    wordIntervalSec: 5,
+    wordRoundSize: 20,
   });
   const [specialTextbooks, setSpecialTextbooks] = useState<TextbookWithUnits[]>([]);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
@@ -660,17 +668,42 @@ export default function TaskConfigCenter() {
           if (examForm.source === 'RANDOM' && (examForm.questionCount < 1 || examForm.questionCount > 50)) {
             throw new Error('抽题数量必须在 1-50 之间');
           }
+        } else if (specialForm.specialType === 'WORD') {
+          // 英语单词：校验配置（每组 1-5、间隔 0-120s、每轮 1-50）
+          if (![1, 2, 3, 4, 5].includes(specialForm.wordGroupSize)) {
+            throw new Error('每组单词数必须为 1-5');
+          }
+          if (
+            !Number.isFinite(specialForm.wordIntervalSec) ||
+            specialForm.wordIntervalSec < 0 ||
+            specialForm.wordIntervalSec > 120
+          ) {
+            throw new Error('每组间隔秒数需在 0-120 之间');
+          }
+          if (!Number.isFinite(specialForm.wordRoundSize) || specialForm.wordRoundSize < 1 || specialForm.wordRoundSize > 50) {
+            throw new Error('每轮词数需在 1-50 之间');
+          }
         } else if (specialForm.questionCount < 1 || specialForm.questionCount > 50) {
           throw new Error('题量必须在 1-50 之间');
         }
 
         const specialBody: any = {
           studentId: specialForm.studentId,
-          subject: specialForm.subject,
+          subject: specialForm.specialType === 'WORD' ? '英语' : specialForm.subject,
           specialType: specialForm.specialType,
           questionCount: specialForm.questionCount,
           title: specialForm.title.trim() || undefined,
         };
+        if (specialForm.specialType === 'WORD') {
+          specialBody.wordConfig = {
+            mode: specialForm.wordMode,
+            stage: specialForm.wordStage,
+            orderMode: specialForm.wordOrderMode,
+            groupSize: specialForm.wordGroupSize,
+            intervalSec: specialForm.wordIntervalSec,
+            roundSize: specialForm.wordRoundSize,
+          };
+        }
         if (specialForm.specialType === 'UNIT') specialBody.unitIds = specialForm.unitIds;
         if (specialForm.specialType === 'KNOWLEDGE_POINT') {
           specialBody.knowledgePoints = specialForm.knowledgePoints;
@@ -2017,7 +2050,8 @@ export default function TaskConfigCenter() {
                   </label>
                   <select
                     required
-                    value={specialForm.subject}
+                    disabled={specialForm.specialType === 'WORD'}
+                    value={specialForm.specialType === 'WORD' ? '英语' : specialForm.subject}
                     onChange={(e) =>
                       setSpecialForm({
                         ...specialForm,
@@ -2028,7 +2062,7 @@ export default function TaskConfigCenter() {
                         errorQuestionIds: [],
                       })
                     }
-                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-[#324467] rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
                   >
                     <option value="">请选择科目</option>
                     {Array.from(new Set(aiTeachers.map((t) => t.subject)))
@@ -2076,6 +2110,141 @@ export default function TaskConfigCenter() {
 
                 {loadingSpecialData && (
                   <div className="text-sm text-[#5b6b8c]">目标数据加载中...</div>
+                )}
+
+                {/* 英语单词：听写/默写配置 */}
+                {specialForm.specialType === 'WORD' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 模式 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">模式</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(
+                          [
+                            { v: 'DICTATION', label: '听写', desc: '播放发音，输入单词' },
+                            { v: 'SPELLING', label: '默写', desc: '显示中文，输入英文' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.v}
+                            type="button"
+                            onClick={() => setSpecialForm({ ...specialForm, wordMode: opt.v })}
+                            className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                              specialForm.wordMode === opt.v
+                                ? 'border-purple-500 bg-purple-500/15 text-white'
+                                : 'border-[#324467] bg-[#1a2332] text-[#92a4c9] hover:border-purple-500/60'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">{opt.label}</div>
+                            <div className="text-xs opacity-80 mt-0.5">{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 阶段 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">阶段</label>
+                      <select
+                        value={specialForm.wordStage}
+                        onChange={(e) => setSpecialForm({ ...specialForm, wordStage: e.target.value })}
+                        className="w-full px-4 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white focus:ring-2 focus:ring-purple-500"
+                      >
+                        {['小学', '初中', '高中'].map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 抽词方式 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">抽词方式</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(
+                          [
+                            { v: 'SEQUENCE', label: '顺序' },
+                            { v: 'RANDOM', label: '随机' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.v}
+                            type="button"
+                            onClick={() => setSpecialForm({ ...specialForm, wordOrderMode: opt.v })}
+                            className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                              specialForm.wordOrderMode === opt.v
+                                ? 'border-purple-500 bg-purple-500/15 text-white'
+                                : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 每组单词数 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">每组单词数</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setSpecialForm({ ...specialForm, wordGroupSize: n })}
+                            className={`flex-1 py-2 rounded-lg border text-sm transition-colors ${
+                              specialForm.wordGroupSize === n
+                                ? 'border-purple-500 bg-purple-500/15 text-white'
+                                : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 组间隔 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">每组间隔（秒）</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={120}
+                        value={specialForm.wordIntervalSec}
+                        onChange={(e) =>
+                          setSpecialForm({
+                            ...specialForm,
+                            wordIntervalSec: Math.max(0, Math.min(120, parseInt(e.target.value) || 0)),
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+
+                    {/* 每轮词数 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                        每轮词数（完成后触发短语填空）：<span className="text-purple-300">{specialForm.wordRoundSize}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={50}
+                        value={specialForm.wordRoundSize}
+                        onChange={(e) =>
+                          setSpecialForm({ ...specialForm, wordRoundSize: parseInt(e.target.value) })
+                        }
+                        className="w-full accent-purple-500"
+                      />
+                      <div className="flex justify-between text-[10px] text-[#5b6b8c]">
+                        <span>1</span>
+                        <span>25</span>
+                        <span>50</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* 单元专项：教材 + 单元多选 */}

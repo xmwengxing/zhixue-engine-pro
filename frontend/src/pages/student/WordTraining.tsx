@@ -66,11 +66,11 @@ export default function WordTraining() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 初始化：恢复进行中会话，否则开始新会话
+  // ⚠️ resume 失败（网络抖动）时【不】自动 start——避免 start 覆盖旧会话导致进度丢失
   const init = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      // 尝试恢复（有进行中会话 → 返回其状态）
       const resume = await request.post<{ success: boolean; data: any }>(
         `/student/word-task/resume/${taskId}`
       );
@@ -89,12 +89,43 @@ export default function WordTraining() {
       setTotalGroups(d.groups);
       setPhase('WORD');
     } catch (e) {
-      setError(getErrorMessage(e, '加载单词训练失败'));
+      setError(getErrorMessage(e, '加载单词训练失败，请重试（进度已保存，不会丢失）'));
     } finally {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
+
+  // 心跳自动存档：刷新/关闭/切后台/组件卸载时自动保存进度（不影响进行中会话）
+  const sessionIdRef = useRef('');
+  const saveGuard = useRef(false);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    if (sessionId) saveGuard.current = false; // 新会话重置防抖
+  }, [sessionId]);
+  useEffect(() => {
+    const autoSave = () => {
+      const sid = sessionIdRef.current;
+      if (!sid || saveGuard.current) return;
+      saveGuard.current = true; // 防抖：一次会话只自动保存一次
+      try {
+        void request.post(`/student/word-task/finish/${sid}`, { clozeDone: false });
+      } catch {
+        /* 心跳失败不影响页面 */
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') autoSave();
+    };
+    const onBeforeUnload = () => autoSave();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      autoSave(); // 组件卸载（路由切换）也自动保存
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     void init();
