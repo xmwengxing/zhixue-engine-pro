@@ -1,0 +1,6372 @@
+{
+ "stage": "初中",
+ "source": "【初中英语】15天背完英语3500词.pdf",
+ "count": 1273,
+ "words": [
+  {
+   "word": "able",
+   "phonetic": "eibl",
+   "meaning": "有能力的"
+  },
+  {
+   "word": "abolish",
+   "phonetic": "əbɔli",
+   "meaning": "废除，废止；取消"
+  },
+  {
+   "word": "abstractart",
+   "phonetic": "",
+   "meaning": "抽象派；抽象主义"
+  },
+  {
+   "word": "abyss",
+   "phonetic": "əbis",
+   "meaning": "深渊"
+  },
+  {
+   "word": "acid",
+   "phonetic": "æsid",
+   "meaning": "酸的"
+  },
+  {
+   "word": "act",
+   "phonetic": "ækt",
+   "meaning": "幕"
+  },
+  {
+   "word": "action",
+   "phonetic": "ækən",
+   "meaning": "诉讼"
+  },
+  {
+   "word": "actor",
+   "phonetic": "æktə",
+   "meaning": "男演员"
+  },
+  {
+   "word": "actress",
+   "phonetic": "",
+   "meaning": "女演员"
+  },
+  {
+   "word": "administration",
+   "phonetic": "",
+   "meaning": "行政"
+  },
+  {
+   "word": "aeroplane",
+   "phonetic": "",
+   "meaning": "飞机"
+  },
+  {
+   "word": "aggression",
+   "phonetic": "əgreən",
+   "meaning": "侵略"
+  },
+  {
+   "word": "agriculture",
+   "phonetic": "",
+   "meaning": "农学"
+  },
+  {
+   "word": "aircraft",
+   "phonetic": "əkra:ft",
+   "meaning": "飞机"
+  },
+  {
+   "word": "airplane",
+   "phonetic": "",
+   "meaning": "飞机"
+  },
+  {
+   "word": "airport",
+   "phonetic": "əpɔ:t",
+   "meaning": "飞机场"
+  },
+  {
+   "word": "albatross",
+   "phonetic": "ælbətrɔs",
+   "meaning": "信天翁"
+  },
+  {
+   "word": "allegory",
+   "phonetic": "æligəri",
+   "meaning": "寓言"
+  },
+  {
+   "word": "allowance",
+   "phonetic": "əlauəns",
+   "meaning": "补贴；津贴"
+  },
+  {
+   "word": "alto",
+   "phonetic": "æltəu",
+   "meaning": "女低音"
+  },
+  {
+   "word": "ambassador",
+   "phonetic": "æmbæsədə",
+   "meaning": "大使"
+  },
+  {
+   "word": "america",
+   "phonetic": "",
+   "meaning": "美国；美洲"
+  },
+  {
+   "word": "amount",
+   "phonetic": "",
+   "meaning": "总数；总值"
+  },
+  {
+   "word": "anarchy",
+   "phonetic": "ænəki",
+   "meaning": "无政府状态"
+  },
+  {
+   "word": "anchovy",
+   "phonetic": "æntəvi",
+   "meaning": "凤尾鱼；鳀鱼"
+  },
+  {
+   "word": "angry",
+   "phonetic": "ægri",
+   "meaning": "发怒的"
+  },
+  {
+   "word": "ankle",
+   "phonetic": "ækl",
+   "meaning": "踝，踝关节"
+  },
+  {
+   "word": "announcement",
+   "phonetic": "",
+   "meaning": "公告"
+  },
+  {
+   "word": "announcer",
+   "phonetic": "",
+   "meaning": "播音员，广播员"
+  },
+  {
+   "word": "ant",
+   "phonetic": "ænt",
+   "meaning": "蚂蚁"
+  },
+  {
+   "word": "anteater",
+   "phonetic": "ænti:tə",
+   "meaning": "食蚁兽"
+  },
+  {
+   "word": "antelope",
+   "phonetic": "",
+   "meaning": "羚羊"
+  },
+  {
+   "word": "anthem",
+   "phonetic": "ænəm",
+   "meaning": "圣歌；赞美诗"
+  },
+  {
+   "word": "anthology",
+   "phonetic": "ænɔlədi",
+   "meaning": "选集"
+  },
+  {
+   "word": "appeal",
+   "phonetic": "əpi:l",
+   "meaning": "上诉"
+  },
+  {
+   "word": "appetite",
+   "phonetic": "",
+   "meaning": "胃口"
+  },
+  {
+   "word": "apple",
+   "phonetic": "æpl",
+   "meaning": "苹果"
+  },
+  {
+   "word": "apprentice",
+   "phonetic": "",
+   "meaning": "学徒"
+  },
+  {
+   "word": "apricot",
+   "phonetic": "",
+   "meaning": "杏"
+  },
+  {
+   "word": "april",
+   "phonetic": "",
+   "meaning": "四月"
+  },
+  {
+   "word": "apron",
+   "phonetic": "",
+   "meaning": "围裙"
+  },
+  {
+   "word": "aquarius",
+   "phonetic": "əkwəriəs",
+   "meaning": "宝瓶座，水瓶座"
+  },
+  {
+   "word": "arab",
+   "phonetic": "ærəb",
+   "meaning": "阿拉伯人"
+  },
+  {
+   "word": "arabic",
+   "phonetic": "ærəbik",
+   "meaning": "阿拉伯语"
+  },
+  {
+   "word": "arch",
+   "phonetic": "a:t",
+   "meaning": "脚掌心，足弓日用品"
+  },
+  {
+   "word": "archaeologist",
+   "phonetic": "",
+   "meaning": "考古学家"
+  },
+  {
+   "word": "architect",
+   "phonetic": "a:kitekt",
+   "meaning": "建筑师"
+  },
+  {
+   "word": "architecture",
+   "phonetic": "",
+   "meaning": "建筑学普通形容词"
+  },
+  {
+   "word": "aries",
+   "phonetic": "əri:z",
+   "meaning": "白羊座"
+  },
+  {
+   "word": "aristocracy",
+   "phonetic": "",
+   "meaning": "贵族；贵族统治"
+  },
+  {
+   "word": "armchair",
+   "phonetic": "a:mtəa:m",
+   "meaning": "扶手椅"
+  },
+  {
+   "word": "armpit",
+   "phonetic": "",
+   "meaning": "腋下"
+  },
+  {
+   "word": "arrest",
+   "phonetic": "",
+   "meaning": "逮捕"
+  },
+  {
+   "word": "artisan",
+   "phonetic": "a:tizæna:tizən",
+   "meaning": "工匠；手工业工人"
+  },
+  {
+   "word": "artist",
+   "phonetic": "a:tist",
+   "meaning": "艺术家；美术家"
+  },
+  {
+   "word": "arts",
+   "phonetic": "a:ts",
+   "meaning": "文科"
+  },
+  {
+   "word": "asparagus",
+   "phonetic": "əspærəgəs",
+   "meaning": "芦笋"
+  },
+  {
+   "word": "ass",
+   "phonetic": "æs",
+   "meaning": "驴"
+  },
+  {
+   "word": "assignment",
+   "phonetic": "",
+   "meaning": "转让"
+  },
+  {
+   "word": "asteroid",
+   "phonetic": "æstərɔid",
+   "meaning": "小行星"
+  },
+  {
+   "word": "astronaut",
+   "phonetic": "æstrənɔ:t",
+   "meaning": "宇航员，航天员"
+  },
+  {
+   "word": "astronomy",
+   "phonetic": "əstrɔnəmi",
+   "meaning": "天文学"
+  },
+  {
+   "word": "athlete",
+   "phonetic": "æli:t",
+   "meaning": "运动员"
+  },
+  {
+   "word": "atmosphere",
+   "phonetic": "",
+   "meaning": "气候"
+  },
+  {
+   "word": "attempt",
+   "phonetic": "",
+   "meaning": "未遂罪"
+  },
+  {
+   "word": "attorney",
+   "phonetic": "ətə:ni",
+   "meaning": "律师"
+  },
+  {
+   "word": "august",
+   "phonetic": "ɔ:gʌst",
+   "meaning": "八月"
+  },
+  {
+   "word": "aunt",
+   "phonetic": "a:nt",
+   "meaning": "阿姨，舅妈，姑妈"
+  },
+  {
+   "word": "australia",
+   "phonetic": "",
+   "meaning": "澳洲，澳大利亚"
+  },
+  {
+   "word": "austria",
+   "phonetic": "",
+   "meaning": "奥地利"
+  },
+  {
+   "word": "author",
+   "phonetic": "ɔ:ə",
+   "meaning": "作者"
+  },
+  {
+   "word": "automatic",
+   "phonetic": "ɔ:təmætik",
+   "meaning": "自动的"
+  },
+  {
+   "word": "autonomy",
+   "phonetic": "ɔ:tɔnəmi",
+   "meaning": "自治"
+  },
+  {
+   "word": "autumn",
+   "phonetic": "ɔ:təm",
+   "meaning": "秋天，"
+  },
+  {
+   "word": "awake",
+   "phonetic": "",
+   "meaning": "清醒的"
+  },
+  {
+   "word": "axe",
+   "phonetic": "æks",
+   "meaning": "斧子"
+  },
+  {
+   "word": "azalea",
+   "phonetic": "",
+   "meaning": "杜鹃花"
+  },
+  {
+   "word": "baboon",
+   "phonetic": "bəbu:n",
+   "meaning": "狒狒"
+  },
+  {
+   "word": "baby-sitter",
+   "phonetic": "",
+   "meaning": "当临时保姆"
+  },
+  {
+   "word": "backstroke",
+   "phonetic": "",
+   "meaning": "仰泳"
+  },
+  {
+   "word": "bag",
+   "phonetic": "bæg",
+   "meaning": "袋子，包"
+  },
+  {
+   "word": "baker",
+   "phonetic": "",
+   "meaning": "面包师"
+  },
+  {
+   "word": "ballot",
+   "phonetic": "bælət",
+   "meaning": "选票"
+  },
+  {
+   "word": "banana",
+   "phonetic": "bəna:nə",
+   "meaning": "香蕉"
+  },
+  {
+   "word": "bank",
+   "phonetic": "bæk",
+   "meaning": "银行"
+  },
+  {
+   "word": "baobab",
+   "phonetic": "beiəubæb",
+   "meaning": "猴面包树"
+  },
+  {
+   "word": "bar",
+   "phonetic": "ba:",
+   "meaning": "酒吧"
+  },
+  {
+   "word": "baritone",
+   "phonetic": "bæritəun",
+   "meaning": "男中音"
+  },
+  {
+   "word": "baroque",
+   "phonetic": "bərɔk",
+   "meaning": "巴洛克式"
+  },
+  {
+   "word": "basin",
+   "phonetic": "",
+   "meaning": "流域"
+  },
+  {
+   "word": "basketball",
+   "phonetic": "",
+   "meaning": "篮球"
+  },
+  {
+   "word": "bass",
+   "phonetic": "beis",
+   "meaning": "男低音；贝司"
+  },
+  {
+   "word": "bassoon",
+   "phonetic": "bəsu:n",
+   "meaning": "低音管"
+  },
+  {
+   "word": "bat",
+   "phonetic": "bæt",
+   "meaning": "蝙蝠"
+  },
+  {
+   "word": "bath",
+   "phonetic": "ba:",
+   "meaning": "浴缸，浴盆"
+  },
+  {
+   "word": "bathroom",
+   "phonetic": "ba:rum",
+   "meaning": "浴室，厕所"
+  },
+  {
+   "word": "bay",
+   "phonetic": "bei",
+   "meaning": "海湾；湾"
+  },
+  {
+   "word": "beach",
+   "phonetic": "bi:t",
+   "meaning": "海滩"
+  },
+  {
+   "word": "bean",
+   "phonetic": "bi:n",
+   "meaning": "豆，菜豆"
+  },
+  {
+   "word": "beautiful",
+   "phonetic": "bju:tiful",
+   "meaning": "美丽的"
+  },
+  {
+   "word": "bed",
+   "phonetic": "bed",
+   "meaning": "床"
+  },
+  {
+   "word": "bedclothes",
+   "phonetic": "",
+   "meaning": "铺盖，床上用品"
+  },
+  {
+   "word": "bee",
+   "phonetic": "bi:",
+   "meaning": "蜜蜂，蜂"
+  },
+  {
+   "word": "beech",
+   "phonetic": "bi:t",
+   "meaning": "山毛榉"
+  },
+  {
+   "word": "beetle",
+   "phonetic": "bi:tl",
+   "meaning": "甲虫"
+  },
+  {
+   "word": "beetroot",
+   "phonetic": "bi:tru:t",
+   "meaning": "甜菜根"
+  },
+  {
+   "word": "begonia",
+   "phonetic": "bigəunjə",
+   "meaning": "秋海棠"
+  },
+  {
+   "word": "belgium",
+   "phonetic": "",
+   "meaning": "比利时"
+  },
+  {
+   "word": "belt",
+   "phonetic": "belt",
+   "meaning": "腰带"
+  },
+  {
+   "word": "bench",
+   "phonetic": "bent",
+   "meaning": "长椅子，长凳"
+  },
+  {
+   "word": "bent",
+   "phonetic": "bent",
+   "meaning": "弯曲的"
+  },
+  {
+   "word": "beverage",
+   "phonetic": "bevərid",
+   "meaning": "饮料"
+  },
+  {
+   "word": "bill",
+   "phonetic": "bil",
+   "meaning": "纸币"
+  },
+  {
+   "word": "biography",
+   "phonetic": "baiɔgrəfi",
+   "meaning": "传记，传记文学"
+  },
+  {
+   "word": "biologist",
+   "phonetic": "",
+   "meaning": "生物学家"
+  },
+  {
+   "word": "biology",
+   "phonetic": "baiɔlədi",
+   "meaning": "生物"
+  },
+  {
+   "word": "biscuit",
+   "phonetic": "biskit",
+   "meaning": "饼干；小甜品"
+  },
+  {
+   "word": "bitch",
+   "phonetic": "bit",
+   "meaning": "母狗，雌狗"
+  },
+  {
+   "word": "bitter",
+   "phonetic": "bitə",
+   "meaning": "苦的"
+  },
+  {
+   "word": "blanket",
+   "phonetic": "blækit",
+   "meaning": "毛毯，毯子"
+  },
+  {
+   "word": "bloodshed",
+   "phonetic": "blʌded",
+   "meaning": "流血；屠杀"
+  },
+  {
+   "word": "blouse",
+   "phonetic": "blauz",
+   "meaning": "女衬衫身体"
+  },
+  {
+   "word": "blue",
+   "phonetic": "blu:",
+   "meaning": "蓝色；蓝色的"
+  },
+  {
+   "word": "boat",
+   "phonetic": "bəut",
+   "meaning": "小船"
+  },
+  {
+   "word": "bobsleigh",
+   "phonetic": "",
+   "meaning": "雪橇"
+  },
+  {
+   "word": "boiling",
+   "phonetic": "bɔili",
+   "meaning": "沸腾的"
+  },
+  {
+   "word": "bolt",
+   "phonetic": "bəult",
+   "meaning": "螺栓"
+  },
+  {
+   "word": "bond",
+   "phonetic": "bɔnd",
+   "meaning": "债券"
+  },
+  {
+   "word": "bookseller",
+   "phonetic": "",
+   "meaning": "书商；售书员"
+  },
+  {
+   "word": "bookshop",
+   "phonetic": "bukɔp",
+   "meaning": "书店"
+  },
+  {
+   "word": "bookstore",
+   "phonetic": "",
+   "meaning": "书店"
+  },
+  {
+   "word": "boot",
+   "phonetic": "bu:t",
+   "meaning": "靴子"
+  },
+  {
+   "word": "botanist",
+   "phonetic": "",
+   "meaning": "植物学家"
+  },
+  {
+   "word": "bottle",
+   "phonetic": "bɔtl",
+   "meaning": "瓶子"
+  },
+  {
+   "word": "boxing",
+   "phonetic": "bɔksi",
+   "meaning": "拳击"
+  },
+  {
+   "word": "bra",
+   "phonetic": "bra:",
+   "meaning": "乳罩"
+  },
+  {
+   "word": "brad",
+   "phonetic": "bræd",
+   "meaning": "平头钉，无头钉，曲头钉"
+  },
+  {
+   "word": "brass",
+   "phonetic": "bra:s",
+   "meaning": "铜管乐器"
+  },
+  {
+   "word": "brazil",
+   "phonetic": "brəzil",
+   "meaning": "巴西"
+  },
+  {
+   "word": "bread",
+   "phonetic": "bred",
+   "meaning": "面包"
+  },
+  {
+   "word": "breaststroke",
+   "phonetic": "",
+   "meaning": "蛙泳"
+  },
+  {
+   "word": "breeze",
+   "phonetic": "bri:z",
+   "meaning": "微风"
+  },
+  {
+   "word": "bridge",
+   "phonetic": "brid",
+   "meaning": "桥牌"
+  },
+  {
+   "word": "bright",
+   "phonetic": "brait",
+   "meaning": "明亮的"
+  },
+  {
+   "word": "britain",
+   "phonetic": "",
+   "meaning": "英国"
+  },
+  {
+   "word": "broken",
+   "phonetic": "brəukən",
+   "meaning": "损坏的"
+  },
+  {
+   "word": "bronze",
+   "phonetic": "brɔnz",
+   "meaning": "铜像音乐"
+  },
+  {
+   "word": "brook",
+   "phonetic": "bruk",
+   "meaning": "小溪；小河"
+  },
+  {
+   "word": "broth",
+   "phonetic": "brɔ",
+   "meaning": "肉汤交通工具"
+  },
+  {
+   "word": "brown",
+   "phonetic": "braun",
+   "meaning": "褐色，棕色"
+  },
+  {
+   "word": "brush",
+   "phonetic": "brʌ",
+   "meaning": "刷子，毛笔，画笔"
+  },
+  {
+   "word": "buck",
+   "phonetic": "bʌk",
+   "meaning": "一美元"
+  },
+  {
+   "word": "budget",
+   "phonetic": "bʌdit",
+   "meaning": "预算"
+  },
+  {
+   "word": "buffalo",
+   "phonetic": "bʌfələu",
+   "meaning": "水牛；野牛"
+  },
+  {
+   "word": "bug",
+   "phonetic": "bʌg",
+   "meaning": "臭虫，小虫"
+  },
+  {
+   "word": "bull",
+   "phonetic": "bul",
+   "meaning": "公牛"
+  },
+  {
+   "word": "bureaucracy",
+   "phonetic": "bjuərɔkrəsi",
+   "meaning": "官僚主义；官僚政治"
+  },
+  {
+   "word": "bus",
+   "phonetic": "bʌs",
+   "meaning": "公共汽车"
+  },
+  {
+   "word": "butcher",
+   "phonetic": "butə",
+   "meaning": "屠夫"
+  },
+  {
+   "word": "butter",
+   "phonetic": "bʌtə",
+   "meaning": "奶油主食"
+  },
+  {
+   "word": "butterfly",
+   "phonetic": "",
+   "meaning": "蝴蝶，蝶"
+  },
+  {
+   "word": "button",
+   "phonetic": "bʌtən",
+   "meaning": "纽扣"
+  },
+  {
+   "word": "byzantine",
+   "phonetic": "",
+   "meaning": "拜占庭式"
+  },
+  {
+   "word": "cactus",
+   "phonetic": "kæktəs",
+   "meaning": "仙人掌"
+  },
+  {
+   "word": "cafe",
+   "phonetic": "kæfei",
+   "meaning": "咖啡馆"
+  },
+  {
+   "word": "cake",
+   "phonetic": "keik",
+   "meaning": "蛋糕"
+  },
+  {
+   "word": "calf",
+   "phonetic": "ka:fkæf",
+   "meaning": "小腿肚"
+  },
+  {
+   "word": "camel",
+   "phonetic": "kæməl",
+   "meaning": "骆驼"
+  },
+  {
+   "word": "camellia",
+   "phonetic": "kəmi:liə",
+   "meaning": "山茶花"
+  },
+  {
+   "word": "canada",
+   "phonetic": "kænədə",
+   "meaning": "加拿大"
+  },
+  {
+   "word": "canal",
+   "phonetic": "kənæl",
+   "meaning": "运河"
+  },
+  {
+   "word": "canary",
+   "phonetic": "kənəri",
+   "meaning": "金丝雀"
+  },
+  {
+   "word": "cancer",
+   "phonetic": "kænsə",
+   "meaning": "巨蟹座"
+  },
+  {
+   "word": "candidate",
+   "phonetic": "",
+   "meaning": "候选人；候补人"
+  },
+  {
+   "word": "canna",
+   "phonetic": "kænə",
+   "meaning": "美人蕉"
+  },
+  {
+   "word": "canoe",
+   "phonetic": "kənu:",
+   "meaning": "独木舟"
+  },
+  {
+   "word": "canvas",
+   "phonetic": "kænvəs",
+   "meaning": "画布"
+  },
+  {
+   "word": "capricorn",
+   "phonetic": "",
+   "meaning": "魔蝎座山羊座"
+  },
+  {
+   "word": "caricature",
+   "phonetic": "kærikətjuətə",
+   "meaning": "漫画"
+  },
+  {
+   "word": "carnation",
+   "phonetic": "ka:neiən",
+   "meaning": "康乃馨"
+  },
+  {
+   "word": "carpet",
+   "phonetic": "ka:pit",
+   "meaning": "地毯"
+  },
+  {
+   "word": "carrot",
+   "phonetic": "kærət",
+   "meaning": "胡萝卜"
+  },
+  {
+   "word": "carving",
+   "phonetic": "ka:vi",
+   "meaning": "雕刻"
+  },
+  {
+   "word": "cascade",
+   "phonetic": "",
+   "meaning": "小瀑布"
+  },
+  {
+   "word": "cash",
+   "phonetic": "kæ",
+   "meaning": "现金"
+  },
+  {
+   "word": "cat",
+   "phonetic": "kæt",
+   "meaning": "猫"
+  },
+  {
+   "word": "caterpillar",
+   "phonetic": "kætəpilə",
+   "meaning": "毛虫"
+  },
+  {
+   "word": "cauliflower",
+   "phonetic": "",
+   "meaning": "花菜"
+  },
+  {
+   "word": "cent",
+   "phonetic": "sent",
+   "meaning": "分"
+  },
+  {
+   "word": "centipede",
+   "phonetic": "sentipi:d",
+   "meaning": "蜈蚣"
+  },
+  {
+   "word": "certain",
+   "phonetic": "sə:tən",
+   "meaning": "肯定的"
+  },
+  {
+   "word": "cession",
+   "phonetic": "seən",
+   "meaning": "割让（土地）"
+  },
+  {
+   "word": "chair",
+   "phonetic": "tə",
+   "meaning": "椅子"
+  },
+  {
+   "word": "change",
+   "phonetic": "teind",
+   "meaning": "零钱"
+  },
+  {
+   "word": "chassis",
+   "phonetic": "æsi",
+   "meaning": "画布绷架"
+  },
+  {
+   "word": "cheap",
+   "phonetic": "ti:p",
+   "meaning": "便宜的"
+  },
+  {
+   "word": "cheek",
+   "phonetic": "ti:k",
+   "meaning": "脸颊"
+  },
+  {
+   "word": "cheese",
+   "phonetic": "ti:z",
+   "meaning": "奶酪"
+  },
+  {
+   "word": "chemist",
+   "phonetic": "kemist",
+   "meaning": "化学家，药剂师"
+  },
+  {
+   "word": "chemistry",
+   "phonetic": "kemistri",
+   "meaning": "化学"
+  },
+  {
+   "word": "cheque",
+   "phonetic": "tek",
+   "meaning": "支票美作"
+  },
+  {
+   "word": "cherry",
+   "phonetic": "teri",
+   "meaning": "樱桃"
+  },
+  {
+   "word": "chess",
+   "phonetic": "tes",
+   "meaning": "国际象棋"
+  },
+  {
+   "word": "chestnut",
+   "phonetic": "",
+   "meaning": "粟子"
+  },
+  {
+   "word": "chick",
+   "phonetic": "tik",
+   "meaning": "雏鸡，小鸟"
+  },
+  {
+   "word": "chicken",
+   "phonetic": "tikin",
+   "meaning": "鸡；小鸡"
+  },
+  {
+   "word": "chief",
+   "phonetic": "ti:f",
+   "meaning": "首要的"
+  },
+  {
+   "word": "china",
+   "phonetic": "",
+   "meaning": "中国"
+  },
+  {
+   "word": "chinese",
+   "phonetic": "taini:z",
+   "meaning": "中国人；汉语"
+  },
+  {
+   "word": "chocolate",
+   "phonetic": "",
+   "meaning": "驼色的"
+  },
+  {
+   "word": "chrysanthemum",
+   "phonetic": "",
+   "meaning": "菊花"
+  },
+  {
+   "word": "church",
+   "phonetic": "tə:t",
+   "meaning": "教堂"
+  },
+  {
+   "word": "cicada",
+   "phonetic": "",
+   "meaning": "蝉"
+  },
+  {
+   "word": "cinema",
+   "phonetic": "sinəmə",
+   "meaning": "电影院"
+  },
+  {
+   "word": "claim",
+   "phonetic": "kleim",
+   "meaning": "索赔"
+  },
+  {
+   "word": "classical",
+   "phonetic": "klæsikəl",
+   "meaning": "古典音乐"
+  },
+  {
+   "word": "classicalmusic",
+   "phonetic": "",
+   "meaning": "古典音乐"
+  },
+  {
+   "word": "classicism",
+   "phonetic": "",
+   "meaning": "古典主义；古典风格"
+  },
+  {
+   "word": "clause",
+   "phonetic": "klɔ:z",
+   "meaning": "条款"
+  },
+  {
+   "word": "clean",
+   "phonetic": "kli:n",
+   "meaning": "干净的"
+  },
+  {
+   "word": "clear",
+   "phonetic": "kliə",
+   "meaning": "清澈的"
+  },
+  {
+   "word": "clerk",
+   "phonetic": "kla:kklə:k",
+   "meaning": "办事员；店员；书记"
+  },
+  {
+   "word": "client",
+   "phonetic": "",
+   "meaning": "顾客；客户"
+  },
+  {
+   "word": "cliff",
+   "phonetic": "klif",
+   "meaning": "悬崖；峭壁第页共页"
+  },
+  {
+   "word": "clinic",
+   "phonetic": "klinik",
+   "meaning": "诊所"
+  },
+  {
+   "word": "clip",
+   "phonetic": "klip",
+   "meaning": "回形针；夹子"
+  },
+  {
+   "word": "clock",
+   "phonetic": "klɔk",
+   "meaning": "时钟"
+  },
+  {
+   "word": "clothes",
+   "phonetic": "kləuz",
+   "meaning": "衣服，服装"
+  },
+  {
+   "word": "clothing",
+   "phonetic": "kləui",
+   "meaning": "服装"
+  },
+  {
+   "word": "cloud",
+   "phonetic": "klaud",
+   "meaning": "云，阴云"
+  },
+  {
+   "word": "clove",
+   "phonetic": "kləuv",
+   "meaning": "丁香"
+  },
+  {
+   "word": "club",
+   "phonetic": "klʌb",
+   "meaning": "俱乐部"
+  },
+  {
+   "word": "coach",
+   "phonetic": "kəut",
+   "meaning": "四轮大马车"
+  },
+  {
+   "word": "coast",
+   "phonetic": "kəust",
+   "meaning": "海岸"
+  },
+  {
+   "word": "coat",
+   "phonetic": "kəut",
+   "meaning": "外套"
+  },
+  {
+   "word": "cobra",
+   "phonetic": "kəubrə",
+   "meaning": "眼镜蛇"
+  },
+  {
+   "word": "cock",
+   "phonetic": "kɔk",
+   "meaning": "公鸡"
+  },
+  {
+   "word": "cockroach",
+   "phonetic": "kɔkrəut",
+   "meaning": "蟑螂"
+  },
+  {
+   "word": "coco",
+   "phonetic": "kəukəu",
+   "meaning": "椰树"
+  },
+  {
+   "word": "coconut",
+   "phonetic": "kəukənʌt",
+   "meaning": "椰子"
+  },
+  {
+   "word": "codfish",
+   "phonetic": "kɔdfi",
+   "meaning": "鳕鱼"
+  },
+  {
+   "word": "coin",
+   "phonetic": "kɔin",
+   "meaning": "硬币"
+  },
+  {
+   "word": "collar",
+   "phonetic": "kɔlə",
+   "meaning": "衣领，领子"
+  },
+  {
+   "word": "collection",
+   "phonetic": "kəlekən",
+   "meaning": "收藏"
+  },
+  {
+   "word": "college",
+   "phonetic": "kɔlid",
+   "meaning": "学院"
+  },
+  {
+   "word": "colony",
+   "phonetic": "kɔləni",
+   "meaning": "殖民地"
+  },
+  {
+   "word": "comb",
+   "phonetic": "kəum",
+   "meaning": "梳子"
+  },
+  {
+   "word": "comedy",
+   "phonetic": "",
+   "meaning": "喜剧"
+  },
+  {
+   "word": "comet",
+   "phonetic": "kɔmit",
+   "meaning": "彗星"
+  },
+  {
+   "word": "commerce",
+   "phonetic": "kɔmə:s",
+   "meaning": "商业；贸易"
+  },
+  {
+   "word": "common",
+   "phonetic": "kɔmən",
+   "meaning": "普通的"
+  },
+  {
+   "word": "commotion",
+   "phonetic": "kəməuən",
+   "meaning": "骚动；暴乱"
+  },
+  {
+   "word": "community",
+   "phonetic": "",
+   "meaning": "社区"
+  },
+  {
+   "word": "compact",
+   "phonetic": "kəmpæktkɔmpækt",
+   "meaning": "合同；契约第页共页"
+  },
+  {
+   "word": "compass",
+   "phonetic": "kʌmpəs",
+   "meaning": "指南针，罗盘"
+  },
+  {
+   "word": "competition",
+   "phonetic": "",
+   "meaning": "竞争"
+  },
+  {
+   "word": "competitive",
+   "phonetic": "",
+   "meaning": "竞争的"
+  },
+  {
+   "word": "complaint",
+   "phonetic": "",
+   "meaning": "控告；申诉第页共页"
+  },
+  {
+   "word": "complete",
+   "phonetic": "",
+   "meaning": "完整的"
+  },
+  {
+   "word": "complex",
+   "phonetic": "",
+   "meaning": "复杂的"
+  },
+  {
+   "word": "composer",
+   "phonetic": "kəmpəuzə",
+   "meaning": "作曲家"
+  },
+  {
+   "word": "composition",
+   "phonetic": "kɔmpəziən",
+   "meaning": "作文；学术著作"
+  },
+  {
+   "word": "condor",
+   "phonetic": "kɔndɔ:",
+   "meaning": "秃鹫，秃鹰"
+  },
+  {
+   "word": "conductor",
+   "phonetic": "kəndʌktə",
+   "meaning": "乘务员"
+  },
+  {
+   "word": "congress",
+   "phonetic": "",
+   "meaning": "国会"
+  },
+  {
+   "word": "congressman",
+   "phonetic": "",
+   "meaning": "国会议员"
+  },
+  {
+   "word": "conscious",
+   "phonetic": "kɔnəs",
+   "meaning": "有意识的"
+  },
+  {
+   "word": "conspiracy",
+   "phonetic": "",
+   "meaning": "阴谋"
+  },
+  {
+   "word": "conspirator",
+   "phonetic": "",
+   "meaning": "阴谋者；同谋者"
+  },
+  {
+   "word": "constellation",
+   "phonetic": "kɔnstəleiən",
+   "meaning": "星座"
+  },
+  {
+   "word": "constitution",
+   "phonetic": "",
+   "meaning": "宪法"
+  },
+  {
+   "word": "consul",
+   "phonetic": "kɔnsəl",
+   "meaning": "领事"
+  },
+  {
+   "word": "consumer",
+   "phonetic": "",
+   "meaning": "消费者；用户"
+  },
+  {
+   "word": "consumption",
+   "phonetic": "kənsʌmpən",
+   "meaning": "消费"
+  },
+  {
+   "word": "continent",
+   "phonetic": "",
+   "meaning": "大陆；洲"
+  },
+  {
+   "word": "convention",
+   "phonetic": "",
+   "meaning": "惯例"
+  },
+  {
+   "word": "convict",
+   "phonetic": "",
+   "meaning": "囚犯，罪犯"
+  },
+  {
+   "word": "cook",
+   "phonetic": "kuk",
+   "meaning": "厨子厨师"
+  },
+  {
+   "word": "cookie",
+   "phonetic": "kuki",
+   "meaning": "甜饼干，曲奇饼"
+  },
+  {
+   "word": "cooperation",
+   "phonetic": "kəuɔpəreiən",
+   "meaning": "合作"
+  },
+  {
+   "word": "copyright",
+   "phonetic": "",
+   "meaning": "版权著作权"
+  },
+  {
+   "word": "coral",
+   "phonetic": "kɔ:rəl",
+   "meaning": "珊瑚"
+  },
+  {
+   "word": "cormorant",
+   "phonetic": "",
+   "meaning": "天鹅"
+  },
+  {
+   "word": "cost",
+   "phonetic": "kɔst",
+   "meaning": "成本；费用"
+  },
+  {
+   "word": "cotton",
+   "phonetic": "kɔtən",
+   "meaning": "棉花第页共页"
+  },
+  {
+   "word": "couple",
+   "phonetic": "kʌpl",
+   "meaning": "夫妇，夫妻"
+  },
+  {
+   "word": "court",
+   "phonetic": "kɔ:t",
+   "meaning": "法院"
+  },
+  {
+   "word": "cousin",
+   "phonetic": "kʌzən",
+   "meaning": "堂兄弟姐妹"
+  },
+  {
+   "word": "cow",
+   "phonetic": "kau",
+   "meaning": "奶牛，母牛"
+  },
+  {
+   "word": "crab",
+   "phonetic": "kræb",
+   "meaning": "蟹"
+  },
+  {
+   "word": "cracker",
+   "phonetic": "krækə",
+   "meaning": "饼干（美）"
+  },
+  {
+   "word": "craftsman",
+   "phonetic": "",
+   "meaning": "工匠；手艺人"
+  },
+  {
+   "word": "crank",
+   "phonetic": "kræk",
+   "meaning": "曲柄，曲轴"
+  },
+  {
+   "word": "crayfish",
+   "phonetic": "kreifi",
+   "meaning": "小龙虾"
+  },
+  {
+   "word": "cricket",
+   "phonetic": "krikit",
+   "meaning": "板球"
+  },
+  {
+   "word": "crime",
+   "phonetic": "kraim",
+   "meaning": "罪行；犯法"
+  },
+  {
+   "word": "criminal",
+   "phonetic": "",
+   "meaning": "罪犯"
+  },
+  {
+   "word": "critic",
+   "phonetic": "kritik",
+   "meaning": "批评家；评论家"
+  },
+  {
+   "word": "criticism",
+   "phonetic": "",
+   "meaning": "评论"
+  },
+  {
+   "word": "crocodile",
+   "phonetic": "",
+   "meaning": "鳄鱼"
+  },
+  {
+   "word": "crow",
+   "phonetic": "krəu",
+   "meaning": "乌鸦"
+  },
+  {
+   "word": "cruel",
+   "phonetic": "kru:əl",
+   "meaning": "残酷的"
+  },
+  {
+   "word": "crust",
+   "phonetic": "krʌst",
+   "meaning": "面包皮"
+  },
+  {
+   "word": "cubism",
+   "phonetic": "kju:bizəm",
+   "meaning": "立体派；立体主义"
+  },
+  {
+   "word": "cuckoo",
+   "phonetic": "ku:ku:",
+   "meaning": "杜鹃，布谷鸟"
+  },
+  {
+   "word": "cucumber",
+   "phonetic": "kju:kʌmbə",
+   "meaning": "黄瓜"
+  },
+  {
+   "word": "cup",
+   "phonetic": "kʌp",
+   "meaning": "杯子"
+  },
+  {
+   "word": "cupboard",
+   "phonetic": "kʌbəd",
+   "meaning": "碗柜，橱柜"
+  },
+  {
+   "word": "current",
+   "phonetic": "kʌrənt",
+   "meaning": "水流"
+  },
+  {
+   "word": "curtain",
+   "phonetic": "kə:tən",
+   "meaning": "窗帘，帘子"
+  },
+  {
+   "word": "cushion",
+   "phonetic": "kuən",
+   "meaning": "垫子"
+  },
+  {
+   "word": "custom",
+   "phonetic": "kʌstəm",
+   "meaning": "习惯；风俗；海关"
+  },
+  {
+   "word": "customer",
+   "phonetic": "kʌstəmə",
+   "meaning": "顾客；客户"
+  },
+  {
+   "word": "cut",
+   "phonetic": "kʌt",
+   "meaning": "切过的"
+  },
+  {
+   "word": "cyclone",
+   "phonetic": "",
+   "meaning": "旋风"
+  },
+  {
+   "word": "dahlia",
+   "phonetic": "",
+   "meaning": "大丽花"
+  },
+  {
+   "word": "daisy",
+   "phonetic": "deizi",
+   "meaning": "雏菊"
+  },
+  {
+   "word": "dancer",
+   "phonetic": "da:nsə",
+   "meaning": "舞蹈家，舞女"
+  },
+  {
+   "word": "dark",
+   "phonetic": "da:k",
+   "meaning": "黑暗的"
+  },
+  {
+   "word": "date",
+   "phonetic": "deit",
+   "meaning": "枣"
+  },
+  {
+   "word": "datura",
+   "phonetic": "dətjuərə",
+   "meaning": "曼陀罗"
+  },
+  {
+   "word": "daughter-in-law",
+   "phonetic": "",
+   "meaning": "儿媳"
+  },
+  {
+   "word": "dead",
+   "phonetic": "ded",
+   "meaning": "死的"
+  },
+  {
+   "word": "december",
+   "phonetic": "",
+   "meaning": "十二月饮食"
+  },
+  {
+   "word": "declamation",
+   "phonetic": "",
+   "meaning": "朗诵；朗诵技巧"
+  },
+  {
+   "word": "deep",
+   "phonetic": "di:p",
+   "meaning": "深的"
+  },
+  {
+   "word": "deer",
+   "phonetic": "diə",
+   "meaning": "鹿"
+  },
+  {
+   "word": "deficit",
+   "phonetic": "defisit",
+   "meaning": "亏空；亏损；赤字"
+  },
+  {
+   "word": "delegate",
+   "phonetic": "",
+   "meaning": "代表"
+  },
+  {
+   "word": "delegation",
+   "phonetic": "",
+   "meaning": "代表团"
+  },
+  {
+   "word": "delicate",
+   "phonetic": "",
+   "meaning": "纤弱的；微妙的"
+  },
+  {
+   "word": "demand",
+   "phonetic": "dima:nd",
+   "meaning": "需求"
+  },
+  {
+   "word": "democracy",
+   "phonetic": "dimɔkrəsi",
+   "meaning": "民主主义；民主政治"
+  },
+  {
+   "word": "demonstration",
+   "phonetic": "",
+   "meaning": "示威；示威游行"
+  },
+  {
+   "word": "denouement",
+   "phonetic": "",
+   "meaning": "终场结局"
+  },
+  {
+   "word": "dentist",
+   "phonetic": "dentist",
+   "meaning": "牙科医生"
+  },
+  {
+   "word": "denture",
+   "phonetic": "",
+   "meaning": "假齿"
+  },
+  {
+   "word": "dependent",
+   "phonetic": "",
+   "meaning": "依靠的"
+  },
+  {
+   "word": "deposition",
+   "phonetic": "depəziən",
+   "meaning": "革职；免职"
+  },
+  {
+   "word": "descent",
+   "phonetic": "disent",
+   "meaning": "血统"
+  },
+  {
+   "word": "desert",
+   "phonetic": "dezət",
+   "meaning": "沙漠"
+  },
+  {
+   "word": "designer",
+   "phonetic": "",
+   "meaning": "设计家"
+  },
+  {
+   "word": "desk",
+   "phonetic": "desk",
+   "meaning": "书桌，办公桌"
+  },
+  {
+   "word": "despot",
+   "phonetic": "",
+   "meaning": "暴君"
+  },
+  {
+   "word": "detective",
+   "phonetic": "ditektiv",
+   "meaning": "侦探"
+  },
+  {
+   "word": "dew",
+   "phonetic": "dju:du:",
+   "meaning": "露水"
+  },
+  {
+   "word": "dictator",
+   "phonetic": "",
+   "meaning": "独裁者"
+  },
+  {
+   "word": "dictatorship",
+   "phonetic": "",
+   "meaning": "专政；独裁政权"
+  },
+  {
+   "word": "different",
+   "phonetic": "difərənt",
+   "meaning": "不同的"
+  },
+  {
+   "word": "dining-room",
+   "phonetic": "dainiru:m",
+   "meaning": "餐厅，食堂"
+  },
+  {
+   "word": "diplomacy",
+   "phonetic": "",
+   "meaning": "外交"
+  },
+  {
+   "word": "diplomat",
+   "phonetic": "",
+   "meaning": "外交官"
+  },
+  {
+   "word": "director",
+   "phonetic": "",
+   "meaning": "导演；主任；理事"
+  },
+  {
+   "word": "dirty",
+   "phonetic": "də:ti",
+   "meaning": "脏的"
+  },
+  {
+   "word": "discount",
+   "phonetic": "diskaunt",
+   "meaning": "折扣"
+  },
+  {
+   "word": "discrimination",
+   "phonetic": "",
+   "meaning": "岐视"
+  },
+  {
+   "word": "discus",
+   "phonetic": "",
+   "meaning": "铁饼"
+  },
+  {
+   "word": "diving",
+   "phonetic": "daivi",
+   "meaning": "跳水"
+  },
+  {
+   "word": "dock",
+   "phonetic": "dɔk",
+   "meaning": "被告席"
+  },
+  {
+   "word": "doctor",
+   "phonetic": "dɔktə",
+   "meaning": "医生；博士"
+  },
+  {
+   "word": "dog",
+   "phonetic": "dɔg",
+   "meaning": "狗"
+  },
+  {
+   "word": "dollar",
+   "phonetic": "dɔlə",
+   "meaning": "美元"
+  },
+  {
+   "word": "dolphin",
+   "phonetic": "",
+   "meaning": "海豚"
+  },
+  {
+   "word": "dominion",
+   "phonetic": "",
+   "meaning": "领土；主权；统治"
+  },
+  {
+   "word": "donkey",
+   "phonetic": "dɔki",
+   "meaning": "驴"
+  },
+  {
+   "word": "draft",
+   "phonetic": "dra:ft",
+   "meaning": "草案"
+  },
+  {
+   "word": "dragonfly",
+   "phonetic": "",
+   "meaning": "蜻蜓"
+  },
+  {
+   "word": "drama",
+   "phonetic": "dra:mə",
+   "meaning": "戏剧，话剧；剧本"
+  },
+  {
+   "word": "drawer",
+   "phonetic": "drɔ:",
+   "meaning": "抽屉"
+  },
+  {
+   "word": "drawing",
+   "phonetic": "drɔ:i",
+   "meaning": "取出存款；提款"
+  },
+  {
+   "word": "dress",
+   "phonetic": "dres",
+   "meaning": "女装，连衣裙"
+  },
+  {
+   "word": "drill",
+   "phonetic": "dril",
+   "meaning": "钻，钻头"
+  },
+  {
+   "word": "driver",
+   "phonetic": "",
+   "meaning": "驾驶员"
+  },
+  {
+   "word": "drought",
+   "phonetic": "draut",
+   "meaning": "干旱"
+  },
+  {
+   "word": "druggist",
+   "phonetic": "",
+   "meaning": "药剂师"
+  },
+  {
+   "word": "dry",
+   "phonetic": "drai",
+   "meaning": "干的"
+  },
+  {
+   "word": "duck",
+   "phonetic": "dʌk",
+   "meaning": "鸭"
+  },
+  {
+   "word": "dull",
+   "phonetic": "dʌl",
+   "meaning": "阴天的，多云的"
+  },
+  {
+   "word": "dutch",
+   "phonetic": "dʌt",
+   "meaning": "荷兰人；荷兰语货币"
+  },
+  {
+   "word": "duty",
+   "phonetic": "dju:ti",
+   "meaning": "税收关税"
+  },
+  {
+   "word": "dynasty",
+   "phonetic": "dinəsti",
+   "meaning": "朝代，王朝"
+  },
+  {
+   "word": "eagle",
+   "phonetic": "i:gl",
+   "meaning": "鹰"
+  },
+  {
+   "word": "ear",
+   "phonetic": "iə",
+   "meaning": "耳朵"
+  },
+  {
+   "word": "earnings",
+   "phonetic": "ə:niz",
+   "meaning": "收入；利润；收益"
+  },
+  {
+   "word": "earring",
+   "phonetic": "iəri",
+   "meaning": "耳环，耳饰"
+  },
+  {
+   "word": "earth",
+   "phonetic": "ə:",
+   "meaning": "地球"
+  },
+  {
+   "word": "earthquake",
+   "phonetic": "",
+   "meaning": "地震"
+  },
+  {
+   "word": "earthworm",
+   "phonetic": "ə:wə:m",
+   "meaning": "蚯蚓"
+  },
+  {
+   "word": "economics",
+   "phonetic": "",
+   "meaning": "经济学"
+  },
+  {
+   "word": "economist",
+   "phonetic": "",
+   "meaning": "经济学家"
+  },
+  {
+   "word": "edition",
+   "phonetic": "idiən",
+   "meaning": "版本"
+  },
+  {
+   "word": "editor",
+   "phonetic": "",
+   "meaning": "编者"
+  },
+  {
+   "word": "eggplant",
+   "phonetic": "egpla:nt",
+   "meaning": "茄子"
+  },
+  {
+   "word": "egypt",
+   "phonetic": "i:dipt",
+   "meaning": "埃及"
+  },
+  {
+   "word": "egyptian",
+   "phonetic": "",
+   "meaning": "埃及人"
+  },
+  {
+   "word": "elastic",
+   "phonetic": "",
+   "meaning": "有弹性的"
+  },
+  {
+   "word": "elbow",
+   "phonetic": "elbəu",
+   "meaning": "肘部"
+  },
+  {
+   "word": "electric",
+   "phonetic": "ilektrik",
+   "meaning": "电的"
+  },
+  {
+   "word": "elephant",
+   "phonetic": "",
+   "meaning": "象"
+  },
+  {
+   "word": "elm",
+   "phonetic": "elm",
+   "meaning": "榆树，榆木"
+  },
+  {
+   "word": "eloquence",
+   "phonetic": "eləkwəns",
+   "meaning": "文才；口才"
+  },
+  {
+   "word": "embassy",
+   "phonetic": "embəsi",
+   "meaning": "大使馆"
+  },
+  {
+   "word": "emperor",
+   "phonetic": "empərə",
+   "meaning": "皇帝"
+  },
+  {
+   "word": "empire",
+   "phonetic": "",
+   "meaning": "帝国"
+  },
+  {
+   "word": "employer",
+   "phonetic": "",
+   "meaning": "雇主，老板"
+  },
+  {
+   "word": "engineer",
+   "phonetic": "",
+   "meaning": "工程师"
+  },
+  {
+   "word": "engineering",
+   "phonetic": "",
+   "meaning": "工程学"
+  },
+  {
+   "word": "england",
+   "phonetic": "iglənd",
+   "meaning": "英国"
+  },
+  {
+   "word": "english",
+   "phonetic": "igli",
+   "meaning": "英语；英国人"
+  },
+  {
+   "word": "engraving",
+   "phonetic": "ingreivi",
+   "meaning": "版画"
+  },
+  {
+   "word": "entree",
+   "phonetic": "",
+   "meaning": "正菜"
+  },
+  {
+   "word": "episode",
+   "phonetic": "",
+   "meaning": "插曲；一段情节"
+  },
+  {
+   "word": "equal",
+   "phonetic": "i:kwəl",
+   "meaning": "相等的"
+  },
+  {
+   "word": "equator",
+   "phonetic": "",
+   "meaning": "赤道"
+  },
+  {
+   "word": "equus",
+   "phonetic": "ekwəs",
+   "meaning": "马属（包括马，驴，斑马等）"
+  },
+  {
+   "word": "er",
+   "phonetic": "brʌə",
+   "meaning": "兄弟"
+  },
+  {
+   "word": "eraser",
+   "phonetic": "",
+   "meaning": "橡皮擦工具"
+  },
+  {
+   "word": "essay",
+   "phonetic": "esei",
+   "meaning": "随笔"
+  },
+  {
+   "word": "estimate",
+   "phonetic": "estimeit",
+   "meaning": "估价"
+  },
+  {
+   "word": "evidence",
+   "phonetic": "",
+   "meaning": "证据"
+  },
+  {
+   "word": "examination",
+   "phonetic": "",
+   "meaning": "讯问；质问"
+  },
+  {
+   "word": "exhibition",
+   "phonetic": "",
+   "meaning": "展览"
+  },
+  {
+   "word": "existentialism",
+   "phonetic": "",
+   "meaning": "存在主义"
+  },
+  {
+   "word": "expenditure",
+   "phonetic": "",
+   "meaning": "开支；支出"
+  },
+  {
+   "word": "expensive",
+   "phonetic": "ikspensiv",
+   "meaning": "昂贵的"
+  },
+  {
+   "word": "explorer",
+   "phonetic": "",
+   "meaning": "探险家"
+  },
+  {
+   "word": "export",
+   "phonetic": "",
+   "meaning": "出口"
+  },
+  {
+   "word": "express",
+   "phonetic": "ikspres",
+   "meaning": "快客列车，快车"
+  },
+  {
+   "word": "expressionism",
+   "phonetic": "",
+   "meaning": "表现主义"
+  },
+  {
+   "word": "extinction",
+   "phonetic": "",
+   "meaning": "消灭"
+  },
+  {
+   "word": "eye",
+   "phonetic": "ai",
+   "meaning": "眼睛"
+  },
+  {
+   "word": "face",
+   "phonetic": "feis",
+   "meaning": "脸"
+  },
+  {
+   "word": "falcon",
+   "phonetic": "fælkən",
+   "meaning": "猎鹰；隼"
+  },
+  {
+   "word": "fall",
+   "phonetic": "fɔ:l",
+   "meaning": "秋天"
+  },
+  {
+   "word": "false",
+   "phonetic": "fɔ:ls",
+   "meaning": "假的"
+  },
+  {
+   "word": "family",
+   "phonetic": "",
+   "meaning": "家庭，亲属"
+  },
+  {
+   "word": "fan",
+   "phonetic": "fæn",
+   "meaning": "风扇"
+  },
+  {
+   "word": "farce",
+   "phonetic": "fa:s",
+   "meaning": "滑稽剧"
+  },
+  {
+   "word": "farmer",
+   "phonetic": "fa:mə",
+   "meaning": "农夫；农场主"
+  },
+  {
+   "word": "father-in-law",
+   "phonetic": "fa:əinlɔ:",
+   "meaning": "岳父（公公）"
+  },
+  {
+   "word": "fauvism",
+   "phonetic": "",
+   "meaning": "野兽派"
+  },
+  {
+   "word": "february",
+   "phonetic": "",
+   "meaning": "二月"
+  },
+  {
+   "word": "female",
+   "phonetic": "fi:meil",
+   "meaning": "女的"
+  },
+  {
+   "word": "fencing",
+   "phonetic": "fensi",
+   "meaning": "击剑"
+  },
+  {
+   "word": "ferment",
+   "phonetic": "",
+   "meaning": "动乱"
+  },
+  {
+   "word": "fertile",
+   "phonetic": "",
+   "meaning": "多产的"
+  },
+  {
+   "word": "feudalism",
+   "phonetic": "fju:dəlizəm",
+   "meaning": "封建制度；封建主义"
+  },
+  {
+   "word": "fig",
+   "phonetic": "fig",
+   "meaning": "无花果"
+  },
+  {
+   "word": "figure",
+   "phonetic": "figə",
+   "meaning": "塑像"
+  },
+  {
+   "word": "file",
+   "phonetic": "fail",
+   "meaning": "锉"
+  },
+  {
+   "word": "finance",
+   "phonetic": "",
+   "meaning": "财政学"
+  },
+  {
+   "word": "fine",
+   "phonetic": "fain",
+   "meaning": "晴天"
+  },
+  {
+   "word": "finger",
+   "phonetic": "figə",
+   "meaning": "手指"
+  },
+  {
+   "word": "finland",
+   "phonetic": "",
+   "meaning": "芬兰"
+  },
+  {
+   "word": "firefighter",
+   "phonetic": "",
+   "meaning": "消防员第页共页"
+  },
+  {
+   "word": "firefly",
+   "phonetic": "",
+   "meaning": "萤火虫"
+  },
+  {
+   "word": "fisherman",
+   "phonetic": "fiəmən",
+   "meaning": "渔夫"
+  },
+  {
+   "word": "fishworm",
+   "phonetic": "fiwə:m",
+   "meaning": "蚯蚓"
+  },
+  {
+   "word": "fist",
+   "phonetic": "fist",
+   "meaning": "拳头"
+  },
+  {
+   "word": "fixed",
+   "phonetic": "fikst",
+   "meaning": "固定的"
+  },
+  {
+   "word": "flat",
+   "phonetic": "flæt",
+   "meaning": "平的"
+  },
+  {
+   "word": "flea",
+   "phonetic": "fli:",
+   "meaning": "跳蚤"
+  },
+  {
+   "word": "flood",
+   "phonetic": "flʌd",
+   "meaning": "洪水"
+  },
+  {
+   "word": "flow",
+   "phonetic": "fləu",
+   "meaning": "泛滥"
+  },
+  {
+   "word": "flute",
+   "phonetic": "flu:t",
+   "meaning": "长笛"
+  },
+  {
+   "word": "fly",
+   "phonetic": "flai",
+   "meaning": "苍蝇"
+  },
+  {
+   "word": "fog",
+   "phonetic": "fɔg",
+   "meaning": "浓雾"
+  },
+  {
+   "word": "foolish",
+   "phonetic": "fu:li",
+   "meaning": "愚蠢的"
+  },
+  {
+   "word": "foot",
+   "phonetic": "fut",
+   "meaning": "脚"
+  },
+  {
+   "word": "forecast",
+   "phonetic": "fɔ:ka:st",
+   "meaning": "预测"
+  },
+  {
+   "word": "forefinger",
+   "phonetic": "fɔ:figə",
+   "meaning": "食指中指无名指小指"
+  },
+  {
+   "word": "forest",
+   "phonetic": "",
+   "meaning": "森林"
+  },
+  {
+   "word": "fork",
+   "phonetic": "fɔ:k",
+   "meaning": "叉"
+  },
+  {
+   "word": "foster",
+   "phonetic": "fɔstə",
+   "meaning": "领养的"
+  },
+  {
+   "word": "frame",
+   "phonetic": "freim",
+   "meaning": "画框"
+  },
+  {
+   "word": "franc",
+   "phonetic": "fræk",
+   "meaning": "法郎"
+  },
+  {
+   "word": "france",
+   "phonetic": "fra:ns",
+   "meaning": "法国"
+  },
+  {
+   "word": "fraud",
+   "phonetic": "frɔ:d",
+   "meaning": "欺骗；骗子"
+  },
+  {
+   "word": "freestyle",
+   "phonetic": "fri:stail",
+   "meaning": "自由泳"
+  },
+  {
+   "word": "freeze",
+   "phonetic": "fri:z",
+   "meaning": "冰冻"
+  },
+  {
+   "word": "french",
+   "phonetic": "frent",
+   "meaning": "法国人；法文"
+  },
+  {
+   "word": "frequent",
+   "phonetic": "",
+   "meaning": "频繁的，经常的"
+  },
+  {
+   "word": "friday",
+   "phonetic": "fraidi",
+   "meaning": "周五"
+  },
+  {
+   "word": "frost",
+   "phonetic": "frɔst",
+   "meaning": "霜"
+  },
+  {
+   "word": "furniture",
+   "phonetic": "fə:nitə",
+   "meaning": "家具"
+  },
+  {
+   "word": "future",
+   "phonetic": "fju:tə",
+   "meaning": "未来的"
+  },
+  {
+   "word": "futurologist",
+   "phonetic": "",
+   "meaning": "未来学家"
+  },
+  {
+   "word": "galaxy",
+   "phonetic": "gæləksi",
+   "meaning": "银河系"
+  },
+  {
+   "word": "gale",
+   "phonetic": "geil",
+   "meaning": "季节风，大风"
+  },
+  {
+   "word": "gallery",
+   "phonetic": "gæləri",
+   "meaning": "画廊；美术馆"
+  },
+  {
+   "word": "gaol",
+   "phonetic": "deil",
+   "meaning": "监狱美作"
+  },
+  {
+   "word": "garlic",
+   "phonetic": "ga:lik",
+   "meaning": "蒜"
+  },
+  {
+   "word": "gazelle",
+   "phonetic": "gəzel",
+   "meaning": "小羚羊；瞪羚"
+  },
+  {
+   "word": "gemini",
+   "phonetic": "deminai",
+   "meaning": "双子座"
+  },
+  {
+   "word": "general",
+   "phonetic": "denərəl",
+   "meaning": "一般的第页共页"
+  },
+  {
+   "word": "generation",
+   "phonetic": "denəreiən",
+   "meaning": "一代人；一代"
+  },
+  {
+   "word": "geography",
+   "phonetic": "diɔgrəfi",
+   "meaning": "地理"
+  },
+  {
+   "word": "geologist",
+   "phonetic": "",
+   "meaning": "地质学家"
+  },
+  {
+   "word": "geology",
+   "phonetic": "diɔlədi",
+   "meaning": "地质学"
+  },
+  {
+   "word": "geometry",
+   "phonetic": "",
+   "meaning": "几何"
+  },
+  {
+   "word": "german",
+   "phonetic": "də:mən",
+   "meaning": "德国人；德语"
+  },
+  {
+   "word": "germany",
+   "phonetic": "də:məni",
+   "meaning": "德国"
+  },
+  {
+   "word": "gibbon",
+   "phonetic": "gibən",
+   "meaning": "长臂猿"
+  },
+  {
+   "word": "ginkgo",
+   "phonetic": "",
+   "meaning": "银杏，银杏树"
+  },
+  {
+   "word": "giraffe",
+   "phonetic": "dira:f",
+   "meaning": "长颈鹿"
+  },
+  {
+   "word": "glacier",
+   "phonetic": "glæsjə",
+   "meaning": "冰川，冰河学科"
+  },
+  {
+   "word": "glass",
+   "phonetic": "gla:s",
+   "meaning": "玻璃杯"
+  },
+  {
+   "word": "glove",
+   "phonetic": "glʌv",
+   "meaning": "手套"
+  },
+  {
+   "word": "glue",
+   "phonetic": "glu:",
+   "meaning": "胶水，胶"
+  },
+  {
+   "word": "goat",
+   "phonetic": "gəut",
+   "meaning": "山羊"
+  },
+  {
+   "word": "golden",
+   "phonetic": "gəuldən",
+   "meaning": "金色的"
+  },
+  {
+   "word": "goldfinch",
+   "phonetic": "",
+   "meaning": "金翅雀"
+  },
+  {
+   "word": "golf",
+   "phonetic": "gɔlf",
+   "meaning": "高尔夫球"
+  },
+  {
+   "word": "goods",
+   "phonetic": "gudz",
+   "meaning": "商品，货物"
+  },
+  {
+   "word": "goose",
+   "phonetic": "gu:s",
+   "meaning": "鹅"
+  },
+  {
+   "word": "gorilla",
+   "phonetic": "gərilə",
+   "meaning": "大猩猩"
+  },
+  {
+   "word": "gothic",
+   "phonetic": "gɔik",
+   "meaning": "哥特式"
+  },
+  {
+   "word": "government",
+   "phonetic": "gʌvənmənt",
+   "meaning": "政府；内阁"
+  },
+  {
+   "word": "governor",
+   "phonetic": "gʌvənə",
+   "meaning": "总督；统治者"
+  },
+  {
+   "word": "grandad",
+   "phonetic": "grændæd",
+   "meaning": "爷爷"
+  },
+  {
+   "word": "grandfather",
+   "phonetic": "",
+   "meaning": "祖父"
+  },
+  {
+   "word": "grandma",
+   "phonetic": "",
+   "meaning": "奶奶"
+  },
+  {
+   "word": "grandmother",
+   "phonetic": "grændmʌə",
+   "meaning": "祖母"
+  },
+  {
+   "word": "grandpa",
+   "phonetic": "",
+   "meaning": "爷爷；"
+  },
+  {
+   "word": "granny",
+   "phonetic": "græni",
+   "meaning": "奶奶；外婆"
+  },
+  {
+   "word": "grape",
+   "phonetic": "greip",
+   "meaning": "葡萄"
+  },
+  {
+   "word": "grasshopper",
+   "phonetic": "gra:shɔpəgræs",
+   "meaning": "蚱蜢，蝗虫"
+  },
+  {
+   "word": "gravity",
+   "phonetic": "",
+   "meaning": "重力"
+  },
+  {
+   "word": "gray",
+   "phonetic": "grei",
+   "meaning": "灰色；灰色的"
+  },
+  {
+   "word": "great",
+   "phonetic": "greit",
+   "meaning": "伟大的"
+  },
+  {
+   "word": "greece",
+   "phonetic": "gri:s",
+   "meaning": "希腊"
+  },
+  {
+   "word": "greek",
+   "phonetic": "gri:k",
+   "meaning": "希腊人；希腊文"
+  },
+  {
+   "word": "green",
+   "phonetic": "gri:n",
+   "meaning": "绿色；绿色的"
+  },
+  {
+   "word": "guardian",
+   "phonetic": "ga:diən",
+   "meaning": "监护人宇宙"
+  },
+  {
+   "word": "guava",
+   "phonetic": "gwa:və",
+   "meaning": "番石榴"
+  },
+  {
+   "word": "guide",
+   "phonetic": "gaid",
+   "meaning": "导游；向导"
+  },
+  {
+   "word": "gulf",
+   "phonetic": "gʌlf",
+   "meaning": "海湾"
+  },
+  {
+   "word": "gym",
+   "phonetic": "dim",
+   "meaning": "体育馆，健身房"
+  },
+  {
+   "word": "gymnasium",
+   "phonetic": "",
+   "meaning": "体育馆，健身房"
+  },
+  {
+   "word": "gymnastics",
+   "phonetic": "",
+   "meaning": "体操单杠双杠"
+  },
+  {
+   "word": "hail",
+   "phonetic": "heil",
+   "meaning": "冰雹"
+  },
+  {
+   "word": "hair",
+   "phonetic": "hə",
+   "meaning": "头发"
+  },
+  {
+   "word": "hamburg",
+   "phonetic": "hæmbə:g",
+   "meaning": "汉堡包"
+  },
+  {
+   "word": "hammer",
+   "phonetic": "hæmə",
+   "meaning": "链球"
+  },
+  {
+   "word": "handbag",
+   "phonetic": "hændbæg",
+   "meaning": "手提包"
+  },
+  {
+   "word": "handball",
+   "phonetic": "hændbɔ:l",
+   "meaning": "手球"
+  },
+  {
+   "word": "handkerchief",
+   "phonetic": "hækətif",
+   "meaning": "手帕"
+  },
+  {
+   "word": "hanging",
+   "phonetic": "hæi",
+   "meaning": "悬挂的"
+  },
+  {
+   "word": "hard",
+   "phonetic": "ha:d",
+   "meaning": "硬的；困难的"
+  },
+  {
+   "word": "harmonica",
+   "phonetic": "hɑ:mɔnikə",
+   "meaning": "口琴"
+  },
+  {
+   "word": "hawk",
+   "phonetic": "hɔ:k",
+   "meaning": "鹰"
+  },
+  {
+   "word": "hawthorn",
+   "phonetic": "hɔ:ɔ:n",
+   "meaning": "山楂，山楂树"
+  },
+  {
+   "word": "haze",
+   "phonetic": "heiz",
+   "meaning": "阴霾，薄雾"
+  },
+  {
+   "word": "hazelnut",
+   "phonetic": "",
+   "meaning": "榛子"
+  },
+  {
+   "word": "head",
+   "phonetic": "hed",
+   "meaning": "头"
+  },
+  {
+   "word": "headmaster",
+   "phonetic": "",
+   "meaning": "中小学校长"
+  },
+  {
+   "word": "headmistress",
+   "phonetic": "hedmistris",
+   "meaning": "中小学女校长"
+  },
+  {
+   "word": "headteacher",
+   "phonetic": "",
+   "meaning": "校长第页共页"
+  },
+  {
+   "word": "healthy",
+   "phonetic": "heli",
+   "meaning": "健康的"
+  },
+  {
+   "word": "hearing",
+   "phonetic": "hiəri",
+   "meaning": "审讯；审问"
+  },
+  {
+   "word": "hedgehog",
+   "phonetic": "",
+   "meaning": "刺猬"
+  },
+  {
+   "word": "heel",
+   "phonetic": "hi:l",
+   "meaning": "鞋后跟"
+  },
+  {
+   "word": "hegemony",
+   "phonetic": "",
+   "meaning": "霸权"
+  },
+  {
+   "word": "heifer",
+   "phonetic": "hefə",
+   "meaning": "小母牛"
+  },
+  {
+   "word": "heir",
+   "phonetic": "ə",
+   "meaning": "继承人"
+  },
+  {
+   "word": "helicopter",
+   "phonetic": "",
+   "meaning": "直升飞机时间"
+  },
+  {
+   "word": "hen",
+   "phonetic": "hen",
+   "meaning": "母鸡"
+  },
+  {
+   "word": "heron",
+   "phonetic": "herən",
+   "meaning": "鹭，苍鹭"
+  },
+  {
+   "word": "hickory",
+   "phonetic": "hikəri",
+   "meaning": "山核桃树"
+  },
+  {
+   "word": "hill",
+   "phonetic": "hil",
+   "meaning": "小山；山岗"
+  },
+  {
+   "word": "history",
+   "phonetic": "",
+   "meaning": "历史"
+  },
+  {
+   "word": "hockey",
+   "phonetic": "hɔki",
+   "meaning": "曲棍球"
+  },
+  {
+   "word": "holland",
+   "phonetic": "hɔlənd",
+   "meaning": "荷兰"
+  },
+  {
+   "word": "hollow",
+   "phonetic": "hɔləu",
+   "meaning": "空的，空心的"
+  },
+  {
+   "word": "holly",
+   "phonetic": "hɔli",
+   "meaning": "冬青树"
+  },
+  {
+   "word": "honeybee",
+   "phonetic": "",
+   "meaning": "蜜蜂"
+  },
+  {
+   "word": "horse",
+   "phonetic": "hɔ:s",
+   "meaning": "马"
+  },
+  {
+   "word": "horsefly",
+   "phonetic": "",
+   "meaning": "马蝇；虻"
+  },
+  {
+   "word": "hospital",
+   "phonetic": "",
+   "meaning": "医院"
+  },
+  {
+   "word": "hotel",
+   "phonetic": "",
+   "meaning": "旅馆，客栈第页共页"
+  },
+  {
+   "word": "hter",
+   "phonetic": "grændɔ:tə",
+   "meaning": "孙女；外孙女"
+  },
+  {
+   "word": "humanities",
+   "phonetic": "",
+   "meaning": "人文学科"
+  },
+  {
+   "word": "humidity",
+   "phonetic": "hju:midəti",
+   "meaning": "潮湿"
+  },
+  {
+   "word": "hunger",
+   "phonetic": "hʌgə",
+   "meaning": "饥饿"
+  },
+  {
+   "word": "hurricane",
+   "phonetic": "hʌrikən",
+   "meaning": "暴风"
+  },
+  {
+   "word": "husband",
+   "phonetic": "hʌzbənd",
+   "meaning": "丈夫"
+  },
+  {
+   "word": "iceberg",
+   "phonetic": "",
+   "meaning": "冰山"
+  },
+  {
+   "word": "icehockey",
+   "phonetic": "",
+   "meaning": "冰球"
+  },
+  {
+   "word": "ideology",
+   "phonetic": "",
+   "meaning": "意识形态"
+  },
+  {
+   "word": "ife",
+   "phonetic": "waif",
+   "meaning": "妻子"
+  },
+  {
+   "word": "import",
+   "phonetic": "",
+   "meaning": "进口"
+  },
+  {
+   "word": "important",
+   "phonetic": "impɔ:tənt",
+   "meaning": "重要的"
+  },
+  {
+   "word": "impressionism",
+   "phonetic": "",
+   "meaning": "印象主义"
+  },
+  {
+   "word": "improvisation",
+   "phonetic": "",
+   "meaning": "即席讲演"
+  },
+  {
+   "word": "income",
+   "phonetic": "inkʌm",
+   "meaning": "收入，收益"
+  },
+  {
+   "word": "india",
+   "phonetic": "",
+   "meaning": "印度"
+  },
+  {
+   "word": "inlet",
+   "phonetic": "inlet",
+   "meaning": "小湾"
+  },
+  {
+   "word": "input",
+   "phonetic": "input",
+   "meaning": "投入"
+  },
+  {
+   "word": "inquiry",
+   "phonetic": "",
+   "meaning": "询问；调查"
+  },
+  {
+   "word": "inspiration",
+   "phonetic": "",
+   "meaning": "灵感；启发"
+  },
+  {
+   "word": "instep",
+   "phonetic": "instep",
+   "meaning": "脚背"
+  },
+  {
+   "word": "institute",
+   "phonetic": "institjut",
+   "meaning": "学会，协会；学院"
+  },
+  {
+   "word": "insurance",
+   "phonetic": "inuərəns",
+   "meaning": "保险"
+  },
+  {
+   "word": "interest",
+   "phonetic": "intrist",
+   "meaning": "利息"
+  },
+  {
+   "word": "interpreter",
+   "phonetic": "",
+   "meaning": "翻译员"
+  },
+  {
+   "word": "intrigue",
+   "phonetic": "intri:g",
+   "meaning": "错综复杂的剧情"
+  },
+  {
+   "word": "investment",
+   "phonetic": "",
+   "meaning": "投资"
+  },
+  {
+   "word": "ireland",
+   "phonetic": "",
+   "meaning": "爱尔兰"
+  },
+  {
+   "word": "irish",
+   "phonetic": "aiəri",
+   "meaning": "爱尔兰人；爱尔兰语"
+  },
+  {
+   "word": "island",
+   "phonetic": "ailənd",
+   "meaning": "岛；岛屿"
+  },
+  {
+   "word": "italian",
+   "phonetic": "itæljən",
+   "meaning": "意大利人；意大利语"
+  },
+  {
+   "word": "italy",
+   "phonetic": "itəli",
+   "meaning": "意大利"
+  },
+  {
+   "word": "item",
+   "phonetic": "aitəm",
+   "meaning": "项目；细目"
+  },
+  {
+   "word": "ivory",
+   "phonetic": "aivəri",
+   "meaning": "乳白色的"
+  },
+  {
+   "word": "ivy",
+   "phonetic": "aivi",
+   "meaning": "常春藤"
+  },
+  {
+   "word": "jacket",
+   "phonetic": "dækit",
+   "meaning": "夹克，短上衣"
+  },
+  {
+   "word": "january",
+   "phonetic": "dænjuəri",
+   "meaning": "一月"
+  },
+  {
+   "word": "japan",
+   "phonetic": "dəpæn",
+   "meaning": "日本"
+  },
+  {
+   "word": "japanese",
+   "phonetic": "dæpəni:z",
+   "meaning": "日本人；日文"
+  },
+  {
+   "word": "javelin",
+   "phonetic": "",
+   "meaning": "标枪"
+  },
+  {
+   "word": "jazz",
+   "phonetic": "dæz",
+   "meaning": "爵士乐"
+  },
+  {
+   "word": "jeans",
+   "phonetic": "di:nz",
+   "meaning": "牛仔裤"
+  },
+  {
+   "word": "jeep",
+   "phonetic": "di:p",
+   "meaning": "吉普车"
+  },
+  {
+   "word": "jet",
+   "phonetic": "det",
+   "meaning": "喷气式飞机"
+  },
+  {
+   "word": "journal",
+   "phonetic": "də:nəl",
+   "meaning": "日记；日志；日记账"
+  },
+  {
+   "word": "journalist",
+   "phonetic": "",
+   "meaning": "新闻工作者；新闻记者"
+  },
+  {
+   "word": "judge",
+   "phonetic": "dʌd",
+   "meaning": "法官"
+  },
+  {
+   "word": "judo",
+   "phonetic": "du:dəu",
+   "meaning": "柔道"
+  },
+  {
+   "word": "july",
+   "phonetic": "du:lai",
+   "meaning": "七月"
+  },
+  {
+   "word": "june",
+   "phonetic": "du:n",
+   "meaning": "六月"
+  },
+  {
+   "word": "jupiter",
+   "phonetic": "du:pitə",
+   "meaning": "木星"
+  },
+  {
+   "word": "jury",
+   "phonetic": "duəri",
+   "meaning": "陪审团"
+  },
+  {
+   "word": "justice",
+   "phonetic": "",
+   "meaning": "法官；司法；正义"
+  },
+  {
+   "word": "kangaroo",
+   "phonetic": "kængəru:",
+   "meaning": "袋鼠"
+  },
+  {
+   "word": "kind",
+   "phonetic": "kaind",
+   "meaning": "亲切的"
+  },
+  {
+   "word": "kindergarten",
+   "phonetic": "",
+   "meaning": "幼儿园"
+  },
+  {
+   "word": "kingdom",
+   "phonetic": "kidəm",
+   "meaning": "王国"
+  },
+  {
+   "word": "kingfisher",
+   "phonetic": "",
+   "meaning": "翠鸟"
+  },
+  {
+   "word": "kite",
+   "phonetic": "kait",
+   "meaning": "鸢"
+  },
+  {
+   "word": "kitten",
+   "phonetic": "kitən",
+   "meaning": "小猫"
+  },
+  {
+   "word": "kitty",
+   "phonetic": "kiti:",
+   "meaning": "小猫"
+  },
+  {
+   "word": "knee",
+   "phonetic": "ni:",
+   "meaning": "膝盖，膝"
+  },
+  {
+   "word": "kneecap",
+   "phonetic": "ni:kæp",
+   "meaning": "膝盖骨"
+  },
+  {
+   "word": "knife",
+   "phonetic": "naif",
+   "meaning": "刀"
+  },
+  {
+   "word": "knuckle",
+   "phonetic": "nʌkl",
+   "meaning": "指关节"
+  },
+  {
+   "word": "koala",
+   "phonetic": "kəua:lə",
+   "meaning": "考拉，树袋熊"
+  },
+  {
+   "word": "ladder",
+   "phonetic": "lædə",
+   "meaning": "梯子植物鲜花"
+  },
+  {
+   "word": "ladle",
+   "phonetic": "leidl",
+   "meaning": "长柄勺"
+  },
+  {
+   "word": "ladybug",
+   "phonetic": "",
+   "meaning": "瓢虫"
+  },
+  {
+   "word": "lake",
+   "phonetic": "leik",
+   "meaning": "湖泊"
+  },
+  {
+   "word": "lamb",
+   "phonetic": "læm",
+   "meaning": "小羊，羔羊"
+  },
+  {
+   "word": "lamp",
+   "phonetic": "læmp",
+   "meaning": "灯"
+  },
+  {
+   "word": "landscape",
+   "phonetic": "",
+   "meaning": "风景画；山水画"
+  },
+  {
+   "word": "lark",
+   "phonetic": "la:k",
+   "meaning": "云雀，百灵鸟"
+  },
+  {
+   "word": "lathe",
+   "phonetic": "lei",
+   "meaning": "车床"
+  },
+  {
+   "word": "latitude",
+   "phonetic": "",
+   "meaning": "纬度"
+  },
+  {
+   "word": "laurel",
+   "phonetic": "lɔrəl",
+   "meaning": "月桂树"
+  },
+  {
+   "word": "law",
+   "phonetic": "lɔ:",
+   "meaning": "法学"
+  },
+  {
+   "word": "lawyer",
+   "phonetic": "lɔ:jə",
+   "meaning": "律师"
+  },
+  {
+   "word": "ld",
+   "phonetic": "taild",
+   "meaning": "孩子，儿童，"
+  },
+  {
+   "word": "lease",
+   "phonetic": "li:s",
+   "meaning": "租约"
+  },
+  {
+   "word": "leech",
+   "phonetic": "li:t",
+   "meaning": "蚂蝗，水蛭"
+  },
+  {
+   "word": "legal",
+   "phonetic": "li:gəl",
+   "meaning": "法律的；合法的；依法的"
+  },
+  {
+   "word": "legion",
+   "phonetic": "li:dən",
+   "meaning": "军团"
+  },
+  {
+   "word": "legislation",
+   "phonetic": "",
+   "meaning": "立法"
+  },
+  {
+   "word": "lemon",
+   "phonetic": "lemən",
+   "meaning": "柠檬"
+  },
+  {
+   "word": "leo",
+   "phonetic": "li:əu",
+   "meaning": "狮子座"
+  },
+  {
+   "word": "lettuce",
+   "phonetic": "letis",
+   "meaning": "莴苣，生菜"
+  },
+  {
+   "word": "lever",
+   "phonetic": "li:və",
+   "meaning": "杠杆"
+  },
+  {
+   "word": "liability",
+   "phonetic": "laiəbiləti",
+   "meaning": "责任；债务；负债"
+  },
+  {
+   "word": "libra",
+   "phonetic": "",
+   "meaning": "天秤座"
+  },
+  {
+   "word": "librarian",
+   "phonetic": "",
+   "meaning": "图书管理员"
+  },
+  {
+   "word": "library",
+   "phonetic": "",
+   "meaning": "图书馆"
+  },
+  {
+   "word": "lid",
+   "phonetic": "lid",
+   "meaning": "眼睑"
+  },
+  {
+   "word": "light",
+   "phonetic": "lait",
+   "meaning": "灯"
+  },
+  {
+   "word": "lightning",
+   "phonetic": "laitni",
+   "meaning": "闪电"
+  },
+  {
+   "word": "line",
+   "phonetic": "lain",
+   "meaning": "诗行"
+  },
+  {
+   "word": "linguist",
+   "phonetic": "ligwist",
+   "meaning": "语言学家"
+  },
+  {
+   "word": "lipstick",
+   "phonetic": "lipstik",
+   "meaning": "口红，唇膏"
+  },
+  {
+   "word": "literature",
+   "phonetic": "litərətə",
+   "meaning": "文学"
+  },
+  {
+   "word": "living",
+   "phonetic": "livi",
+   "meaning": "活的"
+  },
+  {
+   "word": "loaf",
+   "phonetic": "ləuf",
+   "meaning": "长面包"
+  },
+  {
+   "word": "lobster",
+   "phonetic": "lɔbstə",
+   "meaning": "龙虾"
+  },
+  {
+   "word": "locomotive",
+   "phonetic": "",
+   "meaning": "火车头，机车"
+  },
+  {
+   "word": "locust",
+   "phonetic": "ləukəst",
+   "meaning": "蝗虫，蚂蚱第页共页"
+  },
+  {
+   "word": "longitude",
+   "phonetic": "",
+   "meaning": "经度"
+  },
+  {
+   "word": "loose",
+   "phonetic": "lu:s",
+   "meaning": "松的"
+  },
+  {
+   "word": "loquat",
+   "phonetic": "ləukwɔt",
+   "meaning": "枇杷"
+  },
+  {
+   "word": "lorry",
+   "phonetic": "lɔ:ri",
+   "meaning": "重型卡车"
+  },
+  {
+   "word": "loud",
+   "phonetic": "laud",
+   "meaning": "大声的"
+  },
+  {
+   "word": "louse",
+   "phonetic": "laus",
+   "meaning": "虱子，虱"
+  },
+  {
+   "word": "low",
+   "phonetic": "ləu",
+   "meaning": "低的"
+  },
+  {
+   "word": "lynx",
+   "phonetic": "liks",
+   "meaning": "猞猁"
+  },
+  {
+   "word": "lyricism",
+   "phonetic": "",
+   "meaning": "抒情性绘画雕塑"
+  },
+  {
+   "word": "magpie",
+   "phonetic": "",
+   "meaning": "喜鹊"
+  },
+  {
+   "word": "mailman",
+   "phonetic": "",
+   "meaning": "邮递员"
+  },
+  {
+   "word": "mainland",
+   "phonetic": "",
+   "meaning": "大陆"
+  },
+  {
+   "word": "male",
+   "phonetic": "meil",
+   "meaning": "男的"
+  },
+  {
+   "word": "mango",
+   "phonetic": "mægəu",
+   "meaning": "芒果"
+  },
+  {
+   "word": "mantis",
+   "phonetic": "",
+   "meaning": "螳螂"
+  },
+  {
+   "word": "manufacturer",
+   "phonetic": "",
+   "meaning": "制造商；制造厂"
+  },
+  {
+   "word": "marathon",
+   "phonetic": "mærəɔn",
+   "meaning": "马拉松"
+  },
+  {
+   "word": "march",
+   "phonetic": "ma:t",
+   "meaning": "三月"
+  },
+  {
+   "word": "mare",
+   "phonetic": "mə",
+   "meaning": "母马，母驴"
+  },
+  {
+   "word": "mark",
+   "phonetic": "ma:k",
+   "meaning": "马克德国"
+  },
+  {
+   "word": "market",
+   "phonetic": "ma:kit",
+   "meaning": "市场，集市"
+  },
+  {
+   "word": "marriage",
+   "phonetic": "mærid",
+   "meaning": "结婚"
+  },
+  {
+   "word": "married",
+   "phonetic": "mærid",
+   "meaning": "已婚的"
+  },
+  {
+   "word": "mars",
+   "phonetic": "ma:z",
+   "meaning": "火星"
+  },
+  {
+   "word": "marsh",
+   "phonetic": "ma:",
+   "meaning": "沼泽"
+  },
+  {
+   "word": "masterpiece",
+   "phonetic": "ma:stəpi:s",
+   "meaning": "杰作"
+  },
+  {
+   "word": "mat",
+   "phonetic": "mæt",
+   "meaning": "席子"
+  },
+  {
+   "word": "match",
+   "phonetic": "mæt",
+   "meaning": "火柴"
+  },
+  {
+   "word": "material",
+   "phonetic": "mətiəriəl",
+   "meaning": "物质的"
+  },
+  {
+   "word": "mathematician",
+   "phonetic": "mæəmətiən",
+   "meaning": "数学家"
+  },
+  {
+   "word": "mathematics",
+   "phonetic": "",
+   "meaning": "数学"
+  },
+  {
+   "word": "may",
+   "phonetic": "mei",
+   "meaning": "五月"
+  },
+  {
+   "word": "medical",
+   "phonetic": "",
+   "meaning": "医学的"
+  },
+  {
+   "word": "medicine",
+   "phonetic": "medisin",
+   "meaning": "医学"
+  },
+  {
+   "word": "menace",
+   "phonetic": "menəs",
+   "meaning": "恐吓；威胁"
+  },
+  {
+   "word": "merchant",
+   "phonetic": "mə:tənt",
+   "meaning": "商人"
+  },
+  {
+   "word": "mercury",
+   "phonetic": "",
+   "meaning": "水星"
+  },
+  {
+   "word": "meridiem",
+   "phonetic": "",
+   "meaning": "正午（）上午上午（）下午第页共页下午"
+  },
+  {
+   "word": "meteor",
+   "phonetic": "mi:tiə",
+   "meaning": "流星"
+  },
+  {
+   "word": "meteorite",
+   "phonetic": "",
+   "meaning": "陨星第页共页"
+  },
+  {
+   "word": "meteorology",
+   "phonetic": "mi:tiərɔlədi",
+   "meaning": "气象学"
+  },
+  {
+   "word": "metrics",
+   "phonetic": "metriks",
+   "meaning": "韵律学；格律学"
+  },
+  {
+   "word": "mice",
+   "phonetic": "mais",
+   "meaning": "老鼠（的复数）"
+  },
+  {
+   "word": "microphone",
+   "phonetic": "",
+   "meaning": "麦克风，话筒"
+  },
+  {
+   "word": "military",
+   "phonetic": "",
+   "meaning": "军事的"
+  },
+  {
+   "word": "mist",
+   "phonetic": "mist",
+   "meaning": "薄雾"
+  },
+  {
+   "word": "mixed",
+   "phonetic": "mikst",
+   "meaning": "混合的"
+  },
+  {
+   "word": "model",
+   "phonetic": "mɔdəl",
+   "meaning": "模特"
+  },
+  {
+   "word": "monarch",
+   "phonetic": "mɔnək",
+   "meaning": "帝王"
+  },
+  {
+   "word": "monarchy",
+   "phonetic": "mɔnəki",
+   "meaning": "君主制；君主政体"
+  },
+  {
+   "word": "monday",
+   "phonetic": "mʌndi",
+   "meaning": "周一"
+  },
+  {
+   "word": "monopoly",
+   "phonetic": "mənɔpəli",
+   "meaning": "垄断"
+  },
+  {
+   "word": "monsoon",
+   "phonetic": "mɔnsu:n",
+   "meaning": "季风，"
+  },
+  {
+   "word": "moon",
+   "phonetic": "mu:n",
+   "meaning": "月亮"
+  },
+  {
+   "word": "mooncake",
+   "phonetic": "mu:nkeik",
+   "meaning": "月饼"
+  },
+  {
+   "word": "mortgage",
+   "phonetic": "mɔ:gid",
+   "meaning": "抵押第页共页"
+  },
+  {
+   "word": "mosquito",
+   "phonetic": "məski:təu",
+   "meaning": "蚊子"
+  },
+  {
+   "word": "moth",
+   "phonetic": "mɔmɔ:",
+   "meaning": "蛾，飞蛾"
+  },
+  {
+   "word": "mother-in-law",
+   "phonetic": "",
+   "meaning": "岳母（婆婆）"
+  },
+  {
+   "word": "motion",
+   "phonetic": "məuən",
+   "meaning": "动议"
+  },
+  {
+   "word": "mountain",
+   "phonetic": "mauntin",
+   "meaning": "山；山脉"
+  },
+  {
+   "word": "mouse",
+   "phonetic": "maus",
+   "meaning": "家鼠，老鼠"
+  },
+  {
+   "word": "mouth",
+   "phonetic": "mau",
+   "meaning": "嘴"
+  },
+  {
+   "word": "movement",
+   "phonetic": "mu:vmənt",
+   "meaning": "运动"
+  },
+  {
+   "word": "muffler",
+   "phonetic": "mʌflə",
+   "meaning": "围巾"
+  },
+  {
+   "word": "mulberry",
+   "phonetic": "mʌlbəri",
+   "meaning": "桑椹"
+  },
+  {
+   "word": "mule",
+   "phonetic": "mju:l",
+   "meaning": "骡"
+  },
+  {
+   "word": "murder",
+   "phonetic": "mə:də",
+   "meaning": "谋杀；杀人"
+  },
+  {
+   "word": "museum",
+   "phonetic": "mju:ziəm",
+   "meaning": "博物馆"
+  },
+  {
+   "word": "musician",
+   "phonetic": "mju:ziən",
+   "meaning": "音乐家"
+  },
+  {
+   "word": "mustard",
+   "phonetic": "mʌstəd",
+   "meaning": "芥末"
+  },
+  {
+   "word": "nail",
+   "phonetic": "neil",
+   "meaning": "指甲"
+  },
+  {
+   "word": "narcissus",
+   "phonetic": "na:sisəs",
+   "meaning": "水仙花"
+  },
+  {
+   "word": "narrow",
+   "phonetic": "nærəu",
+   "meaning": "窄的，狭窄的"
+  },
+  {
+   "word": "nationality",
+   "phonetic": "",
+   "meaning": "国籍"
+  },
+  {
+   "word": "natural",
+   "phonetic": "nætərəl",
+   "meaning": "自然的"
+  },
+  {
+   "word": "naturalism",
+   "phonetic": "nætərəlizəm",
+   "meaning": "自然主义"
+  },
+  {
+   "word": "nebula",
+   "phonetic": "",
+   "meaning": "星云"
+  },
+  {
+   "word": "necessary",
+   "phonetic": "",
+   "meaning": "必要的"
+  },
+  {
+   "word": "necklace",
+   "phonetic": "neklis",
+   "meaning": "项链"
+  },
+  {
+   "word": "needle",
+   "phonetic": "ni:dl",
+   "meaning": "针"
+  },
+  {
+   "word": "nephew",
+   "phonetic": "nefju:",
+   "meaning": "侄子，外甥"
+  },
+  {
+   "word": "neptune",
+   "phonetic": "neptju:n",
+   "meaning": "海王星"
+  },
+  {
+   "word": "niece",
+   "phonetic": "ni:s",
+   "meaning": "侄女，外甥女"
+  },
+  {
+   "word": "nightingale",
+   "phonetic": "",
+   "meaning": "夜莺"
+  },
+  {
+   "word": "noodle",
+   "phonetic": "nu:dl",
+   "meaning": "面条"
+  },
+  {
+   "word": "normal",
+   "phonetic": "nɔ:məl",
+   "meaning": "正常的"
+  },
+  {
+   "word": "norway",
+   "phonetic": "nɔ:wei",
+   "meaning": "挪威"
+  },
+  {
+   "word": "nose",
+   "phonetic": "nəuz",
+   "meaning": "鼻子"
+  },
+  {
+   "word": "novel",
+   "phonetic": "nɔvəl",
+   "meaning": "小说"
+  },
+  {
+   "word": "november",
+   "phonetic": "",
+   "meaning": "十一月"
+  },
+  {
+   "word": "nude",
+   "phonetic": "nju:d",
+   "meaning": "裸体画"
+  },
+  {
+   "word": "nurse",
+   "phonetic": "nə:s",
+   "meaning": "护士；保姆"
+  },
+  {
+   "word": "nut",
+   "phonetic": "nʌt",
+   "meaning": "螺母，螺帽"
+  },
+  {
+   "word": "nutrition",
+   "phonetic": "nju:triən",
+   "meaning": "营养"
+  },
+  {
+   "word": "oak",
+   "phonetic": "əuk",
+   "meaning": "橡树"
+  },
+  {
+   "word": "ocean",
+   "phonetic": "əuən",
+   "meaning": "大洋；海洋"
+  },
+  {
+   "word": "october",
+   "phonetic": "ɔktəubə",
+   "meaning": "十月"
+  },
+  {
+   "word": "ode",
+   "phonetic": "əud",
+   "meaning": "颂歌"
+  },
+  {
+   "word": "offence",
+   "phonetic": "",
+   "meaning": "违法美作"
+  },
+  {
+   "word": "offer",
+   "phonetic": "ɔfə",
+   "meaning": "提供；报盘；发价"
+  },
+  {
+   "word": "offspring",
+   "phonetic": "",
+   "meaning": "后代公共设施"
+  },
+  {
+   "word": "oilpainting",
+   "phonetic": "",
+   "meaning": "油画"
+  },
+  {
+   "word": "oligarchy",
+   "phonetic": "",
+   "meaning": "寡头政治"
+  },
+  {
+   "word": "olive",
+   "phonetic": "ɔliv",
+   "meaning": "橄榄树家畜"
+  },
+  {
+   "word": "opera",
+   "phonetic": "ɔpərə",
+   "meaning": "歌剧"
+  },
+  {
+   "word": "operator",
+   "phonetic": "",
+   "meaning": "电话接线员；经营者；操作员"
+  },
+  {
+   "word": "opposite",
+   "phonetic": "",
+   "meaning": "相反的；对面的；对立的"
+  },
+  {
+   "word": "orange",
+   "phonetic": "",
+   "meaning": "橙色的"
+  },
+  {
+   "word": "orangutan",
+   "phonetic": "ɔ:ræu:tænɔ:ræu:tæn",
+   "meaning": "猩猩"
+  },
+  {
+   "word": "oratory",
+   "phonetic": "ɔrətəri",
+   "meaning": "讲演术"
+  },
+  {
+   "word": "orbit",
+   "phonetic": "ɔ:bit",
+   "meaning": "轨道"
+  },
+  {
+   "word": "orchestra",
+   "phonetic": "",
+   "meaning": "管弦乐队"
+  },
+  {
+   "word": "ostrich",
+   "phonetic": "",
+   "meaning": "鸵鸟"
+  },
+  {
+   "word": "outlet",
+   "phonetic": "autlet",
+   "meaning": "销路"
+  },
+  {
+   "word": "output",
+   "phonetic": "autput",
+   "meaning": "产出；产量"
+  },
+  {
+   "word": "owl",
+   "phonetic": "aul",
+   "meaning": "枭，猫头鹰"
+  },
+  {
+   "word": "ox",
+   "phonetic": "ɔks",
+   "meaning": "牛；公牛"
+  },
+  {
+   "word": "pact",
+   "phonetic": "pækt",
+   "meaning": "协定；条约"
+  },
+  {
+   "word": "painter",
+   "phonetic": "",
+   "meaning": "画家；油漆匠"
+  },
+  {
+   "word": "palm",
+   "phonetic": "pa:m",
+   "meaning": "手掌"
+  },
+  {
+   "word": "pancake",
+   "phonetic": "",
+   "meaning": "薄煎饼"
+  },
+  {
+   "word": "pants",
+   "phonetic": "pænts",
+   "meaning": "裤子；短裤"
+  },
+  {
+   "word": "parallel",
+   "phonetic": "pærəlel",
+   "meaning": "平行的"
+  },
+  {
+   "word": "parent",
+   "phonetic": "pərənt",
+   "meaning": "父母"
+  },
+  {
+   "word": "park",
+   "phonetic": "pa:k",
+   "meaning": "公园，停车场"
+  },
+  {
+   "word": "parrot",
+   "phonetic": "pærət",
+   "meaning": "鹦鹉"
+  },
+  {
+   "word": "past",
+   "phonetic": "pa:stpæst",
+   "meaning": "过去的"
+  },
+  {
+   "word": "peach",
+   "phonetic": "pi:t",
+   "meaning": "桃"
+  },
+  {
+   "word": "peacock",
+   "phonetic": "pi:kɔk",
+   "meaning": "孔雀"
+  },
+  {
+   "word": "peak",
+   "phonetic": "pi:k",
+   "meaning": "山顶；巅"
+  },
+  {
+   "word": "peanut",
+   "phonetic": "pi:nʌt",
+   "meaning": "花生"
+  },
+  {
+   "word": "pear",
+   "phonetic": "pə",
+   "meaning": "梨"
+  },
+  {
+   "word": "pelican",
+   "phonetic": "",
+   "meaning": "鹈鹕"
+  },
+  {
+   "word": "penalty",
+   "phonetic": "penəlti",
+   "meaning": "罚款；罚金；处罚"
+  },
+  {
+   "word": "pence",
+   "phonetic": "pens",
+   "meaning": "便士（的复数）"
+  },
+  {
+   "word": "penguin",
+   "phonetic": "pegwin",
+   "meaning": "企鹅"
+  },
+  {
+   "word": "peninsula",
+   "phonetic": "",
+   "meaning": "半岛"
+  },
+  {
+   "word": "penny",
+   "phonetic": "peni",
+   "meaning": "便士山河湖海"
+  },
+  {
+   "word": "pepper",
+   "phonetic": "pepə",
+   "meaning": "辣椒；胡椒"
+  },
+  {
+   "word": "performance",
+   "phonetic": "pəfɔ:məns",
+   "meaning": "演出"
+  },
+  {
+   "word": "perfume",
+   "phonetic": "pəfju:m",
+   "meaning": "香水"
+  },
+  {
+   "word": "persimmon",
+   "phonetic": "pəsimən",
+   "meaning": "柿子"
+  },
+  {
+   "word": "petition",
+   "phonetic": "",
+   "meaning": "请愿"
+  },
+  {
+   "word": "pharmacist",
+   "phonetic": "",
+   "meaning": "药剂师"
+  },
+  {
+   "word": "pheasant",
+   "phonetic": "feznt",
+   "meaning": "雉，野鸡第页共页"
+  },
+  {
+   "word": "philanthropy",
+   "phonetic": "filænrəpi",
+   "meaning": "博爱，仁慈"
+  },
+  {
+   "word": "philosopher",
+   "phonetic": "filɔsəfəfə",
+   "meaning": "哲学家"
+  },
+  {
+   "word": "philosophy",
+   "phonetic": "filɔsəfi",
+   "meaning": "哲学"
+  },
+  {
+   "word": "phoenix",
+   "phonetic": "fi:niks",
+   "meaning": "凤凰"
+  },
+  {
+   "word": "photographer",
+   "phonetic": "fətɔgrəfə",
+   "meaning": "摄影师"
+  },
+  {
+   "word": "physical",
+   "phonetic": "",
+   "meaning": "身体的；物质的"
+  },
+  {
+   "word": "physicist",
+   "phonetic": "fizisist",
+   "meaning": "物理学家；唯物论者"
+  },
+  {
+   "word": "physics",
+   "phonetic": "fiziks",
+   "meaning": "物理"
+  },
+  {
+   "word": "physiologist",
+   "phonetic": "",
+   "meaning": "生理学家"
+  },
+  {
+   "word": "pianist",
+   "phonetic": "",
+   "meaning": "钢琴家"
+  },
+  {
+   "word": "pickaxe",
+   "phonetic": "pikæks",
+   "meaning": "丁字镐，鹤嘴锄"
+  },
+  {
+   "word": "pie",
+   "phonetic": "pai",
+   "meaning": "馅饼"
+  },
+  {
+   "word": "pig",
+   "phonetic": "pig",
+   "meaning": "猪"
+  },
+  {
+   "word": "pigeon",
+   "phonetic": "pidin",
+   "meaning": "鸽子"
+  },
+  {
+   "word": "piglet",
+   "phonetic": "piglit",
+   "meaning": "小猪，尤指乳猪猪崽"
+  },
+  {
+   "word": "pigment",
+   "phonetic": "",
+   "meaning": "颜料第页共页"
+  },
+  {
+   "word": "pillow",
+   "phonetic": "piləu",
+   "meaning": "枕头"
+  },
+  {
+   "word": "pilot",
+   "phonetic": "",
+   "meaning": "飞行员；领航员"
+  },
+  {
+   "word": "pin",
+   "phonetic": "pin",
+   "meaning": "大头针，针第页共页"
+  },
+  {
+   "word": "pinacotheca",
+   "phonetic": "pinəkəui:kə",
+   "meaning": "画廊，美术馆"
+  },
+  {
+   "word": "pineapple",
+   "phonetic": "",
+   "meaning": "菠萝"
+  },
+  {
+   "word": "pink",
+   "phonetic": "pik",
+   "meaning": "粉红色；粉红的"
+  },
+  {
+   "word": "pisces",
+   "phonetic": "pisi:zpai",
+   "meaning": "双鱼座"
+  },
+  {
+   "word": "pizza",
+   "phonetic": "pi:tsə",
+   "meaning": "比萨饼"
+  },
+  {
+   "word": "plain",
+   "phonetic": "plein",
+   "meaning": "平原"
+  },
+  {
+   "word": "plan",
+   "phonetic": "plæn",
+   "meaning": "计划"
+  },
+  {
+   "word": "plane",
+   "phonetic": "plein",
+   "meaning": "飞机"
+  },
+  {
+   "word": "planet",
+   "phonetic": "plænit",
+   "meaning": "行星"
+  },
+  {
+   "word": "plateau",
+   "phonetic": "plætəu",
+   "meaning": "高原"
+  },
+  {
+   "word": "platypus",
+   "phonetic": "",
+   "meaning": "鸭嘴兽"
+  },
+  {
+   "word": "play",
+   "phonetic": "plei",
+   "meaning": "剧本"
+  },
+  {
+   "word": "playwright",
+   "phonetic": "pleirait",
+   "meaning": "剧作家"
+  },
+  {
+   "word": "plea",
+   "phonetic": "pli:",
+   "meaning": "辩护；抗辩"
+  },
+  {
+   "word": "plead",
+   "phonetic": "pli:d",
+   "meaning": "辩护"
+  },
+  {
+   "word": "plot",
+   "phonetic": "plɔt",
+   "meaning": "密谋；阴谋；策划"
+  },
+  {
+   "word": "plum",
+   "phonetic": "plʌm",
+   "meaning": "李子"
+  },
+  {
+   "word": "pluto",
+   "phonetic": "plu:təu",
+   "meaning": "冥王星"
+  },
+  {
+   "word": "pocket",
+   "phonetic": "pɔkit",
+   "meaning": "衣袋，口袋"
+  },
+  {
+   "word": "poem",
+   "phonetic": "pəuim",
+   "meaning": "诗"
+  },
+  {
+   "word": "poet",
+   "phonetic": "pəuit",
+   "meaning": "诗人"
+  },
+  {
+   "word": "poetry",
+   "phonetic": "",
+   "meaning": "诗歌"
+  },
+  {
+   "word": "polevault",
+   "phonetic": "pəulvɔ:lt",
+   "meaning": "撑竿跳"
+  },
+  {
+   "word": "policeman",
+   "phonetic": "pəli:smən",
+   "meaning": "警察"
+  },
+  {
+   "word": "policy",
+   "phonetic": "",
+   "meaning": "政策，方针"
+  },
+  {
+   "word": "political",
+   "phonetic": "",
+   "meaning": "政治的"
+  },
+  {
+   "word": "politician",
+   "phonetic": "",
+   "meaning": "政治学家；政客"
+  },
+  {
+   "word": "politics",
+   "phonetic": "",
+   "meaning": "政治学"
+  },
+  {
+   "word": "poll",
+   "phonetic": "pəul",
+   "meaning": "民意测验"
+  },
+  {
+   "word": "polo",
+   "phonetic": "pəuləu",
+   "meaning": "马球；水球"
+  },
+  {
+   "word": "pomegranate",
+   "phonetic": "pɔmgrænit",
+   "meaning": "石榴"
+  },
+  {
+   "word": "pond",
+   "phonetic": "pɔnd",
+   "meaning": "池塘"
+  },
+  {
+   "word": "pony",
+   "phonetic": "pəuni",
+   "meaning": "矮种马；小马"
+  },
+  {
+   "word": "poor",
+   "phonetic": "puəpɔ:",
+   "meaning": "贫穷的；可怜的；贫乏的"
+  },
+  {
+   "word": "pop",
+   "phonetic": "pɔp",
+   "meaning": "流行歌曲"
+  },
+  {
+   "word": "porcupine",
+   "phonetic": "",
+   "meaning": "箭猪，豪猪"
+  },
+  {
+   "word": "port",
+   "phonetic": "pɔ:t",
+   "meaning": "港口"
+  },
+  {
+   "word": "porter",
+   "phonetic": "pɔ:təpəu",
+   "meaning": "守门人；行李夫；搬运工人"
+  },
+  {
+   "word": "portrait",
+   "phonetic": "",
+   "meaning": "肖像；人像；画像"
+  },
+  {
+   "word": "possible",
+   "phonetic": "pɔsəbl",
+   "meaning": "可能的"
+  },
+  {
+   "word": "postman",
+   "phonetic": "",
+   "meaning": "邮差，邮递员"
+  },
+  {
+   "word": "postoffice",
+   "phonetic": "pəustɔfis",
+   "meaning": "邮局蔬菜"
+  },
+  {
+   "word": "potato",
+   "phonetic": "",
+   "meaning": "马铃薯"
+  },
+  {
+   "word": "pound",
+   "phonetic": "paund",
+   "meaning": "英镑"
+  },
+  {
+   "word": "prairie",
+   "phonetic": "prəri",
+   "meaning": "大草原；牧场"
+  },
+  {
+   "word": "prawn",
+   "phonetic": "prɔ:n",
+   "meaning": "对虾，明虾"
+  },
+  {
+   "word": "prejudice",
+   "phonetic": "predudis",
+   "meaning": "偏见"
+  },
+  {
+   "word": "prescription",
+   "phonetic": "",
+   "meaning": "剥夺公权"
+  },
+  {
+   "word": "present",
+   "phonetic": "",
+   "meaning": "在场的；现在的"
+  },
+  {
+   "word": "prison",
+   "phonetic": "",
+   "meaning": "监狱美作"
+  },
+  {
+   "word": "prisoner",
+   "phonetic": "",
+   "meaning": "囚犯"
+  },
+  {
+   "word": "private",
+   "phonetic": "praivit",
+   "meaning": "私人的，个人的；私有的"
+  },
+  {
+   "word": "probable",
+   "phonetic": "prɔbəbl",
+   "meaning": "很可能的"
+  },
+  {
+   "word": "productive",
+   "phonetic": "",
+   "meaning": "生产的"
+  },
+  {
+   "word": "productivity",
+   "phonetic": "",
+   "meaning": "生产率；生产力"
+  },
+  {
+   "word": "professor",
+   "phonetic": "",
+   "meaning": "教授"
+  },
+  {
+   "word": "profile",
+   "phonetic": "",
+   "meaning": "轮廓"
+  },
+  {
+   "word": "proof",
+   "phonetic": "pru:f",
+   "meaning": "证据；证词"
+  },
+  {
+   "word": "proposition",
+   "phonetic": "prɔpəziən",
+   "meaning": "建议"
+  },
+  {
+   "word": "prose",
+   "phonetic": "prəuz",
+   "meaning": "散文"
+  },
+  {
+   "word": "psychology",
+   "phonetic": "",
+   "meaning": "心理学"
+  },
+  {
+   "word": "public",
+   "phonetic": "",
+   "meaning": "公众的"
+  },
+  {
+   "word": "purchase",
+   "phonetic": "pə:təs",
+   "meaning": "购买"
+  },
+  {
+   "word": "purple",
+   "phonetic": "pə:pl",
+   "meaning": "紫色的"
+  },
+  {
+   "word": "purse",
+   "phonetic": "pə:s",
+   "meaning": "手提包，钱包"
+  },
+  {
+   "word": "python",
+   "phonetic": "paiənɔn",
+   "meaning": "蟒蛇，大蟒，巨蟒"
+  },
+  {
+   "word": "quail",
+   "phonetic": "kweil",
+   "meaning": "鹌鹑"
+  },
+  {
+   "word": "quarter",
+   "phonetic": "kwɔ:tə",
+   "meaning": "二十五美分"
+  },
+  {
+   "word": "quick",
+   "phonetic": "kwik",
+   "meaning": "快的"
+  },
+  {
+   "word": "quiet",
+   "phonetic": "",
+   "meaning": "安静的"
+  },
+  {
+   "word": "quilt",
+   "phonetic": "kwilt",
+   "meaning": "棉被，被子"
+  },
+  {
+   "word": "quotation",
+   "phonetic": "",
+   "meaning": "报价单"
+  },
+  {
+   "word": "rabbit",
+   "phonetic": "ræbit",
+   "meaning": "兔子，野兔"
+  },
+  {
+   "word": "radio",
+   "phonetic": "",
+   "meaning": "收音机"
+  },
+  {
+   "word": "railway",
+   "phonetic": "reilwei",
+   "meaning": "铁路"
+  },
+  {
+   "word": "rain",
+   "phonetic": "rein",
+   "meaning": "雨"
+  },
+  {
+   "word": "rainbow",
+   "phonetic": "",
+   "meaning": "彩虹"
+  },
+  {
+   "word": "raincoat",
+   "phonetic": "",
+   "meaning": "雨衣"
+  },
+  {
+   "word": "rainy",
+   "phonetic": "reini",
+   "meaning": "下雨的"
+  },
+  {
+   "word": "rake",
+   "phonetic": "reik",
+   "meaning": "耙子"
+  },
+  {
+   "word": "rally",
+   "phonetic": "ræli",
+   "meaning": "汽车拉力赛水果"
+  },
+  {
+   "word": "rattlesnake",
+   "phonetic": "",
+   "meaning": "响尾蛇"
+  },
+  {
+   "word": "realism",
+   "phonetic": "riəlizəmri:",
+   "meaning": "现实主义"
+  },
+  {
+   "word": "rebel",
+   "phonetic": "",
+   "meaning": "反叛者，叛乱者"
+  },
+  {
+   "word": "rebellion",
+   "phonetic": "",
+   "meaning": "叛乱"
+  },
+  {
+   "word": "receipt",
+   "phonetic": "risi:t",
+   "meaning": "收据法律"
+  },
+  {
+   "word": "receptionist",
+   "phonetic": "",
+   "meaning": "接待员"
+  },
+  {
+   "word": "red",
+   "phonetic": "red",
+   "meaning": "红色；红色的"
+  },
+  {
+   "word": "refrigerator",
+   "phonetic": "",
+   "meaning": "冰箱"
+  },
+  {
+   "word": "regime",
+   "phonetic": "reii:m",
+   "meaning": "政权"
+  },
+  {
+   "word": "regular",
+   "phonetic": "",
+   "meaning": "定期的；有规律的；整齐的"
+  },
+  {
+   "word": "reindeer",
+   "phonetic": "",
+   "meaning": "驯鹿"
+  },
+  {
+   "word": "reportage",
+   "phonetic": "repɔ:tɑ:",
+   "meaning": "报告文学"
+  },
+  {
+   "word": "reporter",
+   "phonetic": "ripɔ:tə",
+   "meaning": "记者"
+  },
+  {
+   "word": "republic",
+   "phonetic": "",
+   "meaning": "共和国"
+  },
+  {
+   "word": "researcher",
+   "phonetic": "ri:sə:tə",
+   "meaning": "研究员"
+  },
+  {
+   "word": "responsibility",
+   "phonetic": "",
+   "meaning": "责任；职责"
+  },
+  {
+   "word": "responsible",
+   "phonetic": "",
+   "meaning": "负责任的"
+  },
+  {
+   "word": "restaurant",
+   "phonetic": "",
+   "meaning": "餐厅"
+  },
+  {
+   "word": "revolution",
+   "phonetic": "revəlu:ən",
+   "meaning": "公转"
+  },
+  {
+   "word": "rhapsody",
+   "phonetic": "ræpsədi",
+   "meaning": "狂想曲"
+  },
+  {
+   "word": "rhetoric",
+   "phonetic": "retərik",
+   "meaning": "修辞学"
+  },
+  {
+   "word": "rhinoceros",
+   "phonetic": "",
+   "meaning": "犀牛"
+  },
+  {
+   "word": "rhyme",
+   "phonetic": "raim",
+   "meaning": "韵脚；押韵"
+  },
+  {
+   "word": "rice",
+   "phonetic": "rais",
+   "meaning": "米饭"
+  },
+  {
+   "word": "ridge",
+   "phonetic": "rid",
+   "meaning": "山脊"
+  },
+  {
+   "word": "ring",
+   "phonetic": "ri",
+   "meaning": "戒指"
+  },
+  {
+   "word": "rings",
+   "phonetic": "riz",
+   "meaning": "吊环"
+  },
+  {
+   "word": "robin",
+   "phonetic": "rɔbin",
+   "meaning": "知更鸟"
+  },
+  {
+   "word": "rock",
+   "phonetic": "rɔk",
+   "meaning": "岩石"
+  },
+  {
+   "word": "roller",
+   "phonetic": "rəulə",
+   "meaning": "滚筒；滚轴"
+  },
+  {
+   "word": "romanesque",
+   "phonetic": "",
+   "meaning": "罗马式"
+  },
+  {
+   "word": "romanticism",
+   "phonetic": "",
+   "meaning": "浪漫主义第页共页"
+  },
+  {
+   "word": "rooster",
+   "phonetic": "ru:stə",
+   "meaning": "公鸡"
+  },
+  {
+   "word": "rough",
+   "phonetic": "rʌf",
+   "meaning": "粗糙的；粗暴的"
+  },
+  {
+   "word": "roundworm",
+   "phonetic": "",
+   "meaning": "蛔虫职业"
+  },
+  {
+   "word": "rowing",
+   "phonetic": "rəui",
+   "meaning": "划船，赛艇"
+  },
+  {
+   "word": "rug",
+   "phonetic": "rʌg",
+   "meaning": "小地毯，地毯"
+  },
+  {
+   "word": "ruler",
+   "phonetic": "ru:lə",
+   "meaning": "尺"
+  },
+  {
+   "word": "russia",
+   "phonetic": "rʌə",
+   "meaning": "俄罗斯"
+  },
+  {
+   "word": "sad",
+   "phonetic": "sæd",
+   "meaning": "悲哀的"
+  },
+  {
+   "word": "safe",
+   "phonetic": "seif",
+   "meaning": "安全的"
+  },
+  {
+   "word": "sagittarius",
+   "phonetic": "sæditəriəs",
+   "meaning": "射手座，人马座"
+  },
+  {
+   "word": "sailfish",
+   "phonetic": "seilfi",
+   "meaning": "旗鱼"
+  },
+  {
+   "word": "sailing",
+   "phonetic": "seili",
+   "meaning": "帆船运动"
+  },
+  {
+   "word": "sailor",
+   "phonetic": "",
+   "meaning": "水手，海员"
+  },
+  {
+   "word": "sale",
+   "phonetic": "seil",
+   "meaning": "销售"
+  },
+  {
+   "word": "salesman",
+   "phonetic": "",
+   "meaning": "售货员；推销员"
+  },
+  {
+   "word": "salon",
+   "phonetic": "sælɔ:n",
+   "meaning": "沙龙"
+  },
+  {
+   "word": "sandal",
+   "phonetic": "sædəl",
+   "meaning": "凉鞋，便鞋"
+  },
+  {
+   "word": "sandalwood",
+   "phonetic": "",
+   "meaning": "檀香木"
+  },
+  {
+   "word": "sandpaper",
+   "phonetic": "",
+   "meaning": "砂纸"
+  },
+  {
+   "word": "sandwich",
+   "phonetic": "",
+   "meaning": "三明治天气"
+  },
+  {
+   "word": "sardine",
+   "phonetic": "sa:di:nsa:di:n",
+   "meaning": "沙丁鱼"
+  },
+  {
+   "word": "satellite",
+   "phonetic": "",
+   "meaning": "卫星"
+  },
+  {
+   "word": "satire",
+   "phonetic": "sætaiə",
+   "meaning": "讽刺文学"
+  },
+  {
+   "word": "saturday",
+   "phonetic": "",
+   "meaning": "星期天"
+  },
+  {
+   "word": "saturn",
+   "phonetic": "sætən",
+   "meaning": "土星"
+  },
+  {
+   "word": "sauce",
+   "phonetic": "sɔ:s",
+   "meaning": "酱油"
+  },
+  {
+   "word": "saucer",
+   "phonetic": "sɔ:sə",
+   "meaning": "茶碟，咖啡碟"
+  },
+  {
+   "word": "saving",
+   "phonetic": "seivi",
+   "meaning": "存款"
+  },
+  {
+   "word": "saw",
+   "phonetic": "sɔ:",
+   "meaning": "锯"
+  },
+  {
+   "word": "scarlet",
+   "phonetic": "ska:lət",
+   "meaning": "猩红色"
+  },
+  {
+   "word": "scene",
+   "phonetic": "si:n",
+   "meaning": "场；情景"
+  },
+  {
+   "word": "school",
+   "phonetic": "sku:l",
+   "meaning": "学校"
+  },
+  {
+   "word": "science",
+   "phonetic": "saiəns",
+   "meaning": "理科"
+  },
+  {
+   "word": "sciencefiction",
+   "phonetic": "fikən",
+   "meaning": "科幻科学；幻想小说"
+  },
+  {
+   "word": "scientist",
+   "phonetic": "",
+   "meaning": "科学家"
+  },
+  {
+   "word": "scissors",
+   "phonetic": "sizəz",
+   "meaning": "剪子，剪刀"
+  },
+  {
+   "word": "scorpio",
+   "phonetic": "skɔ:piəu",
+   "meaning": "天蝎座"
+  },
+  {
+   "word": "scorpion",
+   "phonetic": "skɔ:pjən",
+   "meaning": "蝎子"
+  },
+  {
+   "word": "screw",
+   "phonetic": "skru:",
+   "meaning": "螺丝钉"
+  },
+  {
+   "word": "screwdriver",
+   "phonetic": "",
+   "meaning": "螺丝刀，改锥"
+  },
+  {
+   "word": "sculptor",
+   "phonetic": "skʌlptə",
+   "meaning": "雕刻家"
+  },
+  {
+   "word": "sea",
+   "phonetic": "si:",
+   "meaning": "海"
+  },
+  {
+   "word": "seagull",
+   "phonetic": "si:gʌl",
+   "meaning": "海鸥"
+  },
+  {
+   "word": "seahorse",
+   "phonetic": "",
+   "meaning": "海马"
+  },
+  {
+   "word": "seal",
+   "phonetic": "si:l",
+   "meaning": "海豹"
+  },
+  {
+   "word": "seaman",
+   "phonetic": "si:mən",
+   "meaning": "船员，水手；水兵"
+  },
+  {
+   "word": "seascape",
+   "phonetic": "si:skeip",
+   "meaning": "海景画"
+  },
+  {
+   "word": "season",
+   "phonetic": "si:zən",
+   "meaning": "四季"
+  },
+  {
+   "word": "secret",
+   "phonetic": "si:krit",
+   "meaning": "秘密的"
+  },
+  {
+   "word": "secretary",
+   "phonetic": "",
+   "meaning": "秘书；书记；部长；大臣"
+  },
+  {
+   "word": "sentence",
+   "phonetic": "",
+   "meaning": "宣判，判决"
+  },
+  {
+   "word": "separate",
+   "phonetic": "",
+   "meaning": "马蝇；虻"
+  },
+  {
+   "word": "september",
+   "phonetic": "",
+   "meaning": "九月"
+  },
+  {
+   "word": "serious",
+   "phonetic": "siəriəssi:r",
+   "meaning": "严重的；严肃的"
+  },
+  {
+   "word": "shank",
+   "phonetic": "æk",
+   "meaning": "小腿"
+  },
+  {
+   "word": "share",
+   "phonetic": "ə",
+   "meaning": "股份；股票（英）"
+  },
+  {
+   "word": "shark",
+   "phonetic": "a:k",
+   "meaning": "鲨鱼"
+  },
+  {
+   "word": "sharp",
+   "phonetic": "a:p",
+   "meaning": "锋利的"
+  },
+  {
+   "word": "sheep",
+   "phonetic": "i:p",
+   "meaning": "羊，绵羊"
+  },
+  {
+   "word": "sheet",
+   "phonetic": "i:t",
+   "meaning": "床单"
+  },
+  {
+   "word": "ship",
+   "phonetic": "ip",
+   "meaning": "船"
+  },
+  {
+   "word": "shirt",
+   "phonetic": "ə:t",
+   "meaning": "衬衫，内衣"
+  },
+  {
+   "word": "shoe",
+   "phonetic": "u:",
+   "meaning": "鞋"
+  },
+  {
+   "word": "shootingstar",
+   "phonetic": "",
+   "meaning": "流星"
+  },
+  {
+   "word": "shop",
+   "phonetic": "ɔp",
+   "meaning": "商店（英）"
+  },
+  {
+   "word": "shopkeeper",
+   "phonetic": "ɔpki:pə",
+   "meaning": "零售商，店主"
+  },
+  {
+   "word": "shore",
+   "phonetic": "ɔ:",
+   "meaning": "海滨"
+  },
+  {
+   "word": "short",
+   "phonetic": "ɔ:t",
+   "meaning": "短的；矮的"
+  },
+  {
+   "word": "shorts",
+   "phonetic": "ɔ:ts",
+   "meaning": "短裤，内裤"
+  },
+  {
+   "word": "shotput",
+   "phonetic": "",
+   "meaning": "推铅球"
+  },
+  {
+   "word": "shovel",
+   "phonetic": "ʌvəl",
+   "meaning": "铁锹，铲"
+  },
+  {
+   "word": "shower",
+   "phonetic": "auə",
+   "meaning": "阵雨"
+  },
+  {
+   "word": "shrimp",
+   "phonetic": "rimp",
+   "meaning": "虾，小虾"
+  },
+  {
+   "word": "shut",
+   "phonetic": "ʌt",
+   "meaning": "关闭的"
+  },
+  {
+   "word": "sickle",
+   "phonetic": "sikl",
+   "meaning": "镰刀"
+  },
+  {
+   "word": "silver",
+   "phonetic": "",
+   "meaning": "银白色"
+  },
+  {
+   "word": "simple",
+   "phonetic": "simpl",
+   "meaning": "简单的"
+  },
+  {
+   "word": "singer",
+   "phonetic": "siə",
+   "meaning": "歌手，歌唱家"
+  },
+  {
+   "word": "single",
+   "phonetic": "sigl",
+   "meaning": "单身的"
+  },
+  {
+   "word": "sister",
+   "phonetic": "",
+   "meaning": "姐妹"
+  },
+  {
+   "word": "skating",
+   "phonetic": "skeiti",
+   "meaning": "滑花样滑冰"
+  },
+  {
+   "word": "sketch",
+   "phonetic": "sket",
+   "meaning": "素描；草稿"
+  },
+  {
+   "word": "skiing",
+   "phonetic": "ski:i",
+   "meaning": "滑雪"
+  },
+  {
+   "word": "skirt",
+   "phonetic": "skə:t",
+   "meaning": "裙子"
+  },
+  {
+   "word": "sleeve",
+   "phonetic": "sli:v",
+   "meaning": "袖子，衣袖"
+  },
+  {
+   "word": "slipper",
+   "phonetic": "",
+   "meaning": "拖鞋"
+  },
+  {
+   "word": "slogan",
+   "phonetic": "sləugən",
+   "meaning": "口号；标语"
+  },
+  {
+   "word": "slope",
+   "phonetic": "sləup",
+   "meaning": "斜坡"
+  },
+  {
+   "word": "slow",
+   "phonetic": "sləu",
+   "meaning": "慢的"
+  },
+  {
+   "word": "small",
+   "phonetic": "smɔ:l",
+   "meaning": "小的"
+  },
+  {
+   "word": "smooth",
+   "phonetic": "smu:",
+   "meaning": "平滑的"
+  },
+  {
+   "word": "snake",
+   "phonetic": "sneik",
+   "meaning": "蛇"
+  },
+  {
+   "word": "sneaker",
+   "phonetic": "sni:kə",
+   "meaning": "运动鞋"
+  },
+  {
+   "word": "snow",
+   "phonetic": "snəu",
+   "meaning": "雪"
+  },
+  {
+   "word": "soccer",
+   "phonetic": "sɔkə",
+   "meaning": "足球"
+  },
+  {
+   "word": "sociology",
+   "phonetic": "səusiɔlədi",
+   "meaning": "社会学"
+  },
+  {
+   "word": "sock",
+   "phonetic": "sɔk",
+   "meaning": "短袜，袜子"
+  },
+  {
+   "word": "soft",
+   "phonetic": "sɔftsɔ:ft",
+   "meaning": "柔软的"
+  },
+  {
+   "word": "solarsystem",
+   "phonetic": "",
+   "meaning": "太阳系"
+  },
+  {
+   "word": "soldier",
+   "phonetic": "səuldə",
+   "meaning": "军人，战士"
+  },
+  {
+   "word": "sole",
+   "phonetic": "səul",
+   "meaning": "鞋底"
+  },
+  {
+   "word": "solid",
+   "phonetic": "sɔlid",
+   "meaning": "固体的；结实的；纯的"
+  },
+  {
+   "word": "solo",
+   "phonetic": "səuləu",
+   "meaning": "独奏；独唱"
+  },
+  {
+   "word": "soloist",
+   "phonetic": "",
+   "meaning": "独唱者"
+  },
+  {
+   "word": "son-in-law",
+   "phonetic": "",
+   "meaning": "女婿"
+  },
+  {
+   "word": "sonnet",
+   "phonetic": "sɔnit",
+   "meaning": "十四行诗"
+  },
+  {
+   "word": "soprano",
+   "phonetic": "səprɑ:nəupræ",
+   "meaning": "女高音"
+  },
+  {
+   "word": "source",
+   "phonetic": "sɔ:s",
+   "meaning": "源头"
+  },
+  {
+   "word": "sovereignty",
+   "phonetic": "",
+   "meaning": "主权；独立国"
+  },
+  {
+   "word": "space",
+   "phonetic": "speis",
+   "meaning": "太空"
+  },
+  {
+   "word": "spaceship",
+   "phonetic": "speisip",
+   "meaning": "宇宙飞船"
+  },
+  {
+   "word": "spaceshuttle",
+   "phonetic": "",
+   "meaning": "航天飞机"
+  },
+  {
+   "word": "spade",
+   "phonetic": "speid",
+   "meaning": "铁锹，铲子"
+  },
+  {
+   "word": "spain",
+   "phonetic": "spein",
+   "meaning": "西班牙"
+  },
+  {
+   "word": "spanish",
+   "phonetic": "spæni",
+   "meaning": "西班牙人；西班牙语"
+  },
+  {
+   "word": "spanner",
+   "phonetic": "spænə",
+   "meaning": "扳手（英国）"
+  },
+  {
+   "word": "sparrow",
+   "phonetic": "spærəu",
+   "meaning": "麻雀"
+  },
+  {
+   "word": "special",
+   "phonetic": "speəl",
+   "meaning": "特殊的"
+  },
+  {
+   "word": "specialist",
+   "phonetic": "",
+   "meaning": "专家；专科医生"
+  },
+  {
+   "word": "sphere",
+   "phonetic": "sfiə",
+   "meaning": "天球；球体文学"
+  },
+  {
+   "word": "spider",
+   "phonetic": "",
+   "meaning": "蜘蛛"
+  },
+  {
+   "word": "spokesman",
+   "phonetic": "",
+   "meaning": "发言人；代表者"
+  },
+  {
+   "word": "spring",
+   "phonetic": "spri",
+   "meaning": "春天"
+  },
+  {
+   "word": "square",
+   "phonetic": "skwə",
+   "meaning": "直角尺，丁字尺"
+  },
+  {
+   "word": "star",
+   "phonetic": "sta:",
+   "meaning": "星"
+  },
+  {
+   "word": "starling",
+   "phonetic": "sta:li",
+   "meaning": "八哥"
+  },
+  {
+   "word": "statesman",
+   "phonetic": "",
+   "meaning": "政治家"
+  },
+  {
+   "word": "station",
+   "phonetic": "",
+   "meaning": "车站"
+  },
+  {
+   "word": "statistician",
+   "phonetic": "",
+   "meaning": "统计学家，统计员"
+  },
+  {
+   "word": "statue",
+   "phonetic": "stætju:",
+   "meaning": "雕像，塑像，铸像"
+  },
+  {
+   "word": "steak",
+   "phonetic": "steik",
+   "meaning": "牛排"
+  },
+  {
+   "word": "stepfather",
+   "phonetic": "",
+   "meaning": "继父"
+  },
+  {
+   "word": "stepmother",
+   "phonetic": "",
+   "meaning": "继母"
+  },
+  {
+   "word": "stereo",
+   "phonetic": "",
+   "meaning": "立体音响系统或设备"
+  },
+  {
+   "word": "stewardess",
+   "phonetic": "",
+   "meaning": "女乘务员，女服务员"
+  },
+  {
+   "word": "sticky",
+   "phonetic": "stiki",
+   "meaning": "粘的"
+  },
+  {
+   "word": "stiff",
+   "phonetic": "stif",
+   "meaning": "呆板的；僵硬的"
+  },
+  {
+   "word": "stocking",
+   "phonetic": "stɔki",
+   "meaning": "长筒袜"
+  },
+  {
+   "word": "stool",
+   "phonetic": "stu:l",
+   "meaning": "凳子"
+  },
+  {
+   "word": "store",
+   "phonetic": "stɔ:",
+   "meaning": "商店（美）"
+  },
+  {
+   "word": "stork",
+   "phonetic": "stɔ:k",
+   "meaning": "鹳"
+  },
+  {
+   "word": "storm",
+   "phonetic": "stɔ:m",
+   "meaning": "暴风雨，风暴"
+  },
+  {
+   "word": "story",
+   "phonetic": "stɔ:ri",
+   "meaning": "故事"
+  },
+  {
+   "word": "straight",
+   "phonetic": "streit",
+   "meaning": "直的"
+  },
+  {
+   "word": "strait",
+   "phonetic": "streit",
+   "meaning": "海峡"
+  },
+  {
+   "word": "strange",
+   "phonetic": "streind",
+   "meaning": "奇怪的"
+  },
+  {
+   "word": "strawberry",
+   "phonetic": "strɔ:bəri",
+   "meaning": "草莓"
+  },
+  {
+   "word": "stream",
+   "phonetic": "stri:m",
+   "meaning": "小溪"
+  },
+  {
+   "word": "strong",
+   "phonetic": "strɔstrɔ:",
+   "meaning": "强壮的；坚固的第页共页"
+  },
+  {
+   "word": "studio",
+   "phonetic": "",
+   "meaning": "画室"
+  },
+  {
+   "word": "subsidy",
+   "phonetic": "",
+   "meaning": "补贴；补助金；津贴"
+  },
+  {
+   "word": "subway",
+   "phonetic": "",
+   "meaning": "地铁"
+  },
+  {
+   "word": "sudden",
+   "phonetic": "sʌdən",
+   "meaning": "突然的"
+  },
+  {
+   "word": "sue",
+   "phonetic": "sju:",
+   "meaning": "起诉；控告"
+  },
+  {
+   "word": "sugarcane",
+   "phonetic": "",
+   "meaning": "甘蔗肉类"
+  },
+  {
+   "word": "suit",
+   "phonetic": "sju:tsu:t",
+   "meaning": "男西装男外衣"
+  },
+  {
+   "word": "suitcase",
+   "phonetic": "sju:tkeis",
+   "meaning": "手提箱；衣箱"
+  },
+  {
+   "word": "sum",
+   "phonetic": "sʌm",
+   "meaning": "总数；全额"
+  },
+  {
+   "word": "summer",
+   "phonetic": "sʌmə",
+   "meaning": "夏天"
+  },
+  {
+   "word": "sun",
+   "phonetic": "sʌn",
+   "meaning": "太阳"
+  },
+  {
+   "word": "sunny",
+   "phonetic": "sʌni",
+   "meaning": "晴朗的"
+  },
+  {
+   "word": "supermarket",
+   "phonetic": "sju:pəma:kit",
+   "meaning": "超市"
+  },
+  {
+   "word": "supervisor",
+   "phonetic": "",
+   "meaning": "监工国家和语言"
+  },
+  {
+   "word": "supply",
+   "phonetic": "",
+   "meaning": "供应；补给"
+  },
+  {
+   "word": "surgeon",
+   "phonetic": "sə:dən",
+   "meaning": "外科医生"
+  },
+  {
+   "word": "swallow",
+   "phonetic": "swɔləu",
+   "meaning": "燕子"
+  },
+  {
+   "word": "swamp",
+   "phonetic": "swɔmp",
+   "meaning": "沼泽"
+  },
+  {
+   "word": "sweater",
+   "phonetic": "",
+   "meaning": "毛衣，运动衫"
+  },
+  {
+   "word": "sweden",
+   "phonetic": "swi:dən",
+   "meaning": "瑞典第页共页"
+  },
+  {
+   "word": "sweet",
+   "phonetic": "swi:t",
+   "meaning": "甜的"
+  },
+  {
+   "word": "swim",
+   "phonetic": "swim",
+   "meaning": "游泳"
+  },
+  {
+   "word": "swine",
+   "phonetic": "swain",
+   "meaning": "猪第页共页"
+  },
+  {
+   "word": "swiss",
+   "phonetic": "swis",
+   "meaning": "瑞士人"
+  },
+  {
+   "word": "switzerland",
+   "phonetic": "",
+   "meaning": "瑞士"
+  },
+  {
+   "word": "symbolism",
+   "phonetic": "",
+   "meaning": "象征主义"
+  },
+  {
+   "word": "symphony",
+   "phonetic": "",
+   "meaning": "交响乐"
+  },
+  {
+   "word": "tailor",
+   "phonetic": "",
+   "meaning": "裁缝"
+  },
+  {
+   "word": "taurus",
+   "phonetic": "tɔ:rəs",
+   "meaning": "金牛座"
+  },
+  {
+   "word": "tax",
+   "phonetic": "tæks",
+   "meaning": "税"
+  },
+  {
+   "word": "taxi",
+   "phonetic": "tæksi",
+   "meaning": "出租车"
+  },
+  {
+   "word": "teacher",
+   "phonetic": "ti:tə",
+   "meaning": "教师；导师"
+  },
+  {
+   "word": "teapot",
+   "phonetic": "ti:pɔt",
+   "meaning": "茶壶"
+  },
+  {
+   "word": "teaspoon",
+   "phonetic": "ti:spu:n",
+   "meaning": "茶匙"
+  },
+  {
+   "word": "temperature",
+   "phonetic": "",
+   "meaning": "气温，温度"
+  },
+  {
+   "word": "temple",
+   "phonetic": "templ",
+   "meaning": "太阳穴"
+  },
+  {
+   "word": "tennis",
+   "phonetic": "tenis",
+   "meaning": "网球"
+  },
+  {
+   "word": "tenor",
+   "phonetic": "tenə",
+   "meaning": "男高音"
+  },
+  {
+   "word": "termite",
+   "phonetic": "",
+   "meaning": "白蚁"
+  },
+  {
+   "word": "theater",
+   "phonetic": "iətə",
+   "meaning": "剧院，戏院"
+  },
+  {
+   "word": "theatre",
+   "phonetic": "iətə",
+   "meaning": "戏剧"
+  },
+  {
+   "word": "theft",
+   "phonetic": "eft",
+   "meaning": "盗窃；偷"
+  },
+  {
+   "word": "thick",
+   "phonetic": "ik",
+   "meaning": "厚的"
+  },
+  {
+   "word": "thigh",
+   "phonetic": "ai",
+   "meaning": "大腿"
+  },
+  {
+   "word": "thin",
+   "phonetic": "in",
+   "meaning": "薄的"
+  },
+  {
+   "word": "thirst",
+   "phonetic": "ə:st",
+   "meaning": "口渴"
+  },
+  {
+   "word": "thread",
+   "phonetic": "red",
+   "meaning": "线"
+  },
+  {
+   "word": "threat",
+   "phonetic": "ret",
+   "meaning": "恐吓；威胁"
+  },
+  {
+   "word": "throstle",
+   "phonetic": "rɔsl",
+   "meaning": "画眉鸟其他动物"
+  },
+  {
+   "word": "throwing",
+   "phonetic": "rəui",
+   "meaning": "投掷"
+  },
+  {
+   "word": "thrush",
+   "phonetic": "rʌ",
+   "meaning": "画眉"
+  },
+  {
+   "word": "thumb",
+   "phonetic": "ʌm",
+   "meaning": "大拇指"
+  },
+  {
+   "word": "thunder",
+   "phonetic": "ʌndə",
+   "meaning": "雷"
+  },
+  {
+   "word": "thursday",
+   "phonetic": "",
+   "meaning": "周四"
+  },
+  {
+   "word": "tide",
+   "phonetic": "taid",
+   "meaning": "潮汐，潮水"
+  },
+  {
+   "word": "tie",
+   "phonetic": "tai",
+   "meaning": "领带"
+  },
+  {
+   "word": "tight",
+   "phonetic": "tait",
+   "meaning": "紧的"
+  },
+  {
+   "word": "tired",
+   "phonetic": "taiəd",
+   "meaning": "疲倦的"
+  },
+  {
+   "word": "tissue",
+   "phonetic": "tiju:sju:",
+   "meaning": "纸巾"
+  },
+  {
+   "word": "toe",
+   "phonetic": "təu",
+   "meaning": "脚趾；足尖"
+  },
+  {
+   "word": "tomato",
+   "phonetic": "təma:təu",
+   "meaning": "西红柿"
+  },
+  {
+   "word": "tomcat",
+   "phonetic": "tɔmkæt",
+   "meaning": "雄猫野生动物"
+  },
+  {
+   "word": "tomorrow",
+   "phonetic": "təmɔrəu",
+   "meaning": "明天"
+  },
+  {
+   "word": "toolbox",
+   "phonetic": "tu:lbɔks",
+   "meaning": "工具箱"
+  },
+  {
+   "word": "tornado",
+   "phonetic": "",
+   "meaning": "龙卷风"
+  },
+  {
+   "word": "tracing",
+   "phonetic": "treisi",
+   "meaning": "临摹"
+  },
+  {
+   "word": "trade",
+   "phonetic": "treid",
+   "meaning": "贸易"
+  },
+  {
+   "word": "tragedy",
+   "phonetic": "",
+   "meaning": "悲剧"
+  },
+  {
+   "word": "train",
+   "phonetic": "trein",
+   "meaning": "火车"
+  },
+  {
+   "word": "transfer",
+   "phonetic": "trænsfə:",
+   "meaning": "转让；转帐，过户"
+  },
+  {
+   "word": "tray",
+   "phonetic": "trei",
+   "meaning": "托盘咖啡壶服饰"
+  },
+  {
+   "word": "treaty",
+   "phonetic": "tri:ti",
+   "meaning": "条约"
+  },
+  {
+   "word": "trial",
+   "phonetic": "",
+   "meaning": "审理；审讯；审判"
+  },
+  {
+   "word": "trousers",
+   "phonetic": "",
+   "meaning": "裤子"
+  },
+  {
+   "word": "trout",
+   "phonetic": "traut",
+   "meaning": "鲑鱼，鳟鱼"
+  },
+  {
+   "word": "truck",
+   "phonetic": "trʌk",
+   "meaning": "卡车"
+  },
+  {
+   "word": "true",
+   "phonetic": "tru:",
+   "meaning": "真实的"
+  },
+  {
+   "word": "trust",
+   "phonetic": "trʌst",
+   "meaning": "托拉斯"
+  },
+  {
+   "word": "tuesday",
+   "phonetic": "tju:zdidei",
+   "meaning": "周二"
+  },
+  {
+   "word": "tumult",
+   "phonetic": "tju:mʌlt",
+   "meaning": "骚动"
+  },
+  {
+   "word": "tunny",
+   "phonetic": "tʌni",
+   "meaning": "金枪鱼"
+  },
+  {
+   "word": "turbulence",
+   "phonetic": "",
+   "meaning": "骚动"
+  },
+  {
+   "word": "turkey",
+   "phonetic": "tə:ki",
+   "meaning": "火鸡"
+  },
+  {
+   "word": "turmoil",
+   "phonetic": "tə:mɔil",
+   "meaning": "骚动，混乱"
+  },
+  {
+   "word": "turnover",
+   "phonetic": "tə:nəuvə",
+   "meaning": "营业额；销售额"
+  },
+  {
+   "word": "tutor",
+   "phonetic": "tju:tə",
+   "meaning": "（未成年人）监护人"
+  },
+  {
+   "word": "twin",
+   "phonetic": "twin",
+   "meaning": "双胞胎的"
+  },
+  {
+   "word": "typhoon",
+   "phonetic": "taifu:n",
+   "meaning": "台风"
+  },
+  {
+   "word": "typist",
+   "phonetic": "taipist",
+   "meaning": "打字员"
+  },
+  {
+   "word": "tyranny",
+   "phonetic": "tirəni",
+   "meaning": "暴政"
+  },
+  {
+   "word": "tyrant",
+   "phonetic": "",
+   "meaning": "暴君"
+  },
+  {
+   "word": "umbrella",
+   "phonetic": "",
+   "meaning": "雨伞"
+  },
+  {
+   "word": "uncle",
+   "phonetic": "ʌkl",
+   "meaning": "叔叔，伯父"
+  },
+  {
+   "word": "uniform",
+   "phonetic": "ju:nifɔ:m",
+   "meaning": "制服"
+  },
+  {
+   "word": "university",
+   "phonetic": "ju:nivə:səti",
+   "meaning": "大学"
+  },
+  {
+   "word": "upheaval",
+   "phonetic": "ʌphi:vəl",
+   "meaning": "巨变；动乱"
+  },
+  {
+   "word": "uprising",
+   "phonetic": "",
+   "meaning": "起义"
+  },
+  {
+   "word": "ur",
+   "phonetic": "",
+   "meaning": "暴雨"
+  },
+  {
+   "word": "uranus",
+   "phonetic": "juərənəs",
+   "meaning": "天王星"
+  },
+  {
+   "word": "usurpation",
+   "phonetic": "ju:zə:peiən",
+   "meaning": "篡夺；篡权"
+  },
+  {
+   "word": "usurper",
+   "phonetic": "ju:zə:pə",
+   "meaning": "篡位者；篡夺者"
+  },
+  {
+   "word": "valley",
+   "phonetic": "væli",
+   "meaning": "山谷"
+  },
+  {
+   "word": "van",
+   "phonetic": "væn",
+   "meaning": "厢式货车"
+  },
+  {
+   "word": "venus",
+   "phonetic": "vi:nəs",
+   "meaning": "金星"
+  },
+  {
+   "word": "verse",
+   "phonetic": "və:s",
+   "meaning": "诗节"
+  },
+  {
+   "word": "vessel",
+   "phonetic": "vesəl",
+   "meaning": "大船"
+  },
+  {
+   "word": "vest",
+   "phonetic": "vest",
+   "meaning": "背心，汗衫"
+  },
+  {
+   "word": "vice",
+   "phonetic": "vais",
+   "meaning": "老虎钳"
+  },
+  {
+   "word": "violent",
+   "phonetic": "vaiələnt",
+   "meaning": "激烈的；暴力的"
+  },
+  {
+   "word": "violet",
+   "phonetic": "vaiələt",
+   "meaning": "紫罗兰色的"
+  },
+  {
+   "word": "virgo",
+   "phonetic": "və:gəu",
+   "meaning": "处女座"
+  },
+  {
+   "word": "volcano",
+   "phonetic": "",
+   "meaning": "火山"
+  },
+  {
+   "word": "volume",
+   "phonetic": "vɔlju:m",
+   "meaning": "卷"
+  },
+  {
+   "word": "vote",
+   "phonetic": "vəut",
+   "meaning": "投票，选举艺术流派"
+  },
+  {
+   "word": "vulture",
+   "phonetic": "vʌltə",
+   "meaning": "秃鹫，秃鹰"
+  },
+  {
+   "word": "waiter",
+   "phonetic": "",
+   "meaning": "服务员，侍者"
+  },
+  {
+   "word": "waitress",
+   "phonetic": "weitris",
+   "meaning": "女服务生"
+  },
+  {
+   "word": "wallet",
+   "phonetic": "wɔlit",
+   "meaning": "钱包，皮夹"
+  },
+  {
+   "word": "walnut",
+   "phonetic": "wɔ:lnʌtnət",
+   "meaning": "核桃"
+  },
+  {
+   "word": "walrus",
+   "phonetic": "wɔ:lrəswɔl",
+   "meaning": "海象鸟类"
+  },
+  {
+   "word": "warm",
+   "phonetic": "wɔ:m",
+   "meaning": "温暖的"
+  },
+  {
+   "word": "warship",
+   "phonetic": "wɔ:ip",
+   "meaning": "军舰，战船"
+  },
+  {
+   "word": "wash",
+   "phonetic": "wɔ",
+   "meaning": "水墨画"
+  },
+  {
+   "word": "wasp",
+   "phonetic": "wɔsp",
+   "meaning": "黄蜂；胡蜂"
+  },
+  {
+   "word": "watch",
+   "phonetic": "wɔt",
+   "meaning": "手表第页共页"
+  },
+  {
+   "word": "watercolor",
+   "phonetic": "wɔ:təkʌləwɔ",
+   "meaning": "水彩画"
+  },
+  {
+   "word": "waterfall",
+   "phonetic": "wɔ:təfɔ:l",
+   "meaning": "瀑布"
+  },
+  {
+   "word": "watermelon",
+   "phonetic": "",
+   "meaning": "橙，桔子"
+  },
+  {
+   "word": "waterpolo",
+   "phonetic": "",
+   "meaning": "水球第页共页"
+  },
+  {
+   "word": "wave",
+   "phonetic": "weiv",
+   "meaning": "浪"
+  },
+  {
+   "word": "weak",
+   "phonetic": "wi:k",
+   "meaning": "弱的"
+  },
+  {
+   "word": "weather",
+   "phonetic": "weə",
+   "meaning": "天气"
+  },
+  {
+   "word": "wednesday",
+   "phonetic": "wenzdidei",
+   "meaning": "周三"
+  },
+  {
+   "word": "weekend",
+   "phonetic": "wi:kend",
+   "meaning": "周末"
+  },
+  {
+   "word": "weight-lifting",
+   "phonetic": "weitlifti",
+   "meaning": "举重"
+  },
+  {
+   "word": "wet",
+   "phonetic": "wet",
+   "meaning": "湿的"
+  },
+  {
+   "word": "whale",
+   "phonetic": "hweil",
+   "meaning": "鲸"
+  },
+  {
+   "word": "whisky",
+   "phonetic": "wiski",
+   "meaning": "威士忌"
+  },
+  {
+   "word": "white",
+   "phonetic": "wait",
+   "meaning": "白色；白色的"
+  },
+  {
+   "word": "wide",
+   "phonetic": "waid",
+   "meaning": "宽阔的"
+  },
+  {
+   "word": "wildgoose",
+   "phonetic": "",
+   "meaning": "雁，野鹅"
+  },
+  {
+   "word": "will",
+   "phonetic": "wil",
+   "meaning": "遗嘱"
+  },
+  {
+   "word": "wind",
+   "phonetic": "wind",
+   "meaning": "风"
+  },
+  {
+   "word": "windy",
+   "phonetic": "windi",
+   "meaning": "刮风的"
+  },
+  {
+   "word": "winter",
+   "phonetic": "",
+   "meaning": "冬天"
+  },
+  {
+   "word": "wise",
+   "phonetic": "waiz",
+   "meaning": "聪明的；明智的"
+  },
+  {
+   "word": "woodpecker",
+   "phonetic": "",
+   "meaning": "啄木鸟"
+  },
+  {
+   "word": "work",
+   "phonetic": "wə:k",
+   "meaning": "作品"
+  },
+  {
+   "word": "worker",
+   "phonetic": "wə:kə",
+   "meaning": "工人"
+  },
+  {
+   "word": "wrench",
+   "phonetic": "rent",
+   "meaning": "扳手（美国）"
+  },
+  {
+   "word": "wrestling",
+   "phonetic": "resli",
+   "meaning": "摔跤"
+  },
+  {
+   "word": "wrist",
+   "phonetic": "rist",
+   "meaning": "手腕，腕关节"
+  },
+  {
+   "word": "writer",
+   "phonetic": "",
+   "meaning": "作家"
+  },
+  {
+   "word": "wrong",
+   "phonetic": "rɔrɔ:",
+   "meaning": "错误的经济"
+  },
+  {
+   "word": "yacht",
+   "phonetic": "jɔt",
+   "meaning": "游艇"
+  },
+  {
+   "word": "yellow",
+   "phonetic": "jeləu",
+   "meaning": "黄色家庭亲属"
+  },
+  {
+   "word": "yesterday",
+   "phonetic": "",
+   "meaning": "昨天"
+  },
+  {
+   "word": "young",
+   "phonetic": "jʌ",
+   "meaning": "年青的有反义词的形容词"
+  },
+  {
+   "word": "zebra",
+   "phonetic": "zi:brə",
+   "meaning": "斑马"
+  },
+  {
+   "word": "zoo",
+   "phonetic": "zu:",
+   "meaning": "动物园"
+  },
+  {
+   "word": "zoologist",
+   "phonetic": "",
+   "meaning": "动物学家"
+  }
+ ]
+}

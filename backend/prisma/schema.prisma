@@ -732,6 +732,7 @@ enum TaskMode {
   PROFILE
   CUSTOM
   EXAM_PAPER
+  WORD // 英语单词攻克（听写/默写，AI 词汇老师）
 }
 
 // 任务大类：学科总任务（长期存档，计入学情）/ 专项攻克任务（独立区域与报告）
@@ -746,6 +747,61 @@ enum SpecialTaskType {
   KNOWLEDGE_POINT  // 知识点专项
   ERROR_BOOK       // 错题集专项
   PAPER            // 题库组卷（选择试卷或随机抽题进行专项练习）
+  WORD             // 英语单词攻克（听写/默写，AI 词汇老师）
+}
+
+// 英语单词词库（固定数据，按阶段导入：小学/初中/高中）
+model Word {
+  id        String   @id @default(uuid())
+  stage     String   // 小学 | 初中 | 高中
+  word      String   // 单词（小写）
+  phonetic  String   @default("") // 音标（PDF 破损可空）
+  meaning   String   // 中文释义
+  createdAt DateTime @default(now()) @map("created_at")
+
+  mistakes WordMistake[]
+
+  @@unique([stage, word])
+  @@map("words")
+}
+
+// 单词错题集（记录单词错误频率 + 艾宾浩斯掌握层级）
+model WordMistake {
+  id           String    @id @default(uuid())
+  studentId    String    @map("student_id")
+  wordId       String    @map("word_id")
+  wrongCount   Int       @default(0) @map("wrong_count")   // 累计错误次数
+  correctCount Int       @default(0) @map("correct_count") // 累计正确次数
+  level        Int       @default(0) // 掌握层级 0=新词 1..7（艾宾浩斯档位）
+  lastWrongAt  DateTime? @map("last_wrong_at")
+  nextReviewAt DateTime? @map("next_review_at") // 下次复习时间
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  word Word @relation(fields: [wordId], references: [id])
+
+  @@unique([studentId, wordId])
+  @@index([studentId, nextReviewAt])
+  @@map("word_mistakes")
+}
+
+// 单词训练会话（听写/默写 + AI 短语填空恢复）
+model WordSession {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  studentId String   @map("student_id")
+  mode      String   // DICTATION | SPELLING
+  stage     String
+  wordIds   Json     @map("word_ids") // 本次会话单词顺序（word id 数组）
+  index     Int      @default(0) // 当前已完成词数（含填空前）
+  total     Int      @default(20) // 本轮词数
+  status    String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  clozeJson Json?    @map("cloze_json") // 已生成的短语填空（未完成可恢复）
+  clozeDone Boolean  @default(false) @map("cloze_done")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([studentId, status])
+  @@map("word_sessions")
 }
 
 enum TaskStatus {

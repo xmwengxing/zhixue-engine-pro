@@ -735,7 +735,7 @@ export class ParentTaskService {
     data: {
       studentId: string;
       subject: string;
-      specialType: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER';
+      specialType: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER' | 'WORD';
       /** UNIT：单元节点 id 列表 */
       unitIds?: string[];
       /** KNOWLEDGE_POINT：知识点列表 */
@@ -747,6 +747,15 @@ export class ParentTaskService {
       title?: string;
       /** PAPER：组卷配置（整卷或随机抽题） */
       examConfig?: ExamPaperConfig;
+      /** WORD：单词攻克配置（mode/stage/orderMode/groupSize/intervalSec/roundSize） */
+      wordConfig?: {
+        mode: 'DICTATION' | 'SPELLING';
+        stage: string;
+        orderMode: 'SEQUENCE' | 'RANDOM';
+        groupSize: number;
+        intervalSec: number;
+        roundSize: number;
+      };
     },
     /** 学员主动发起（主动学习入口）：asStudent=true 时调用者即学员本人，跳过亲子关系校验 */
     options?: { asStudent?: boolean }
@@ -894,6 +903,47 @@ export class ParentTaskService {
         `专项题库组卷任务创建成功: ${paperTask.id}, 学员 ${data.studentId}, 学科 ${data.subject}, 题量 ${questionIds.length}`
       );
       return paperTask;
+    } else if (data.specialType === 'WORD') {
+      // 英语单词攻克：听写/默写，老师固定 AI 词汇老师
+      const wordTaskService = await import('./wordTaskService');
+      const wc = wordTaskService.validateWordConfig(data.wordConfig);
+      const count = await prisma.word.count({ where: { stage: wc.stage } });
+      if (count === 0) {
+        throw new Error(`「${wc.stage}」阶段词库为空，请先导入词库`);
+      }
+      const teacher = await wordTaskService.ensureWordTeacherInstruction();
+      const wordTask = await prisma.task.create({
+        data: {
+          studentId: data.studentId,
+          createdBy: parentId,
+          title: data.title || `英语单词 · ${wc.mode === 'DICTATION' ? '听写' : '默写'}（${wc.stage}）`,
+          mode: 'WORD',
+          category: 'SPECIAL',
+          subject: '英语',
+          specialType: 'WORD',
+          targetRef: { stage: wc.stage },
+          config: {
+            source: 'SPECIAL',
+            specialType: 'WORD',
+            ...wc,
+            aiTeacherId: teacher.id,
+          },
+          status: 'PENDING',
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              username: true,
+              studentProfile: { select: { realName: true } },
+            },
+          },
+        },
+      });
+      logger.info(
+        `专项单词任务创建成功: ${wordTask.id}, 学员 ${data.studentId}, 阶段 ${wc.stage}, 模式 ${wc.mode}`
+      );
+      return wordTask;
     } else {
       throw new Error('无效的专项类型');
     }

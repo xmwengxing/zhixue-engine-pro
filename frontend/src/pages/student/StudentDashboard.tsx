@@ -13,6 +13,7 @@ const ErrorRetry = lazy(() => import('./ErrorRetry'));
 const PointsWishMall = lazy(() => import('./PointsWishMall'));
 const TaskCenter = lazy(() => import('./TaskCenter'));
 const AnswerZone = lazy(() => import('./AnswerZone'));
+const WordTraining = lazy(() => import('./WordTraining'));
 const SubjectLearningState = lazy(() => import('./SubjectLearningState'));
 
 /**
@@ -305,6 +306,7 @@ export const StudentDashboard = () => {
             <Route path="/tasks" element={<TaskCenter />} />
             <Route path="/answer-zone/:taskId" element={<AnswerZone />} />
             <Route path="/training/:taskId" element={<TrainingCabin />} />
+            <Route path="/word-training/:taskId" element={<WordTraining />} />
             <Route path="/errors" element={<ErrorBook />} />
             <Route path="/learning-state" element={<SubjectLearningState />} />
             <Route path="/error-retry/:sessionId" element={<ErrorRetry />} />

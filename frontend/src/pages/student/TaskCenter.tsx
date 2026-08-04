@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Button, Badge, Empty, Loading } from '../../components/shared';
 import { getStudentTasks, type Task } from '../../services/studentTrainingService';
 import StudentSpecialTaskModal from '../../components/student/StudentSpecialTaskModal';
+import WordTaskCreateModal from '../../components/student/WordTaskCreateModal';
 
 /** P3 双轨：专项类型中文标签 */
 const SPECIAL_TYPE_LABELS: Record<string, string> = {
@@ -10,11 +11,12 @@ const SPECIAL_TYPE_LABELS: Record<string, string> = {
   KNOWLEDGE_POINT: '知识点专项',
   ERROR_BOOK: '错题本专项',
   PAPER: '题库组卷',
+  WORD: '英语单词',
 };
 
 /**
  * 任务中心页面（P3 双轨）
- * 学科总任务与专项攻克任务分区展示，互不混合
+ * 学科总任务与专项攻克任务分区展示，互不混合；英语单词独立版块
  */
 export const TaskCenter = () => {
   const navigate = useNavigate();
@@ -23,6 +25,11 @@ export const TaskCenter = () => {
   const [loading, setLoading] = useState(true);
   // 主动学习入口：新建专项任务弹窗
   const [createOpen, setCreateOpen] = useState(false);
+  // 英语单词：新建任务弹窗 + 单词错题本
+  const [wordCreateOpen, setWordCreateOpen] = useState(false);
+  const [mistakesOpen, setMistakesOpen] = useState(false);
+  const [mistakes, setMistakes] = useState<Array<{ word: string; meaning: string; wrongCount: number; nextReviewAt: string | null }>>([]);
+  const [mistakesLoading, setMistakesLoading] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -51,8 +58,31 @@ export const TaskCenter = () => {
   const handleStartTraining = (taskId: string, mode?: string) => {
     if (mode === 'EXAM_PAPER') {
       navigate(`/student/answer-zone/${taskId}`);
+    } else if (mode === 'WORD') {
+      navigate(`/student/word-training/${taskId}`);
     } else {
       navigate(`/student/training/${taskId}`);
+    }
+  };
+
+  /** 加载单词错题本 */
+  const loadMistakes = async () => {
+    setMistakesOpen(true);
+    setMistakesLoading(true);
+    setMistakes([]);
+    try {
+      const { default: request } = await import('../../utils/request');
+      const res = await request.get<{ success: boolean; data: any[] }>('/student/word-task/mistakes');
+      setMistakes((res.data || []).map((m) => ({
+        word: m.word,
+        meaning: m.meaning,
+        wrongCount: m.wrongCount,
+        nextReviewAt: m.nextReviewAt,
+      })));
+    } catch {
+      setMistakes([]);
+    } finally {
+      setMistakesLoading(false);
     }
   };
 
@@ -122,10 +152,27 @@ export const TaskCenter = () => {
 
           {/* 任务信息 */}
           <div className="space-y-2 mb-4 flex-1">
-            <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
-              <span className="material-symbols-outlined text-[18px]">quiz</span>
-              <span>题目数量: {task.config?.questionCount ?? '-'} 题</span>
-            </div>
+            {task.mode === 'WORD' ? (
+              <>
+                <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
+                  <span className="material-symbols-outlined text-[18px]">record_voice_over</span>
+                  <span>
+                    {task.config?.mode === 'DICTATION' ? '听写' : '默写'} · 阶段：{task.config?.stage ?? '-'} ·{' '}
+                    每组 {task.config?.groupSize ?? '-'} 词 · 间隔 {task.config?.intervalSec ?? '-'}s · 每轮{' '}
+                    {task.config?.roundSize ?? '-'} 词
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
+                  <span className="material-symbols-outlined text-[18px]">psychology</span>
+                  <span>AI 词汇老师 · 完成后自动出短语填空</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
+                <span className="material-symbols-outlined text-[18px]">quiz</span>
+                <span>题目数量: {task.config?.questionCount ?? '-'} 题</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
               <span className="material-symbols-outlined text-[18px]">schedule</span>
@@ -300,6 +347,40 @@ export const TaskCenter = () => {
         )}
       </div>
 
+      {/* 英语单词独立版块 */}
+      <div className="mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="material-symbols-outlined text-amber-400 text-2xl">translate</span>
+          <h2 className="text-xl font-bold text-white">英语单词</h2>
+          <span className="text-sm text-[#5b6b8c]">
+            （听写 / 默写 · AI 词汇老师短语填空 · 艾宾浩斯复习）
+          </span>
+          <div className="flex-1" />
+          <Button
+            variant="outline"
+            onClick={() => void loadMistakes()}
+            className="border-amber-500/60 text-amber-300 hover:bg-amber-500/10 mr-2"
+          >
+            单词错题本
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setWordCreateOpen(true)}
+            className="border-amber-500/60 text-amber-300 hover:bg-amber-500/10"
+          >
+            ＋ 新建单词任务
+          </Button>
+        </div>
+
+        {specialTasks.filter((t) => t.mode === 'WORD').length === 0 ? (
+          <Empty description="暂无单词任务，点击「新建单词任务」开始听写/默写" />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {specialTasks.filter((t) => t.mode === 'WORD').map((task) => renderTaskCard(task, true))}
+          </div>
+        )}
+      </div>
+
       {/* 主动学习入口：新建专项任务弹窗 */}
       <StudentSpecialTaskModal
         open={createOpen}
@@ -309,6 +390,66 @@ export const TaskCenter = () => {
           void loadTasks();
         }}
       />
+
+      {/* 英语单词：新建任务弹窗 */}
+      <WordTaskCreateModal
+        open={wordCreateOpen}
+        onClose={() => setWordCreateOpen(false)}
+        onCreated={() => {
+          setWordCreateOpen(false);
+          void loadTasks();
+        }}
+      />
+
+      {/* 单词错题本弹窗 */}
+      {mistakesOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setMistakesOpen(false)}>
+          <div
+            className="max-w-xl w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-h-[70vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-[#324467]">
+              <div>
+                <h3 className="text-lg font-medium text-white">单词错题本</h3>
+                <p className="text-sm text-[#5b6b8c] mt-0.5">按错误频率排序，答错的词将按艾宾浩斯安排复习</p>
+              </div>
+              <button onClick={() => setMistakesOpen(false)} className="text-[#5b6b8c] hover:text-white text-xl leading-none">
+                ×
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              {mistakesLoading ? (
+                <p className="text-center text-[#5b6b8c] py-8">加载中...</p>
+              ) : mistakes.length === 0 ? (
+                <p className="text-center text-[#5b6b8c] py-8">暂无单词错题记录，继续加油！</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[#5b6b8c] border-b border-[#324467]">
+                      <th className="py-2 pr-3 font-medium">单词</th>
+                      <th className="py-2 pr-3 font-medium">释义</th>
+                      <th className="py-2 pr-3 font-medium">错误次数</th>
+                      <th className="py-2 font-medium">下次复习</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mistakes.map((m) => (
+                      <tr key={m.word} className="border-b border-[#1a2332]">
+                        <td className="py-2.5 pr-3 text-white font-medium">{m.word}</td>
+                        <td className="py-2.5 pr-3 text-[#92a4c9]">{m.meaning}</td>
+                        <td className="py-2.5 pr-3 text-red-300">{m.wrongCount} 次</td>
+                        <td className="py-2.5 text-[#5b6b8c]">
+                          {m.nextReviewAt ? new Date(m.nextReviewAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

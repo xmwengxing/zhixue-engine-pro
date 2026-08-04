@@ -9,11 +9,18 @@ export interface Task {
   studentId: string;
   createdBy: string;
   title: string;
-  mode: 'PROFILE' | 'CUSTOM' | 'EXAM_PAPER';
+  mode: 'PROFILE' | 'CUSTOM' | 'EXAM_PAPER' | 'WORD';
   config: {
     materialNodeIds: string[];
     questionCount: number;
     difficulty: number;
+    // 单词任务配置（mode=WORD）
+    mode?: 'DICTATION' | 'SPELLING';
+    stage?: string;
+    orderMode?: 'SEQUENCE' | 'RANDOM';
+    groupSize?: number;
+    intervalSec?: number;
+    roundSize?: number;
   };
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
   createdAt: string;
@@ -26,7 +33,7 @@ export interface Task {
   // P3 双轨字段
   category?: 'SUBJECT_MAIN' | 'SPECIAL';
   subject?: string | null;
-  specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | null;
+  specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER' | 'WORD' | null;
 }
 
 export interface Question {

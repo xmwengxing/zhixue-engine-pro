@@ -11,6 +11,7 @@ import * as answerZoneController from '../controllers/answerZoneController';
 import { recognize as visionRecognize } from '../controllers/visionRecognitionController';
 import * as adminMaterialController from '../controllers/adminMaterialController';
 import { parentTaskController } from '../controllers/parentTaskController';
+import { wordTaskController } from '../controllers/wordTaskController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
@@ -116,6 +117,62 @@ router.get('/tasks', studentTrainingController.getTasks);
  *          unitIds?/knowledgePoints?/errorQuestionIds?/questionCount?/title?/examConfig?
  */
 router.post('/tasks/special', studentTrainingController.createSpecialTask);
+
+/**
+ * @route   GET /api/student/word-bank/stages
+ * @desc    词库阶段概览（小学/初中/高中词数）
+ * @access  Private (Student)
+ */
+router.get('/word-bank/stages', wordTaskController.getStages);
+
+/**
+ * @route   POST /api/student/word-task/start/:taskId
+ * @desc    开始单词训练（听写/默写），返回首组单词与配置
+ * @access  Private (Student)
+ */
+router.post('/word-task/start/:taskId', wordTaskController.startWord);
+
+/**
+ * @route   POST /api/student/word-task/group/:sessionId
+ * @desc    提交本组结果并获取下一组；最后一组完成后自动进入 AI 短语填空
+ * @access  Private (Student)
+ */
+router.post('/word-task/group/:sessionId', wordTaskController.nextGroup);
+
+/**
+ * @route   POST /api/student/word-task/resume/:sessionId
+ * @desc    恢复进行中会话（含未完成短语填空）
+ * @access  Private (Student)
+ */
+router.post('/word-task/resume/:sessionId', wordTaskController.resumeWord);
+
+/**
+ * @route   POST /api/student/word-task/cloze/check
+ * @desc    短语填空题判定
+ * @access  Private (Student)
+ */
+router.post('/word-task/cloze/check', wordTaskController.clozeCheck);
+
+/**
+ * @route   POST /api/student/word-task/finish/:sessionId
+ * @desc    完成会话（填空完成或退出保存进度）
+ * @access  Private (Student)
+ */
+router.post('/word-task/finish/:sessionId', wordTaskController.finishWord);
+
+/**
+ * @route   GET /api/student/word-task/mistakes?stage=
+ * @desc    单词错题集（错误频率排序）
+ * @access  Private (Student)
+ */
+router.get('/word-task/mistakes', wordTaskController.getMistakes);
+
+/**
+ * @route   POST /api/student/word-task/tts
+ * @desc    edge-tts 单词发音（word → mp3）
+ * @access  Private (Student)
+ */
+router.post('/word-task/tts', wordTaskController.tts);
 
 /**
  * @route   GET /api/student/question-bank/textbooks

@@ -115,6 +115,7 @@ export const createSpecialTask = async (
       questionCount,
       title,
       examConfig,
+      wordConfig,
     } = req.body ?? {};
     if (!subject || !specialType) {
       res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '专项任务必须指定学科与类型' } });
@@ -133,6 +134,7 @@ export const createSpecialTask = async (
         questionCount,
         title,
         examConfig,
+        wordConfig,
       },
       { asStudent: true }
     );
