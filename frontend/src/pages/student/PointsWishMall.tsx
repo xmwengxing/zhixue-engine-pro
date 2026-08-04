@@ -1,17 +1,30 @@
 import { useState, useEffect } from 'react';
-import { studentPointsService, type PointsData } from '../../services/studentPointsService';
+import {
+  studentPointsService,
+  type PointsOverview,
+  type PointsTx,
+  type PointsRule,
+} from '../../services/studentPointsService';
 import { studentWishService, type Wish, type WishType } from '../../services/studentWishService';
 import { getErrorMessage } from '../../types/error';
 
 /**
- * 积分愿望商城页面
+ * 积分愿望商城页面（V2：1 积分 = 1 元，所有任务可赚积分，参与度惩罚）
  */
 const PointsWishMall: React.FC = () => {
-  const [pointsData, setPointsData] = useState<PointsData | null>(null);
+  const [overview, setOverview] = useState<PointsOverview | null>(null);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWishForm, setShowWishForm] = useState(false);
   const [wishFormType, setWishFormType] = useState<WishType>('CUSTOM');
+  // 明细 / 规则弹窗
+  const [txOpen, setTxOpen] = useState(false);
+  const [txTab, setTxTab] = useState<'ALL' | 'EARN' | 'SPEND'>('ALL');
+  const [txs, setTxs] = useState<PointsTx[]>([]);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [rules, setRules] = useState<PointsRule[]>([]);
+  const [appealTx, setAppealTx] = useState<PointsTx | null>(null);
+  const [appealReason, setAppealReason] = useState('');
 
   // 加载数据
   useEffect(() => {
@@ -21,15 +34,11 @@ const PointsWishMall: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [points, wishList] = await Promise.all([
-        studentPointsService.getPoints(),
+      const [bal, wishList] = await Promise.all([
+        studentPointsService.getBalance(),
         studentWishService.getWishes(),
       ]);
-
-      if (points) {
-        setPointsData(points);
-      }
-      
+      setOverview(bal);
       if (wishList && wishList.wishes) {
         setWishes(wishList.wishes);
       } else {
@@ -38,11 +47,26 @@ const PointsWishMall: React.FC = () => {
     } catch (error) {
       console.error('加载数据失败:', error);
       setWishes([]);
-      if (!pointsData) {
-        setPointsData({ available: 0, total: 0, history: [] });
+      if (!overview) {
+        setOverview({ balance: 0, totalEarned: 0, totalSpent: 0, warnings: [] });
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTxs = async (tab: 'ALL' | 'EARN' | 'SPEND') => {
+    setTxTab(tab);
+    try {
+      const page = await studentPointsService.getTransactions('ALL');
+      const rows = page.rows || [];
+      setTxs(
+        tab === 'ALL'
+          ? rows
+          : rows.filter((r) => (tab === 'EARN' ? r.amount > 0 : r.amount < 0))
+      );
+    } catch {
+      setTxs([]);
     }
   };
 
@@ -59,8 +83,8 @@ const PointsWishMall: React.FC = () => {
 
   // 计算愿望进度
   const calculateProgress = (wish: Wish) => {
-    if (!pointsData || !pointsData.available) return 0;
-    return Math.min((pointsData.available / wish.requiredPoints) * 100, 100);
+    if (!overview || !overview.balance) return 0;
+    return Math.min((overview.balance / wish.requiredPoints) * 100, 100);
   };
 
   // 确认愿望（扣除积分）
@@ -120,28 +144,61 @@ const PointsWishMall: React.FC = () => {
 
       <main className="flex-1 max-w-[1200px] mx-auto w-full px-4 lg:px-10 py-8">
         {/* 积分统计卡片 */}
-        <div className="mb-8 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-blue-500 to-blue-600 p-8 rounded-xl shadow-lg text-white">
+        <div className="mb-6 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-blue-500 to-blue-600 p-8 rounded-xl shadow-lg text-white">
           <div className="bg-[#232f48]/20 p-4 rounded-full">
             <span className="material-symbols-outlined text-[48px]">database</span>
           </div>
           <div className="flex-1 text-center md:text-left">
-            <p className="text-white/80 text-lg font-medium">当前可用积分</p>
+            <p className="text-white/80 text-lg font-medium">当前可用积分（1 积分 = 1 元）</p>
             <div className="flex items-baseline justify-center md:justify-start gap-2">
               <span className="text-5xl font-black tracking-tighter">
-                {(pointsData?.available ?? 0).toLocaleString()}
+                {(overview?.balance ?? 0).toLocaleString()}
               </span>
               <span className="text-xl font-bold">pts</span>
             </div>
+            <p className="text-white/70 text-sm mt-1">
+              累计获得 {overview?.totalEarned ?? 0} · 累计使用 {overview?.totalSpent ?? 0}
+            </p>
           </div>
           <div className="flex gap-4">
-            <button className="bg-[#232f48] text-blue-500 px-6 py-2.5 rounded-full font-bold hover:bg-blue-500/10 transition-colors shadow-md">
+            <button
+              onClick={() => {
+                setTxOpen(true);
+                void loadTxs('ALL');
+              }}
+              className="bg-[#232f48] text-blue-500 px-6 py-2.5 rounded-full font-bold hover:bg-blue-500/10 transition-colors shadow-md"
+            >
               积分明细
             </button>
-            <button className="bg-black/20 text-white px-6 py-2.5 rounded-full font-bold hover:bg-black/30 transition-colors">
+            <button
+              onClick={() => {
+                setRulesOpen(true);
+                void studentPointsService.getRules().then(setRules).catch(() => setRules([]));
+              }}
+              className="bg-black/20 text-white px-6 py-2.5 rounded-full font-bold hover:bg-black/30 transition-colors"
+            >
               如何赚积分?
             </button>
           </div>
         </div>
+
+        {/* 扣分警告横幅 */}
+        {overview && overview.warnings.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {overview.warnings.map((w, i) => (
+              <div
+                key={i}
+                className={`p-3 rounded-lg border text-sm ${
+                  w.severity === 'DANGER'
+                    ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                }`}
+              >
+                ⚠️ {w.reason}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* 左侧：现金奖励和自定义愿望区域 */}
@@ -168,10 +225,10 @@ const PointsWishMall: React.FC = () => {
                   </div>
                   <h4 className="text-lg font-bold text-amber-300 mb-2">兑换现金</h4>
                   <p className="text-sm text-amber-300">
-                    10 积分 = 1 元
+                    1 积分 = 1 元
                   </p>
                   <p className="text-xs text-amber-400 mt-2">
-                    实时到账微信/支付宝
+                    与家长确认后兑现
                   </p>
                 </div>
               </div>
@@ -280,7 +337,7 @@ const PointsWishMall: React.FC = () => {
                               </div>
                               <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-[#5b6b8c]">
-                                  {pointsData?.available ?? 0} / {wish.requiredPoints}
+                                  {overview?.balance ?? 0} / {wish.requiredPoints}
                                 </span>
                                 <span className={`text-[10px] font-bold ${isCash ? 'text-amber-500' : 'text-blue-500'}`}>
                                   {progress.toFixed(0)}% 已达成
@@ -337,6 +394,145 @@ const PointsWishMall: React.FC = () => {
         </div>
       </main>
 
+    {/* 积分明细弹窗 */}
+    {txOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setTxOpen(false)}>
+        <div
+          className="max-w-2xl w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-h-[75vh] overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-5 border-b border-[#324467]">
+            <h3 className="text-lg font-medium text-white">积分明细</h3>
+            <button onClick={() => setTxOpen(false)} className="text-[#5b6b8c] hover:text-white text-xl leading-none">×</button>
+          </div>
+          <div className="flex gap-2 px-5 py-3 border-b border-[#324467]">
+            {(
+              [
+                { v: 'ALL', l: '全部' },
+                { v: 'EARN', l: '获得' },
+                { v: 'SPEND', l: '扣除' },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.v}
+                onClick={() => void loadTxs(t.v)}
+                className={`px-3 py-1 rounded-full text-sm ${txTab === t.v ? 'bg-blue-500/20 text-blue-300' : 'text-[#92a4c9] hover:bg-[#1a2332]'}`}
+              >
+                {t.l}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-2">
+            {txs.length === 0 ? (
+              <p className="text-center text-[#5b6b8c] py-8">暂无记录</p>
+            ) : (
+              txs.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-[#1a2332] border border-[#324467]">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white">{tx.memo || tx.type}</div>
+                    <div className="text-xs text-[#5b6b8c]">{new Date(tx.createdAt).toLocaleString('zh-CN')}</div>
+                  </div>
+                  <div className={`text-base font-bold mx-3 ${tx.amount >= 0 ? 'text-green-400' : 'text-red-300'}`}>
+                    {tx.amount >= 0 ? '+' : ''}{tx.amount}
+                  </div>
+                  {tx.amount < 0 && tx.type === 'PARTICIPATION_PENALTY' && (
+                    <button
+                      onClick={() => setAppealTx(tx)}
+                      className="text-xs px-2 py-1 rounded border border-blue-500/60 text-blue-300 hover:bg-blue-500/10"
+                    >
+                      申诉
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* 申诉弹窗 */}
+    {appealTx && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setAppealTx(null)}>
+        <div className="max-w-md w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-lg font-medium text-white mb-2">扣分申诉</h3>
+          <p className="text-sm text-[#5b6b8c] mb-4">扣分：{appealTx.amount} · {appealTx.memo}</p>
+          <textarea
+            value={appealReason}
+            onChange={(e) => setAppealReason(e.target.value)}
+            rows={3}
+            placeholder="请说明申诉原因（家长会看到并审核）"
+            className="w-full px-3 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white focus:ring-2 focus:ring-blue-500 mb-4"
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setAppealTx(null)} className="px-4 py-2 border border-[#324467] rounded-lg text-[#92a4c9]">取消</button>
+            <button
+              onClick={async () => {
+                if (appealReason.trim().length < 2) return alert('请填写申诉原因');
+                try {
+                  await studentPointsService.submitAppeal(appealTx.id, appealReason.trim());
+                  alert('申诉已提交，等待家长审核');
+                  setAppealTx(null);
+                  setAppealReason('');
+                  void loadTxs(txTab);
+                } catch (e) {
+                  alert(getErrorMessage(e, '提交失败'));
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              提交申诉
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* 积分规则弹窗 */}
+    {rulesOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setRulesOpen(false)}>
+        <div
+          className="max-w-2xl w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-h-[75vh] overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-5 border-b border-[#324467]">
+            <div>
+              <h3 className="text-lg font-medium text-white">积分规则</h3>
+              <p className="text-xs text-[#5b6b8c] mt-0.5">1 积分 = 1 元 · 只奖励参与，准确率不影响积分</p>
+            </div>
+            <button onClick={() => setRulesOpen(false)} className="text-[#5b6b8c] hover:text-white text-xl leading-none">×</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[#5b6b8c] border-b border-[#324467]">
+                  <th className="py-2 pr-3 font-medium">行为</th>
+                  <th className="py-2 pr-3 font-medium">积分</th>
+                  <th className="py-2 font-medium">说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((r) => (
+                  <tr key={r.type} className="border-b border-[#1a2332]">
+                    <td className="py-2.5 pr-3 text-white">{r.name}</td>
+                    <td className="py-2.5 pr-3 text-green-400 font-medium">{r.amount > 0 ? `+${r.amount}` : '—'}</td>
+                    <td className="py-2.5 text-[#92a4c9]">{r.desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300">
+              参与度扣分（不影响成绩）：学科总任务连续 3 天未完成每日训练量 -5（第 2 次 -10，第 3 次起 -30）；单词任务连续 3 天未训练 -5/-10/-30；引导训练完成后 7 天未参加期末测试 -30。扣到 0 分为止，不会扣成负数；被扣后 3 天内完成 1 个专项任务可返还 50%，也可申诉。
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  );
+
+
+
+
       {/* 愿望提交表单模态框 */}
       {showWishForm && (
         <WishSubmitModal
@@ -346,7 +542,7 @@ const PointsWishMall: React.FC = () => {
             setShowWishForm(false);
             loadData();
           }}
-          currentPoints={pointsData?.available || 0}
+          currentPoints={overview?.balance || 0}
         />
       )}
     </div>
@@ -678,7 +874,8 @@ const WishSubmitModal: React.FC<WishSubmitModalProps> = ({
         </form>
       </div>
     </div>
-  );
+
+);
 };
 
 export default PointsWishMall;

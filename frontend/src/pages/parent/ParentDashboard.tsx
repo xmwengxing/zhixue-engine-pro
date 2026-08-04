@@ -10,6 +10,8 @@ import TaskConfigCenter from './TaskConfigCenter';
 import TaskReportCenter from './TaskReportCenter';
 import ReportDetail from './ReportDetail';
 import WishApprovalList from './WishApprovalList';
+import PointsChildSelect from './PointsChildSelect';
+import ParentPointsOverview from './ParentPointsOverview';
 import ParentProfileCenter from './ParentProfileCenter';
 import SubjectLearningState from './SubjectLearningState';
 
@@ -22,6 +24,7 @@ const NAV_ITEMS: Array<{ to: string; icon: string; label: string; exact?: boolea
   { to: '/parent/tasks', icon: 'assignment', label: '任务管理' },
   { to: '/parent/reports', icon: 'description', label: '学习报告' },
   { to: '/parent/wishes', icon: 'card_giftcard', label: '愿望审批' },
+  { to: '/parent/points', icon: 'military_tech', label: '积分管理' },
   { to: '/parent/profile', icon: 'account_circle', label: '个人中心' },
 ];
 
@@ -160,6 +163,8 @@ export const ParentDashboard = () => {
           <Route path="/reports/:id" element={<ReportDetail />} />
           <Route path="/learning-state" element={<SubjectLearningState />} />
           <Route path="/wishes" element={<WishApprovalList />} />
+          <Route path="/points" element={<PointsChildSelect />} />
+          <Route path="/points/:studentId" element={<ParentPointsOverview />} />
           <Route path="/profile" element={<ParentProfileCenter />} />
           <Route
             path="*"

@@ -4,6 +4,7 @@ import { parentOverviewController } from '../controllers/parentOverviewControlle
 import { parentTaskController } from '../controllers/parentTaskController';
 import { parentReportController } from '../controllers/parentReportController';
 import { parentWishController } from '../controllers/parentWishController';
+import { pointsController } from '../controllers/pointsController';
 import { parentProfileController } from '../controllers/parentProfileController';
 import * as adminMaterialController from '../controllers/adminMaterialController';
 import { authenticate, requireParent } from '../middlewares/auth';
@@ -166,8 +167,7 @@ router.get(
 router.get(
   '/children/:studentId/learning-state',
   validateOwnership({ source: 'param', key: 'studentId' }),
-  async (req, res, next) => {
-    try {
+  async (req, res, next) => {    try {
       const studentId = String(req.params.studentId);
       const subject = req.query.subject ? String(req.query.subject) : undefined;
       if (subject) {
@@ -511,6 +511,33 @@ router.get('/wishes/:id', wishOwnership, (req, res, next) =>
  */
 router.put('/wishes/:id/approve', wishOwnership, (req, res, next) =>
   parentWishController.approveWish(req, res, next)
+);
+
+/**
+ * @route   GET /api/parent/children/:studentId/points
+ * @desc    孩子积分总览（余额 + 近 60 条流水 + 待审申诉）
+ * @access  Parent（须为亲子关系）
+ */
+router.get('/children/:studentId/points', (req, res, next) =>
+  pointsController.parentOverview(req, res, next)
+);
+
+/**
+ * @route   POST /api/parent/children/:studentId/points/adjust
+ * @desc    家长手动调整积分（±，附原因）
+ * @access  Parent（须为亲子关系）
+ */
+router.post('/children/:studentId/points/adjust', (req, res, next) =>
+  pointsController.parentAdjust(req, res, next)
+);
+
+/**
+ * @route   POST /api/parent/points/appeals/:appealId/review
+ * @desc    扣分申诉审核（通过返还全额）
+ * @access  Parent（须为亲子关系）
+ */
+router.post('/points/appeals/:appealId/review', (req, res, next) =>
+  pointsController.reviewAppeal(req, res, next)
 );
 
 export default router;

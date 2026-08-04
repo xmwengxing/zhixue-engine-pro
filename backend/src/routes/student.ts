@@ -13,6 +13,7 @@ import * as adminMaterialController from '../controllers/adminMaterialController
 import { parentTaskController } from '../controllers/parentTaskController';
 import { wordTaskController } from '../controllers/wordTaskController';
 import { dailyCalendarController } from '../controllers/dailyCalendarController';
+import { pointsController } from '../controllers/pointsController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
 import { subjectLearningStateService } from '../services/subjectLearningStateService';
@@ -181,6 +182,41 @@ router.get('/word-task/mistakes', wordTaskController.getMistakes);
  * @access  Private (Student)
  */
 router.post('/word-task/tts', wordTaskController.tts);
+
+/**
+ * @route   GET /api/student/points/balance
+ * @desc    积分余额 + 总入总出 + 扣分警告（惰性发放开户基础分）
+ * @access  Private (Student)
+ */
+router.get('/points/balance', pointsController.getBalance);
+
+/**
+ * @route   GET /api/student/points/transactions?type=&page=
+ * @desc    积分流水明细
+ * @access  Private (Student)
+ */
+router.get('/points/transactions', pointsController.getTransactions);
+
+/**
+ * @route   GET /api/student/points/rules
+ * @desc    积分规则页数据
+ * @access  Private (Student)
+ */
+router.get('/points/rules', pointsController.getRules);
+
+/**
+ * @route   POST /api/student/points/appeal/:txId
+ * @desc    扣分申诉
+ * @access  Private (Student)
+ */
+router.post('/points/appeal/:txId', pointsController.submitAppeal);
+
+/**
+ * @route   GET /api/student/points/appeals
+ * @desc    我的申诉列表
+ * @access  Private (Student)
+ */
+router.get('/points/appeals', pointsController.listMyAppeals);
 
 /**
  * @route   GET /api/student/question-bank/textbooks

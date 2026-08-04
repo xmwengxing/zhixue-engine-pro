@@ -65,10 +65,52 @@ export async function recordDailyTraining(
       create: { taskId, studentId, date, questions: q, minutes },
       update: { questions: { increment: q }, minutes: { increment: minutes } },
     });
+    // 今日达标 → 发每日达标积分 + 连续达标奖励（惰性、幂等）
+    try {
+      const { pointsEngineService } = await import('./pointsEngineService');
+      const task = await prisma.task.findUnique({ where: { id: taskId }, select: { config: true, status: true } });
+      const goal = getDailyGoal(task?.config as any);
+      if (task?.status === 'IN_PROGRESS' && isDailyMet(goal, await todayRecord(taskId, studentId))) {
+        const metToday = await pointsEngineService.reward(studentId, 'DAILY_GOAL_MET', 5, taskId, '完成当日训练目标');
+        if (metToday) {
+          // 连续达标天数（含今天）每满 7 天 +10
+          const streak = await countConsecutiveMetDays(taskId, studentId, date);
+          if (streak > 0 && streak % 7 === 0) {
+            await pointsEngineService.reward(studentId, 'STREAK_BONUS', 10, taskId, `连续达标 ${streak} 天`);
+          }
+        }
+      }
+    } catch (e2: any) {
+      logger.warn('[daily] 达标积分发放失败:', e2.message);
+    }
   } catch (e: any) {
     // 非致命：聚合失败不影响答题
     logger.warn('[daily] 每日训练记录聚合失败:', e.message);
   }
+}
+
+/** 当日记录（含达标判定） */
+async function todayRecord(taskId: string, studentId: string) {
+  return prisma.dailyTrainingRecord.findUnique({
+    where: { taskId_studentId_date: { taskId, studentId, date: todayDate() } },
+    select: { questions: true, minutes: true },
+  });
+}
+
+/** 从 today（含）往回数连续达标天数（UTC 日期） */
+async function countConsecutiveMetDays(taskId: string, studentId: string, today: Date): Promise<number> {
+  let streak = 0;
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today.getTime() - i * 86400000);
+    const rec = await prisma.dailyTrainingRecord.findUnique({
+      where: { taskId_studentId_date: { taskId, studentId, date: d } },
+      select: { questions: true, minutes: true },
+    });
+    const goal = getDailyGoal((await prisma.task.findUnique({ where: { id: taskId }, select: { config: true } }))?.config as any);
+    if (rec && isDailyMet(goal, rec)) streak++;
+    else break;
+  }
+  return streak;
 }
 
 /** 获取任务最近 N 天日程表（含目标与达标状态）——统一 UTC 日期，避免本地/UTC 序列化偏移 */

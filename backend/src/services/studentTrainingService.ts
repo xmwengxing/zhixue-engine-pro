@@ -2215,6 +2215,13 @@ export class StudentTrainingService {
     } else if (session.phase === 'TRAINING' && newStep >= Math.ceil(session.totalSteps * 0.8)) {
       // 完成 80% 后进入综合考试阶段
       newPhase = 'FINAL_EXAM';
+      // 引导式训练完成 → 阶段完成奖励 +10（惰性、幂等）
+      try {
+        const { pointsEngineService } = await import('./pointsEngineService');
+        await pointsEngineService.reward(session.studentId, 'STAGE_COMPLETE', 10, session.taskId, '完成引导式训练');
+      } catch (e) {
+        logger.warn('[points] 阶段完成奖励失败:', (e as Error).message);
+      }
     }
 
     await prisma.trainingSession.update({
@@ -2302,6 +2309,35 @@ export class StudentTrainingService {
         });
       } catch (error) {
         logger.warn('[daily] 每日训练聚合失败:', (error as Error).message);
+      }
+
+      // ===== 积分引擎 V2：所有任务可获得积分（只奖励参与+答对，不罚准确率） =====
+      try {
+        const { pointsEngineService } = await import('./pointsEngineService');
+        const task = await prisma.task.findUnique({
+          where: { id: session.taskId },
+          select: { category: true, specialType: true, config: true, status: true },
+        });
+        const isCorrectAnswer = Boolean(evaluation?.isCorrect);
+        if (task) {
+          // 专项攻克（非单词）：答对一题 +2（题量×准确率；题量 ≥5 的任务才有价值，防小任务刷分）
+          if (task.category === 'SPECIAL' && task.specialType !== 'WORD' && isCorrectAnswer && task.status === 'IN_PROGRESS') {
+            const questionCount = Number((task.config as any)?.questionCount) || 0;
+            if (questionCount >= 5) {
+              await pointsEngineService.reward(session.studentId, 'SPECIAL_CORRECT', 2, session.taskId, '专项任务答对一题', { allowMultiPerDay: true });
+            }
+          }
+          // 参与度惩罚惰性结算（学科总任务：连续未达标递增扣分；终测拖延）
+          await pointsEngineService.settleParticipationPenalties(
+            session.studentId,
+            session.taskId,
+            task.category,
+            task.config as any,
+            session.updatedAt ?? null
+          );
+        }
+      } catch (pointsError) {
+        logger.warn('[points] 答题积分结算失败:', (pointsError as Error).message);
       }
 
       if (!questionId) {
@@ -2979,6 +3015,19 @@ export class StudentTrainingService {
       });
 
       logger.info(`会话 ${sessionId} 完成综合考试，正确率：${examResults.accuracy}%`);
+
+      // 积分：参加终测 +20；达标（正确率 ≥ 目标）额外 +30（惰性、幂等）
+      try {
+        const { pointsEngineService } = await import('./pointsEngineService');
+        await pointsEngineService.reward(studentId, 'FINAL_EXAM_DONE', 20, session.taskId, '完成期末测试');
+        const taskConfig = session.task.config as any;
+        const goalScore = Number(taskConfig?.goalScore ?? 60);
+        if (Number(examResults.accuracy) >= goalScore) {
+          await pointsEngineService.reward(studentId, 'FINAL_EXAM_PASS', 30, session.taskId, `期末测试达标（正确率 ${examResults.accuracy}%）`);
+        }
+      } catch (pointsError) {
+        logger.warn('[points] 终测积分发放失败:', (pointsError as Error).message);
+      }
 
       return {
         success: true,

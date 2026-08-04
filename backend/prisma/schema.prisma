@@ -449,16 +449,33 @@ model Wish {
 model PointsTransaction {
   id        String   @id @default(uuid())
   studentId String   @map("student_id")
-  amount    Int      // 正数为获得，负数为消耗
+  amount    Int      // 正数为获得，负数为消耗/扣分
   type      TransactionType
   relatedId String?  @map("related_id") // 关联 ID（任务/错题/愿望）
   balance   Int      // 交易后余额
+  memo      String?  // 原因说明（扣分原因/调整原因，申诉依据）
   createdAt DateTime @default(now()) @map("created_at")
 
   // 关联关系
   student User @relation(fields: [studentId], references: [id])
 
+  @@index([studentId, createdAt])
   @@map("points_transactions")
+}
+
+// 积分扣分申诉（学员对参与度扣分有异议时提交，家长审核）
+model PointsAppeal {
+  id         String   @id @default(uuid())
+  studentId  String   @map("student_id")
+  txId       String   @map("tx_id") // 被申诉的扣分流水
+  reason     String   @db.Text
+  status     String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewNote String?  @map("review_note") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  reviewedAt DateTime? @map("reviewed_at")
+
+  @@index([studentId, status])
+  @@map("points_appeals")
 }
 
 // ============ 学科学情与智能体平台 ============
@@ -871,6 +888,21 @@ enum TransactionType {
   ERROR_RETRY
   WISH_REDEEM
   GUIDED_SOLVE // 苏格拉底式引导后独立解出题目的奖励
+  SIGNUP_BONUS // 开户基础分
+  DAILY_GOAL_MET // 学科总任务每日训练达标
+  STREAK_BONUS // 连续达标奖励
+  WEEKLY_ATTENDANCE // 周满勤
+  STAGE_COMPLETE // 训练阶段完成
+  FINAL_EXAM_DONE // 参加期末测试
+  FINAL_EXAM_PASS // 终测达标
+  SPECIAL_CORRECT // 专项任务答对一题
+  PAPER_COMPLETE // 专项组卷整卷完成
+  WORD_CORRECT // 单词答对一词
+  WORD_ROUND_DONE // 单词整轮完成
+  WORD_REVIEW_CORRECT // 单词复习答对
+  PARENT_ADJUST // 家长手动调整
+  PARTICIPATION_PENALTY // 参与度扣分（连续未达标/中断/拖延终测）
+  PENALTY_RETURN // 将功补过返还
 }
 
 enum AIProviderType {

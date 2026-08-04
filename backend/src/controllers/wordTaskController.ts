@@ -74,6 +74,31 @@ export const submitWord = async (req: Request, res: Response, next: NextFunction
       where: { id: session.id },
       data: { index: nextIndex, doneInGroup },
     });
+
+    // 积分：答对 1 词 +1（词汇量×准确率）；复习旧词答对 +2（幂等）
+    try {
+      const { pointsEngineService } = await import('../services/pointsEngineService');
+      if (correct) {
+        const task = await prisma.task.findUnique({ where: { id: session.taskId }, select: { config: true } });
+        const roundSize = Number((task?.config as any)?.roundSize) || 0;
+        if (roundSize >= 10) {
+          await pointsEngineService.reward(studentId, 'WORD_CORRECT', 1, session.taskId, `单词「${word.word}」答对`, { allowMultiPerDay: true });
+        }
+        const mistake = await prisma.wordMistake.findUnique({
+          where: { studentId_wordId: { studentId, wordId: word.id } },
+        });
+        if (mistake && mistake.level >= 1) {
+          await pointsEngineService.reward(studentId, 'WORD_REVIEW_CORRECT', 2, session.taskId, `复习单词「${word.word}」答对`, { allowMultiPerDay: true });
+        }
+      }
+      // 参与度惩罚结算（单词连续未训练）
+      const task = await prisma.task.findUnique({ where: { id: session.taskId }, select: { category: true, specialType: true, config: true } });
+      if (task) {
+        await pointsEngineService.settleParticipationPenalties(studentId, session.taskId, task.category, task.config as any, session.updatedAt ?? null);
+      }
+    } catch (pointsError) {
+      // 非致命
+    }
     res.json({ success: true, data: { correct } });
   } catch (e) {
     next(e);
@@ -104,6 +129,16 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
         where: { id: session.id },
         data: { clozeJson: cloze as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
       });
+      // 积分：整轮完成 +5（轮内答对已按词计分）
+      try {
+        const { pointsEngineService } = await import('../services/pointsEngineService');
+        const roundSize = Number(config?.roundSize) || 0;
+        if (roundSize >= 10) {
+          await pointsEngineService.reward(studentId, 'WORD_ROUND_DONE', 5, session.taskId, '完成一整轮单词训练');
+        }
+      } catch (pointsError) {
+        // 非致命
+      }
       res.json({
         success: true,
         data: { done: true, phase: 'CLOZE', cloze },
