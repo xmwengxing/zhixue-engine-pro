@@ -9,16 +9,29 @@ export interface OcrProviderInput {
   endpoint: string;
   apiKey?: string;
   model?: string;
+  extra?: Record<string, unknown>;
   isDefault?: boolean;
   enableForRecognition?: boolean;
   status?: ProviderStatus;
 }
+
+/** 云端识别方式（可勾选用于学员/家长识别） */
+const CLOUD_METHODS: OcrMethod[] = ['CUSTOM_API', 'BAIDU_OCR', 'PADDLE_OCR_VL'];
 
 function maskApiKey(key?: string | null): string {
   if (!key) return '';
   if (key.length > 12) return `${key.substring(0, 8)}...${key.substring(key.length - 4)}`;
   if (key.length > 4) return `${key.substring(0, 4)}...`;
   return '***';
+}
+
+/** 返回给前端前脱敏（apiKey 与 extra.secretKey，防止明文泄露） */
+function sanitizeProvider(p: any) {
+  const extra = p.extra && typeof p.extra === 'object' ? { ...p.extra } : p.extra;
+  if (extra && typeof extra.secretKey === 'string' && extra.secretKey) {
+    extra.secretKey = maskApiKey(extra.secretKey);
+  }
+  return { ...p, apiKey: maskApiKey(p.apiKey), extra };
 }
 
 /**
@@ -28,18 +41,24 @@ function maskApiKey(key?: string | null): string {
 export class AdminOcrService {
   async getAllProviders() {
     const list = await prisma.ocrProvider.findMany({ orderBy: { createdAt: 'desc' } });
-    return list.map((p) => ({ ...p, apiKey: maskApiKey(p.apiKey) }));
+    return list.map((p) => sanitizeProvider(p));
   }
 
   async getProviderById(id: string) {
     const p = await prisma.ocrProvider.findUnique({ where: { id } });
     if (!p) return null;
-    return { ...p, apiKey: maskApiKey(p.apiKey) };
+    return sanitizeProvider(p);
   }
 
   async createProvider(data: OcrProviderInput) {
-    if (data.enableForRecognition && data.method !== 'CUSTOM_API') {
-      throw new Error('仅「自定义厂商视觉模型」(CUSTOM_API) 可勾选用于学员/家长识别（需非本地）');
+    if (data.enableForRecognition && !CLOUD_METHODS.includes(data.method)) {
+      throw new Error('仅云端识别方式（自定义厂商视觉 / 百度智能云 OCR / 飞桨 PaddleOCR-VL）可勾选用于学员/家长识别');
+    }
+    if (data.method === 'BAIDU_OCR' && (!data.apiKey || !data.extra?.secretKey)) {
+      throw new Error('百度智能云 OCR 需要填写 API Key 与 Secret Key（百度智能云控制台创建应用获取）');
+    }
+    if (data.method === 'PADDLE_OCR_VL' && !data.apiKey) {
+      throw new Error('飞桨 PaddleOCR-VL 需要填写 Token');
     }
     if (data.isDefault) {
       await prisma.ocrProvider.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
@@ -51,17 +70,35 @@ export class AdminOcrService {
         endpoint: data.endpoint,
         apiKey: data.apiKey || null,
         model: data.model || null,
+        extra: (data.extra as any) || null,
         isDefault: data.isDefault || false,
         enableForRecognition: data.enableForRecognition || false,
         status: data.status || ProviderStatus.ACTIVE,
       },
     });
-    return { ...created, apiKey: maskApiKey(created.apiKey) };
+    return sanitizeProvider(created);
   }
 
   async updateProvider(id: string, data: Partial<OcrProviderInput>) {
-    if (data.enableForRecognition && data.method && data.method !== 'CUSTOM_API') {
-      throw new Error('仅「自定义厂商视觉模型」(CUSTOM_API) 可勾选用于学员/家长识别（需非本地）');
+    if (data.enableForRecognition && data.method && !CLOUD_METHODS.includes(data.method)) {
+      throw new Error('仅云端识别方式（自定义厂商视觉 / 百度智能云 OCR / 飞桨 PaddleOCR-VL）可勾选用于学员/家长识别');
+    }
+    if (data.method === 'BAIDU_OCR' && !data.apiKey && !data.extra?.secretKey) {
+      // 编辑场景可能沿用原密钥（apiKey 未改动不回传），secretKey 同理
+      const cur = await prisma.ocrProvider.findUnique({ where: { id } });
+      if (!cur || (!cur.apiKey && !(cur.extra as any)?.secretKey)) {
+        throw new Error('百度智能云 OCR 需要填写 API Key 与 Secret Key');
+      }
+    }
+    const updateData: any = { ...data };
+    if (data.extra !== undefined) updateData.extra = data.extra as any;
+    if (data.method === 'BAIDU_OCR') {
+      // 编辑时 secretKey 若未改动则不覆盖
+      const cur = await prisma.ocrProvider.findUnique({ where: { id } });
+      if (cur) {
+        const mergedExtra = { ...((cur.extra as any) || {}), ...(data.extra || {}) };
+        updateData.extra = mergedExtra;
+      }
     }
     if (data.isDefault) {
       await prisma.ocrProvider.updateMany({
@@ -69,8 +106,8 @@ export class AdminOcrService {
         data: { isDefault: false },
       });
     }
-    const updated = await prisma.ocrProvider.update({ where: { id }, data });
-    return { ...updated, apiKey: maskApiKey(updated.apiKey) };
+    const updated = await prisma.ocrProvider.update({ where: { id }, data: updateData });
+    return sanitizeProvider(updated);
   }
 
   async deleteProvider(id: string) {
@@ -84,10 +121,10 @@ export class AdminOcrService {
     });
   }
 
-  /** 学员/家长识别通道：enableForRecognition=true 且 CUSTOM_API + ACTIVE */
+  /** 学员/家长识别通道：云端方式（CUSTOM_API / BAIDU_OCR / PADDLE_OCR_VL）+ ACTIVE */
   async getRecognitionProvider() {
     return prisma.ocrProvider.findFirst({
-      where: { enableForRecognition: true, method: 'CUSTOM_API', status: ProviderStatus.ACTIVE },
+      where: { enableForRecognition: true, method: { in: CLOUD_METHODS }, status: ProviderStatus.ACTIVE },
     });
   }
 
@@ -106,6 +143,7 @@ export class AdminOcrService {
     endpoint: string;
     apiKey?: string;
     model?: string;
+    extra?: any;
   }): Promise<{ ok: boolean; latency: number; error?: string; sample?: string }> {
     const start = Date.now();
     try {
@@ -117,6 +155,12 @@ export class AdminOcrService {
         clearTimeout(t);
         if (!res.ok) throw new Error(`服务返回 ${res.status}`);
         return { ok: true, latency: Date.now() - start };
+      }
+      if (provider.method === 'BAIDU_OCR') {
+        // 百度：仅验证凭据有效（换 token 成功即视为连通），不消耗文档解析额度
+        const { getBaiduAccessToken } = await import('./ocrVisionClient');
+        await getBaiduAccessToken(provider.apiKey || '', provider.extra?.secretKey || '');
+        return { ok: true, latency: Date.now() - start, sample: '凭据有效，access_token 获取成功' };
       }
       const { buffer, mime } = getTestImage();
       const text = await callVisionApi(

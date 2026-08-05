@@ -3,7 +3,7 @@ import request from '../../utils/request';
 import { getErrorMessage } from '../../types/error';
 
 // ============ 类型 ============
-type OcrMethod = 'LOCAL_SERVICE' | 'LOCAL_VISION' | 'CUSTOM_API';
+type OcrMethod = 'LOCAL_SERVICE' | 'LOCAL_VISION' | 'CUSTOM_API' | 'BAIDU_OCR' | 'PADDLE_OCR_VL';
 
 interface OcrProvider {
   id: string;
@@ -12,6 +12,7 @@ interface OcrProvider {
   endpoint: string;
   apiKey: string; // 后端已脱敏
   model: string | null;
+  extra: any | null; // BAIDU_OCR: {secretKey(脱敏)}；PADDLE_OCR_VL: {model, 开关}
   isDefault: boolean;
   enableForRecognition: boolean;
   status: 'ACTIVE' | 'INACTIVE';
@@ -25,6 +26,11 @@ interface ProviderFormData {
   endpoint: string;
   apiKey: string;
   model: string;
+  secretKey: string; // 百度智能云 Secret Key
+  paddleModel: string; // 飞桨模型名（PaddleOCR-VL-1.6）
+  useDocOrientationClassify: boolean;
+  useDocUnwarping: boolean;
+  useChartRecognition: boolean;
   isDefault: boolean;
   enableForRecognition: boolean;
   status: 'ACTIVE' | 'INACTIVE';
@@ -43,6 +49,8 @@ const METHOD_CONFIG: Record<OcrMethod, {
   desc: string;
   needApiKey: boolean;
   needModel: boolean;
+  needSecretKey: boolean;
+  needPaddleOptions: boolean;
   endpointPlaceholder: string;
 }> = {
   LOCAL_SERVICE: {
@@ -50,6 +58,8 @@ const METHOD_CONFIG: Record<OcrMethod, {
     desc: 'Unlimited-OCR 等本地 OCR 服务，仅需服务地址（用于管理员导入转化）',
     needApiKey: false,
     needModel: false,
+    needSecretKey: false,
+    needPaddleOptions: false,
     endpointPlaceholder: 'http://localhost:8080',
   },
   LOCAL_VISION: {
@@ -57,6 +67,8 @@ const METHOD_CONFIG: Record<OcrMethod, {
     desc: 'Ollama 本地视觉模型（如 qwen-vl），需服务地址与模型名（用于管理员导入转化）',
     needApiKey: false,
     needModel: true,
+    needSecretKey: false,
+    needPaddleOptions: false,
     endpointPlaceholder: 'http://localhost:11434',
   },
   CUSTOM_API: {
@@ -64,7 +76,27 @@ const METHOD_CONFIG: Record<OcrMethod, {
     desc: 'OpenAI 兼容视觉接口；可勾选用于学员/家长端非本地识别',
     needApiKey: true,
     needModel: true,
+    needSecretKey: false,
+    needPaddleOptions: false,
     endpointPlaceholder: 'https://api.openai.com/v1',
+  },
+  BAIDU_OCR: {
+    name: '百度智能云官方 OCR API',
+    desc: '百度智能云「文档解析 Unlimited-OCR」异步任务接口；需百度智能云控制台创建应用获取 API Key 与 Secret Key；支持图片/PDF/Office 文档转 Markdown；可勾选用于学员/家长端识别',
+    needApiKey: true,
+    needModel: false,
+    needSecretKey: true,
+    needPaddleOptions: false,
+    endpointPlaceholder: 'https://aip.baidubce.com',
+  },
+  PADDLE_OCR_VL: {
+    name: '飞桨 PaddleOCR-VL',
+    desc: '飞桨 AI Studio PaddleOCR-VL 异步任务接口；需 Token（aistudio 鉴权）；可选开启方向分类/文档矫正/图表识别；可勾选用于学员/家长端识别',
+    needApiKey: true,
+    needModel: false,
+    needSecretKey: false,
+    needPaddleOptions: true,
+    endpointPlaceholder: 'https://paddleocr.aistudio-app.com',
   },
 };
 
@@ -81,6 +113,11 @@ const OcrProviderConfig: React.FC = () => {
     endpoint: '',
     apiKey: '',
     model: '',
+    secretKey: '',
+    paddleModel: 'PaddleOCR-VL-1.6',
+    useDocOrientationClassify: false,
+    useDocUnwarping: false,
+    useChartRecognition: false,
     isDefault: false,
     enableForRecognition: false,
     status: 'ACTIVE',
@@ -112,6 +149,11 @@ const OcrProviderConfig: React.FC = () => {
       endpoint: METHOD_CONFIG.LOCAL_SERVICE.endpointPlaceholder,
       apiKey: '',
       model: '',
+      secretKey: '',
+      paddleModel: 'PaddleOCR-VL-1.6',
+      useDocOrientationClassify: false,
+      useDocUnwarping: false,
+      useChartRecognition: false,
       isDefault: false,
       enableForRecognition: false,
       status: 'ACTIVE',
@@ -128,6 +170,11 @@ const OcrProviderConfig: React.FC = () => {
       endpoint: p.endpoint,
       apiKey: p.apiKey, // 脱敏值，未改动则不回传
       model: p.model || '',
+      secretKey: p.extra?.secretKey || '', // 脱敏值
+      paddleModel: p.extra?.model || p.model || 'PaddleOCR-VL-1.6',
+      useDocOrientationClassify: p.extra?.useDocOrientationClassify ?? false,
+      useDocUnwarping: p.extra?.useDocUnwarping ?? false,
+      useChartRecognition: p.extra?.useChartRecognition ?? false,
       isDefault: p.isDefault,
       enableForRecognition: p.enableForRecognition,
       status: p.status,
@@ -145,7 +192,8 @@ const OcrProviderConfig: React.FC = () => {
       // 切换方式时清空与新方式不匹配的字段
       apiKey: cfg.needApiKey ? f.apiKey : '',
       model: cfg.needModel ? f.model : '',
-      enableForRecognition: m === 'CUSTOM_API' ? f.enableForRecognition : false,
+      secretKey: cfg.needSecretKey ? f.secretKey : '',
+      enableForRecognition: ['CUSTOM_API', 'BAIDU_OCR', 'PADDLE_OCR_VL'].includes(m) ? f.enableForRecognition : false,
     }));
   };
 
@@ -156,11 +204,15 @@ const OcrProviderConfig: React.FC = () => {
       return;
     }
     if (cfg.needApiKey && !formData.apiKey) {
-      alert('该方式需要填写 API Key');
+      alert('该方式需要填写 API Key / Token');
       return;
     }
     if (cfg.needModel && !formData.model) {
       alert('该方式需要填写模型名称');
+      return;
+    }
+    if (cfg.needSecretKey && !formData.secretKey) {
+      alert('该方式需要填写 Secret Key');
       return;
     }
     setTesting(true);
@@ -171,6 +223,7 @@ const OcrProviderConfig: React.FC = () => {
         endpoint: formData.endpoint,
         apiKey: formData.apiKey || undefined,
         model: formData.model || undefined,
+        extra: buildExtra(),
       });
       if (res.success) setTestResult(res.data);
     } catch (e: unknown) {
@@ -180,6 +233,26 @@ const OcrProviderConfig: React.FC = () => {
     }
   };
 
+  /** 组装方式扩展配置（百度 Secret Key / 飞桨模型与开关） */
+  const buildExtra = (): Record<string, unknown> => {
+    if (formData.method === 'BAIDU_OCR') {
+      const extra: Record<string, unknown> = {};
+      if (formData.secretKey && formData.secretKey !== editing?.extra?.secretKey) {
+        extra.secretKey = formData.secretKey;
+      }
+      return extra;
+    }
+    if (formData.method === 'PADDLE_OCR_VL') {
+      return {
+        model: formData.paddleModel.trim() || 'PaddleOCR-VL-1.6',
+        useDocOrientationClassify: formData.useDocOrientationClassify,
+        useDocUnwarping: formData.useDocUnwarping,
+        useChartRecognition: formData.useChartRecognition,
+      };
+    }
+    return {};
+  };
+
   const handleSave = async () => {
     if (!formData.name || !formData.endpoint) {
       alert('请填写名称与服务地址');
@@ -187,11 +260,15 @@ const OcrProviderConfig: React.FC = () => {
     }
     const cfg = METHOD_CONFIG[formData.method];
     if (cfg.needApiKey && !formData.apiKey) {
-      alert('该方式需要填写 API Key');
+      alert('该方式需要填写 API Key / Token');
       return;
     }
     if (cfg.needModel && !formData.model) {
       alert('该方式需要填写模型名称');
+      return;
+    }
+    if (cfg.needSecretKey && !formData.secretKey && !editing?.extra?.secretKey) {
+      alert('该方式需要填写 Secret Key');
       return;
     }
     try {
@@ -200,7 +277,7 @@ const OcrProviderConfig: React.FC = () => {
         name: formData.name,
         method: formData.method,
         endpoint: formData.endpoint,
-        model: formData.model || null,
+        model: formData.method === 'PADDLE_OCR_VL' ? null : (formData.model || null),
         isDefault: formData.isDefault,
         enableForRecognition: formData.enableForRecognition,
         status: formData.status,
@@ -208,6 +285,8 @@ const OcrProviderConfig: React.FC = () => {
       if (formData.apiKey && formData.apiKey !== editing?.apiKey) {
         payload.apiKey = formData.apiKey;
       }
+      const extra = buildExtra();
+      if (Object.keys(extra).length > 0) payload.extra = extra;
       if (editing) {
         await request.put(`/admin/ocr-providers/${editing.id}`, payload);
       } else {
@@ -368,11 +447,30 @@ const OcrProviderConfig: React.FC = () => {
                     </div>
                     {cfg.needApiKey && (
                       <div className="space-y-2">
-                        <label className="text-[#92a4c9] text-xs font-medium">API Key</label>
+                        <label className="text-[#92a4c9] text-xs font-medium">
+                          {p.method === 'PADDLE_OCR_VL' ? 'Token' : 'API Key'}
+                        </label>
                         <input
                           className="w-full bg-[#1a2332] border border-[#324467] text-[#92a4c9] text-xs rounded-lg px-3 py-2"
                           readOnly type="password" value={p.apiKey}
                         />
+                      </div>
+                    )}
+                    {p.method === 'BAIDU_OCR' && p.extra?.secretKey && (
+                      <div className="space-y-2">
+                        <label className="text-[#92a4c9] text-xs font-medium">Secret Key</label>
+                        <input
+                          className="w-full bg-[#1a2332] border border-[#324467] text-[#92a4c9] text-xs rounded-lg px-3 py-2"
+                          readOnly type="password" value={p.extra.secretKey}
+                        />
+                      </div>
+                    )}
+                    {p.method === 'PADDLE_OCR_VL' && (
+                      <div className="space-y-2">
+                        <label className="text-[#92a4c9] text-xs font-medium">解析选项</label>
+                        <span className="text-[#92a4c9] text-xs block">
+                          方向分类 {(p.extra?.useDocOrientationClassify ? '开' : '关')} · 矫正 {(p.extra?.useDocUnwarping ? '开' : '关')} · 图表 {(p.extra?.useChartRecognition ? '开' : '关')}
+                        </span>
                       </div>
                     )}
                     <div className="space-y-2">
@@ -434,6 +532,8 @@ const OcrProviderConfig: React.FC = () => {
                   <option value="LOCAL_SERVICE">本地 OCR 服务（Unlimited-OCR 等）</option>
                   <option value="LOCAL_VISION">本地视觉模型（Ollama）</option>
                   <option value="CUSTOM_API">自定义厂商视觉 API（OpenAI 兼容）</option>
+                  <option value="BAIDU_OCR">百度智能云官方 OCR API（文档解析）</option>
+                  <option value="PADDLE_OCR_VL">飞桨 PaddleOCR-VL（异步任务）</option>
                 </select>
                 <p className="text-[#5b6b8c] text-xs mt-2">{METHOD_CONFIG[formData.method].desc}</p>
               </div>
@@ -451,18 +551,84 @@ const OcrProviderConfig: React.FC = () => {
 
               {METHOD_CONFIG[formData.method].needApiKey && (
                 <div>
-                  <label className="text-[#92a4c9] text-sm font-medium block mb-2">API Key *</label>
+                  <label className="text-[#92a4c9] text-sm font-medium block mb-2">
+                    {formData.method === 'PADDLE_OCR_VL' ? 'Token *' : formData.method === 'BAIDU_OCR' ? 'API Key *' : 'API Key *'}
+                  </label>
                   <input
                     type="text"
                     className="w-full bg-[#1a2332] border border-[#324467] text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
                     value={formData.apiKey}
                     onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                    placeholder={editing ? '（留空则不修改原密钥）' : 'sk-...'}
+                    placeholder={
+                      formData.method === 'PADDLE_OCR_VL'
+                        ? '飞桨 AI Studio Token'
+                        : editing
+                          ? '（留空则不修改原密钥）'
+                          : 'sk-...'
+                    }
+                  />
+                  {editing && (
+                    <p className="text-[#5b6b8c] text-xs mt-2">当前为脱敏值，留空表示不修改。</p>
+                  )}
+                  {formData.method === 'BAIDU_OCR' && (
+                    <p className="text-[#5b6b8c] text-xs mt-2">
+                      在<a className="text-blue-400 hover:underline" href="https://console.bce.baidu.com/ai/#/ai/ocr/overview/index" target="_blank" rel="noreferrer">百度智能云控制台 · 文字识别</a>创建应用后获取 API Key 与 Secret Key。
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {METHOD_CONFIG[formData.method].needSecretKey && (
+                <div>
+                  <label className="text-[#92a4c9] text-sm font-medium block mb-2">Secret Key *</label>
+                  <input
+                    type="password"
+                    className="w-full bg-[#1a2332] border border-[#324467] text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                    value={formData.secretKey}
+                    onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })}
+                    placeholder={editing ? '（留空则不修改原密钥）' : '百度智能云应用 Secret Key'}
                   />
                   {editing && (
                     <p className="text-[#5b6b8c] text-xs mt-2">当前为脱敏值，留空表示不修改。</p>
                   )}
                 </div>
+              )}
+
+              {METHOD_CONFIG[formData.method].needPaddleOptions && (
+                <>
+                  <div>
+                    <label className="text-[#92a4c9] text-sm font-medium block mb-2">模型名称</label>
+                    <input
+                      type="text"
+                      className="w-full bg-[#1a2332] border border-[#324467] text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+                      value={formData.paddleModel}
+                      onChange={(e) => setFormData({ ...formData, paddleModel: e.target.value })}
+                      placeholder="PaddleOCR-VL-1.6"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[#92a4c9] text-sm font-medium block mb-2">解析选项（可选）</label>
+                    <div className="flex flex-col gap-2">
+                      {(
+                        [
+                          { k: 'useDocOrientationClassify', label: '方向分类（竖版/旋转文档自动矫正）' },
+                          { k: 'useDocUnwarping', label: '文档矫正（拍照弯曲页面拉平）' },
+                          { k: 'useChartRecognition', label: '图表识别（表格/图表结构化）' },
+                        ] as const
+                      ).map((opt) => (
+                        <label key={opt.k} className="flex items-center gap-3 text-[#92a4c9] text-sm">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-primary"
+                            checked={formData[opt.k]}
+                            onChange={(e) => setFormData({ ...formData, [opt.k]: e.target.checked })}
+                          />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               {METHOD_CONFIG[formData.method].needModel && (
@@ -526,16 +692,16 @@ const OcrProviderConfig: React.FC = () => {
                   <span className="text-[#92a4c9] text-sm">设为默认导入方式（管理员导入试卷时优先使用）</span>
                 </label>
 
-                <label className={`flex items-center gap-3 ${formData.method === 'CUSTOM_API' ? 'cursor-pointer' : 'opacity-40'}`}>
+                <label className={`flex items-center gap-3 ${['CUSTOM_API', 'BAIDU_OCR', 'PADDLE_OCR_VL'].includes(formData.method) ? 'cursor-pointer' : 'opacity-40'}`}>
                   <input
                     type="checkbox"
                     className="size-4 accent-emerald-500"
-                    disabled={formData.method !== 'CUSTOM_API'}
+                    disabled={!['CUSTOM_API', 'BAIDU_OCR', 'PADDLE_OCR_VL'].includes(formData.method)}
                     checked={formData.enableForRecognition}
                     onChange={(e) => setFormData({ ...formData, enableForRecognition: e.target.checked })}
                   />
                   <span className="text-[#92a4c9] text-sm">
-                    用于学员/家长端识别（仅自定义厂商视觉 API 可用，需非本地）
+                    用于学员/家长端识别（仅云端方式可用：自定义厂商视觉 / 百度智能云 OCR / 飞桨 PaddleOCR-VL）
                   </span>
                 </label>
               </div>

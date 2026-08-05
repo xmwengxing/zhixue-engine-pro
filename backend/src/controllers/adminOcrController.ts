@@ -30,7 +30,7 @@ export const getProviderById = async (req: Request, res: Response) => {
 // 创建 OCR 服务商
 export const createProvider = async (req: Request, res: Response) => {
   try {
-    const { name, method, endpoint, apiKey, model, isDefault, enableForRecognition, status } = req.body;
+    const { name, method, endpoint, apiKey, model, extra, isDefault, enableForRecognition, status } = req.body;
     if (!name || !method || !endpoint) {
       return res.status(400).json({ success: false, message: '缺少必填字段（name / method / endpoint）' });
     }
@@ -40,8 +40,11 @@ export const createProvider = async (req: Request, res: Response) => {
     if (method === 'CUSTOM_API' && !apiKey) {
       return res.status(400).json({ success: false, message: 'CUSTOM_API 需要提供 API Key' });
     }
-    if ((method === 'LOCAL_VISION' || method === 'CUSTOM_API') && !model) {
+    if ((method === 'LOCAL_VISION' || method === 'CUSTOM_API' || method === 'PADDLE_OCR_VL') && !model && !extra?.model) {
       return res.status(400).json({ success: false, message: '视觉模型需要提供 model 名称' });
+    }
+    if (method === 'BAIDU_OCR' && !apiKey) {
+      return res.status(400).json({ success: false, message: '百度智能云 OCR 需要提供 API Key' });
     }
     const provider = await adminOcrService.createProvider({
       name,
@@ -49,6 +52,7 @@ export const createProvider = async (req: Request, res: Response) => {
       endpoint,
       apiKey,
       model,
+      extra,
       isDefault,
       enableForRecognition,
       status,
@@ -56,7 +60,8 @@ export const createProvider = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, message: 'OCR 服务商创建成功', data: provider });
   } catch (error: any) {
     console.error('创建 OCR 服务商失败:', error);
-    return res.status(500).json({ success: false, message: '创建 OCR 服务商失败', error: error.message });
+    const isValidation = /需要|仅|必须|缺少/.test(error.message || '');
+    return res.status(isValidation ? 400 : 500).json({ success: false, message: error.message || '创建 OCR 服务商失败' });
   }
 };
 
@@ -65,7 +70,7 @@ export const updateProvider = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     if (!id || typeof id !== 'string') return res.status(400).json({ success: false, message: 'ID 参数无效' });
-    const { name, method, endpoint, apiKey, model, isDefault, enableForRecognition, status } = req.body;
+    const { name, method, endpoint, apiKey, model, extra, isDefault, enableForRecognition, status } = req.body;
     if (method && !Object.values(OcrMethod).includes(method)) {
       return res.status(400).json({ success: false, message: '无效的识别方式' });
     }
@@ -78,6 +83,7 @@ export const updateProvider = async (req: Request, res: Response) => {
       endpoint,
       apiKey,
       model,
+      extra,
       isDefault,
       enableForRecognition,
       status,
@@ -86,7 +92,8 @@ export const updateProvider = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('更新 OCR 服务商失败:', error);
     if (error.code === 'P2025') return res.status(404).json({ success: false, message: 'OCR 服务商不存在' });
-    return res.status(500).json({ success: false, message: '更新 OCR 服务商失败', error: error.message });
+    const isValidation = /需要|仅|必须|缺少/.test(error.message || '');
+    return res.status(isValidation ? 400 : 500).json({ success: false, message: error.message || '更新 OCR 服务商失败' });
   }
 };
 
@@ -107,14 +114,14 @@ export const deleteProvider = async (req: Request, res: Response) => {
 // 测试连通性（不保存到数据库）
 export const testProvider = async (req: Request, res: Response) => {
   try {
-    const { method, endpoint, apiKey, model } = req.body;
+    const { method, endpoint, apiKey, model, extra } = req.body;
     if (!method || !endpoint) {
       return res.status(400).json({ success: false, message: '缺少必填字段（method / endpoint）' });
     }
     if (!Object.values(OcrMethod).includes(method)) {
       return res.status(400).json({ success: false, message: '无效的识别方式' });
     }
-    const result = await adminOcrService.testConnection({ method, endpoint, apiKey, model });
+    const result = await adminOcrService.testConnection({ method, endpoint, apiKey, model, extra });
     return res.json({ success: true, message: '连通性测试完成', data: result });
   } catch (error: any) {
     console.error('测试 OCR 服务商连通性失败:', error);

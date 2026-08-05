@@ -603,10 +603,11 @@ model OcrProvider {
   name                 String
   method               OcrMethod
   endpoint             String
-  apiKey               String?       @map("api_key") // 仅 CUSTOM_API 需要
-  model                String?       @map("model")   // 视觉模型名（LOCAL_VISION / CUSTOM_API）
+  apiKey               String?       @map("api_key") // 各方式含义不同：CUSTOM_API=Bearer Key；BAIDU_OCR=百度应用 API Key；PADDLE_OCR_VL=飞桨 TOKEN
+  model                String?       @map("model")   // 视觉模型名（LOCAL_VISION / CUSTOM_API / PADDLE_OCR_VL）
+  extra                Json?         @map("extra")   // 方式扩展配置：BAIDU_OCR={secretKey,ocrType}；PADDLE_OCR_VL={useDocOrientationClassify,useDocUnwarping,useChartRecognition}
   isDefault            Boolean       @default(false) // 管理端导入默认使用
-  enableForRecognition Boolean       @default(false) // 作为学员/家长识别通道（仅 CUSTOM_API）
+  enableForRecognition Boolean       @default(false) // 作为学员/家长识别通道（云端方式：CUSTOM_API / BAIDU_OCR / PADDLE_OCR_VL）
   status               ProviderStatus @default(ACTIVE)
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
@@ -923,6 +924,8 @@ enum OcrMethod {
   LOCAL_SERVICE // 本地 Unlimited-OCR 推理服务（仅 endpoint）
   LOCAL_VISION  // 本地视觉模型（Ollama 原生 /api/chat，需 endpoint + model）
   CUSTOM_API    // 自定义厂商视觉模型（OpenAI 兼容 /chat/completions，需 endpoint + apiKey + model）
+  BAIDU_OCR     // 百度智能云官方 OCR API（文档解析 Unlimited-OCR 异步任务，需 apiKey + extra.secretKey）
+  PADDLE_OCR_VL // 飞桨 PaddleOCR-VL 异步任务 API（需 apiKey=TOKEN + extra.model）
 }
 
 enum ProviderStatus {

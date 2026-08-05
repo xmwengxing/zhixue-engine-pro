@@ -130,8 +130,8 @@ async function ocrFromImage(
     if (provider.method === 'LOCAL_SERVICE') {
       return ocrViaLocalService(file, provider.endpoint);
     }
-    // LOCAL_VISION / CUSTOM_API：统一走视觉对话接口
-    return callVisionApi(provider, file.buffer, file.mimetype, undefined, 1000 * 60 * 10);
+    // LOCAL_VISION / CUSTOM_API / BAIDU_OCR / PADDLE_OCR_VL：统一走视觉/文档解析接口
+    return callVisionApi(provider, file.buffer, file.mimetype, undefined, 1000 * 60 * 10, file.originalname);
   }
 
   // 回退环境变量行为（兼容旧逻辑）
