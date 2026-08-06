@@ -218,7 +218,9 @@ const OcrProviderConfig: React.FC = () => {
     setTesting(true);
     setTestResult(null);
     try {
+      // 编辑已保存的服务商：传 providerId 由后端用真实凭据测试（前端拿到的密钥是脱敏值）
       const res = await request.post<{ success: boolean; data: TestResult }>('/admin/ocr-providers/test', {
+        providerId: editing?.id,
         method: formData.method,
         endpoint: formData.endpoint,
         apiKey: formData.apiKey || undefined,

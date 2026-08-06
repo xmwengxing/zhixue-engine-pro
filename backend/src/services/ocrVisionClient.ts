@@ -109,9 +109,82 @@ async function callBaiduOcr(
   throw new Error('百度文档解析超时（10 分钟）');
 }
 
+// ==================== PDF → PNG 渲染（视觉类绕开损坏文本层；走 PyMuPDF via Python 子进程）====================
+import { spawn } from 'node:child_process';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
+
+/** PDF 渲染脚本路径（backend/scripts/pdf_render.py，stdin/stdout JSON 协议） */
+const PDF_RENDER_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'pdf_render.py');
+
+/** 探测可用 Python（优先 PDF_RENDER_PYTHON 环境变量，再 spawn `python`/`python3`/`py -3`） */
+async function detectPython(): Promise<{ cmd: string; argsPrefix: string[] } | null> {
+  const candidates: Array<[string, string[]]> = [];
+  if (process.env.PDF_RENDER_PYTHON) candidates.push([process.env.PDF_RENDER_PYTHON, []]);
+  candidates.push(['python', []]);
+  candidates.push(['python3', []]);
+  // Windows: `py -3`
+  candidates.push(['py', ['-3']]);
+  for (const [cmd, argsPrefix] of candidates) {
+    try {
+      const ok = await new Promise<boolean>((resolve) => {
+        const p = spawn(cmd, [...argsPrefix, '-c', 'import fitz; print(fitz.__version__)'], { stdio: ['ignore', 'pipe', 'ignore'] });
+        let out = '';
+        p.stdout?.on('data', (d) => (out += d));
+        p.on('error', () => resolve(false));
+        p.on('close', (code) => resolve(code === 0 && /^\d/.test(out.trim())));
+      });
+      if (ok) return { cmd, argsPrefix };
+    } catch {
+      /* 继续 */
+    }
+  }
+  return null;
+}
+
+/**
+ * PDF buffer → 每页 PNG buffer 数组（用 PyMuPDF 渲染，scale=2 即 144 DPI）
+ * 非致命失败抛错（让上层回退或提示用户）
+ */
+async function renderPdfToPngs(pdfBuffer: Buffer, maxPages = 20, scale = 2): Promise<Buffer[]> {
+  if (!fs.existsSync(PDF_RENDER_SCRIPT)) {
+    throw new Error(`PDF 渲染脚本缺失: ${PDF_RENDER_SCRIPT}`);
+  }
+  const py = await detectPython();
+  if (!py) {
+    throw new Error(
+      'PDF 渲染需要 Python + PyMuPDF（pip install pymupdf）。请安装后重试，或设置环境变量 PDF_RENDER_PYTHON 指向含 PyMuPDF 的 python 可执行文件。'
+    );
+  }
+  const stdout = await new Promise<string>((resolve, reject) => {
+    const p = spawn(py.cmd, [...py.argsPrefix, PDF_RENDER_SCRIPT], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let out = '';
+    let err = '';
+    p.stdout.on('data', (d) => (out += d));
+    p.stderr.on('data', (d) => (err += d));
+    p.on('error', (e) => reject(new Error(`Python 渲染进程启动失败: ${e.message}`)));
+    p.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Python 渲染失败 (exit=${code}): ${err.slice(0, 300)}`));
+        return;
+      }
+      resolve(out);
+    });
+    p.stdin.write(JSON.stringify({ pdfBase64: pdfBuffer.toString('base64'), maxPages, scale }));
+    p.stdin.end();
+  });
+  const result = JSON.parse(stdout);
+  if (!result.pages || !Array.isArray(result.pages)) {
+    throw new Error(`PDF 渲染返回格式异常: ${stdout.slice(0, 200)}`);
+  }
+  return result.pages.map((p: any) => Buffer.from(p.base64, 'base64'));
+}
+
 /**
  * 飞桨 PaddleOCR-VL 异步任务 API
  * 流程：提交 job（multipart file + model）→ 轮询 jobId → done 取 resultUrl.jsonUrl → 下载 jsonl 解析 markdown 文本
+ * - 若输入为 PDF：服务端先用 PyMuPDF 渲染为 PNG，**逐页**提交 job 后拼接（绕开损坏文本层）
+ * - 若输入为图像：单页直接提交
  */
 async function callPaddleOcrVl(
   provider: VisionProviderLike,
@@ -130,10 +203,39 @@ async function callPaddleOcrVl(
     useChartRecognition: provider.extra?.useChartRecognition ?? false,
   };
 
-  // 1) 提交 job（本地文件模式 multipart）
+  // PDF → 先渲染为 PNG，逐页提交（避免 Paddle 走坏文本层）
+  const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(fileName);
+  fs.appendFileSync('/tmp/be-dev-paddle.log', `[${new Date().toISOString()}] paddle mime=${mime} fileName=${fileName} isPdf=${isPdf}\n`);
+  if (isPdf) {
+    const pngs = await renderPdfToPngs(imageBuffer);
+    fs.appendFileSync('/tmp/be-dev-paddle.log', `[${new Date().toISOString()}] PDF rendered to ${pngs.length} PNGs\n`);
+    if (pngs.length === 0) throw new Error('PDF 渲染未产出任何页面');
+    const pageMds: string[] = [];
+    const baseName = (fileName || 'ocr').replace(/\.pdf$/i, '');
+    for (let i = 0; i < pngs.length; i++) {
+      const md = await submitAndFetchPaddle(jobUrl, headers, model, optionalPayload, pngs[i], `${baseName}_p${i + 1}.png`);
+      pageMds.push(md);
+    }
+    if (pageMds.every((m) => !m.trim())) throw new Error('PaddleOCR-VL 未解析到任何页面文本');
+    return pageMds.join('\n\n');
+  }
+
+  // 图像：单次提交
+  const name = fileName && fileName.trim() ? fileName : `ocr_${Date.now()}.png`;
+  return submitAndFetchPaddle(jobUrl, headers, model, optionalPayload, imageBuffer, name);
+}
+
+/** PaddleOCR-VL 单文件提交 + 轮询 + 下载解析（图像或 PDF 渲染后的单页） */
+async function submitAndFetchPaddle(
+  jobUrl: string,
+  headers: Record<string, string>,
+  model: string,
+  optionalPayload: Record<string, unknown>,
+  buffer: Buffer,
+  fileName: string
+): Promise<string> {
   const form = new FormData();
-  const name = fileName && fileName.trim() ? fileName : `ocr_${Date.now()}.${mime === 'application/pdf' ? 'pdf' : 'png'}`;
-  form.append('file', new Blob([imageBuffer], { type: mime }), name);
+  form.append('file', new Blob([buffer], { type: 'image/png' }), fileName);
   form.append('model', model);
   form.append('optionalPayload', JSON.stringify(optionalPayload));
   const submit = await fetch(jobUrl, { method: 'POST', headers, body: form });
@@ -143,11 +245,8 @@ async function callPaddleOcrVl(
   }
   const sj = (await submit.json()) as any;
   const jobId = sj?.data?.jobId;
-  if (!jobId) {
-    throw new Error(`PaddleOCR-VL 提交失败: ${JSON.stringify(sj).slice(0, 200)}`);
-  }
+  if (!jobId) throw new Error(`PaddleOCR-VL 提交失败: ${JSON.stringify(sj).slice(0, 200)}`);
 
-  // 2) 轮询 job 状态（每 5 秒；总超时 10 分钟）
   const deadline = Date.now() + 10 * 60 * 1000;
   let jsonlUrl = '';
   while (Date.now() < deadline) {
@@ -159,15 +258,12 @@ async function callPaddleOcrVl(
         jsonlUrl = j?.data?.resultUrl?.jsonUrl || j?.data?.resultUrl?.jsonlUrl || '';
         break;
       }
-      if (state === 'failed') {
-        throw new Error(`PaddleOCR-VL 任务失败: ${j?.data?.errorMsg || '未知错误'}`);
-      }
+      if (state === 'failed') throw new Error(`PaddleOCR-VL 任务失败: ${j?.data?.errorMsg || '未知错误'}`);
     }
     await new Promise((r2) => setTimeout(r2, 5000));
   }
   if (!jsonlUrl) throw new Error('PaddleOCR-VL 任务超时（10 分钟）');
 
-  // 3) 下载 jsonl 并解析 markdown 文本（每页 layoutParsingResults[].markdown.text）
   const dl = await fetch(jsonlUrl);
   if (!dl.ok) throw new Error(`PaddleOCR-VL 结果下载失败 ${dl.status}`);
   const lines = (await dl.text()).split('\n').filter((l) => l.trim());
@@ -186,7 +282,6 @@ async function callPaddleOcrVl(
       /* 忽略坏行 */
     }
   }
-  if (pages.length === 0) throw new Error('PaddleOCR-VL 未解析到文本内容');
   return pages.join('\n\n');
 }
 
@@ -292,6 +387,28 @@ export async function callVisionApi(
 
 export function getTestImage(): { buffer: Buffer; mime: string } {
   return { buffer: Buffer.from(TEST_PNG_B64, 'base64'), mime: 'image/png' };
+}
+
+/**
+ * 飞桨连通性测试：提交一个 1x1 测试图 job，拿到 jobId 即视为鉴权通过（不等待识别完成）
+ */
+export async function testPaddleAuth(token: string): Promise<void> {
+  if (!token) throw new Error('飞桨 PaddleOCR-VL 需要配置 Token');
+  const jobUrl = 'https://paddleocr.aistudio-app.com/api/v2/ocr/jobs';
+  const buf = Buffer.from(TEST_PNG_B64, 'base64');
+  const form = new FormData();
+  form.append('file', new Blob([buf], { type: 'image/png' }), 'test.png');
+  form.append('model', 'PaddleOCR-VL-1.6');
+  form.append('optionalPayload', JSON.stringify({ useDocOrientationClassify: false, useDocUnwarping: false, useChartRecognition: false }));
+  const res = await fetch(jobUrl, { method: 'POST', headers: { Authorization: `bearer ${token}` }, body: form });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`PaddleOCR-VL 鉴权失败 ${res.status}: ${t.slice(0, 120)}`);
+  }
+  const json = (await res.json()) as any;
+  if (!json?.data?.jobId) {
+    throw new Error(`PaddleOCR-VL 提交失败: ${JSON.stringify(json).slice(0, 120)}`);
+  }
 }
 
 export { getBaiduAccessToken };

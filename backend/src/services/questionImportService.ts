@@ -424,7 +424,10 @@ async function processImport(
     createdBy: (await getImportJob(jobId))?.createdBy ?? 'system',
     sourceFile: (await getImportJob(jobId))?.fileName,
     textbookId: opts?.textbookId,
-    paperType: (opts?.paperType as any) || 'UNIT',
+    paperType: ((): 'UNIT' | 'MIDTERM' | 'FINAL' | 'ZHONGKAO' | 'GAOKAO' => {
+      const v = opts?.paperType;
+      return v && ['UNIT', 'MIDTERM', 'FINAL', 'ZHONGKAO', 'GAOKAO'].includes(v) ? (v as any) : 'UNIT';
+    })(),
     category: opts?.category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
     unitIds: opts?.unitIds,
   });

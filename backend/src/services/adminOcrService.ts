@@ -50,6 +50,11 @@ export class AdminOcrService {
     return sanitizeProvider(p);
   }
 
+  /** 原始凭据（仅服务端内部使用：测试连通性等），不对外返回 */
+  async getRawProviderById(id: string) {
+    return prisma.ocrProvider.findUnique({ where: { id } });
+  }
+
   async createProvider(data: OcrProviderInput) {
     if (data.enableForRecognition && !CLOUD_METHODS.includes(data.method)) {
       throw new Error('仅云端识别方式（自定义厂商视觉 / 百度智能云 OCR / 飞桨 PaddleOCR-VL）可勾选用于学员/家长识别');
@@ -161,6 +166,12 @@ export class AdminOcrService {
         const { getBaiduAccessToken } = await import('./ocrVisionClient');
         await getBaiduAccessToken(provider.apiKey || '', provider.extra?.secretKey || '');
         return { ok: true, latency: Date.now() - start, sample: '凭据有效，access_token 获取成功' };
+      }
+      if (provider.method === 'PADDLE_OCR_VL') {
+        // 飞桨：仅验证鉴权（提交 job 成功即视为连通），不等待识别完成
+        const { testPaddleAuth } = await import('./ocrVisionClient');
+        await testPaddleAuth(provider.apiKey || '');
+        return { ok: true, latency: Date.now() - start, sample: 'Token 有效，任务提交成功' };
       }
       const { buffer, mime } = getTestImage();
       const text = await callVisionApi(

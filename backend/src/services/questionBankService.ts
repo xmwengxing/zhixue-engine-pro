@@ -265,9 +265,9 @@ export async function createPaper(data: {
     data: {
       subject: data.subject,
       title: data.title,
-      grade,
-      term,
-      version,
+      grade: grade ?? null,
+      term: term ?? null,
+      version: version ?? null,
       createdBy: data.createdBy,
       sourceFile: data.sourceFile,
       status: PaperStatus.DRAFT,

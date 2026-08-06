@@ -114,14 +114,28 @@ export const deleteProvider = async (req: Request, res: Response) => {
 // 测试连通性（不保存到数据库）
 export const testProvider = async (req: Request, res: Response) => {
   try {
-    const { method, endpoint, apiKey, model, extra } = req.body;
+    const { providerId, method, endpoint, apiKey, model, extra } = req.body;
     if (!method || !endpoint) {
       return res.status(400).json({ success: false, message: '缺少必填字段（method / endpoint）' });
     }
     if (!Object.values(OcrMethod).includes(method)) {
       return res.status(400).json({ success: false, message: '无效的识别方式' });
     }
-    const result = await adminOcrService.testConnection({ method, endpoint, apiKey, model, extra });
+    // 编辑已保存的服务商时，用数据库真实凭据测试（前端拿到的 apiKey/extra 是脱敏值）
+    let testInput: any = { method, endpoint, apiKey, model, extra };
+    if (providerId) {
+      const saved = await adminOcrService.getRawProviderById(String(providerId));
+      if (saved) {
+        testInput = {
+          method: saved.method,
+          endpoint: saved.endpoint,
+          apiKey: saved.apiKey,
+          model: saved.model,
+          extra: saved.extra,
+        };
+      }
+    }
+    const result = await adminOcrService.testConnection(testInput);
     return res.json({ success: true, message: '连通性测试完成', data: result });
   } catch (error: any) {
     console.error('测试 OCR 服务商连通性失败:', error);
