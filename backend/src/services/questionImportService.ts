@@ -230,7 +230,7 @@ export async function normalizeWithLLM(
     // 本地小模型（如 1080 Ti 上的 9B Q6_K）单块生成可能需 1~4 分钟，
     // 故放大超时到 5 分钟；关闭重试（慢生成重试只会重复耗时，无意义）。
     timeout: 300000,
-    maxRetries: 0,
+    maxRetries: 1,
     systemPrompt:
       '你是题库结构化抽取引擎，只输出符合要求的 JSON 数组，不要任何额外文字。',
   });
@@ -335,6 +335,7 @@ export async function startImport(params: {
   category?: 'EXERCISE' | 'ASSESSMENT';
   unitIds?: string[];
   ocrProviderId?: string;
+  categoryId?: string; // 目标目录节点（V2 文件夹导入）
 }): Promise<StartImportResult> {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const safeName = `${Date.now()}_${params.file.originalname.replace(/[^\w.\-一-龥]/g, '_')}`;
@@ -354,12 +355,84 @@ export async function startImport(params: {
     category: params.category,
     unitIds: params.unitIds,
     ocrProviderId: params.ocrProviderId,
+    categoryId: params.categoryId,
   }).catch((e) => {
     console.error('试卷导入处理失败:', e);
     void updateImportJob(job.id, { status: 'FAILED', error: String(e.message || e) });
   });
 
   return { jobId: job.id, fileName: safeName };
+}
+
+/**
+ * 文件夹导入（V2）：多文件 + 相对路径 → 自动生成目录树 → 每文件建子任务
+ * - 立即返回全部 jobId（不阻塞上传请求）
+ * - 后台**串行**处理（本地 Ollama 归一化无法承受多文件并发分块，并发必 fetch failed）
+ */
+export async function startFolderImport(params: {
+  files: Express.Multer.File[];
+  paths: string[]; // 与 files 对应的相对路径（可缺省）
+  subject: string;
+  createdBy: string;
+  textbookId?: string;
+  paperType?: string;
+  category?: 'EXERCISE' | 'ASSESSMENT';
+  ocrProviderId?: string;
+}): Promise<{ jobIds: string[]; total: number; skipped: number }> {
+  const { ensurePathCategories } = await import('./paperCategoryService');
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  const RE = /\.(pdf|jpg|jpeg|png|bmp|tif|tiff|ofd|doc|docx|txt|wps|ppt|pptx)$/i;
+  const queue: Array<{ file: Express.Multer.File; categoryId?: string }> = [];
+  const jobIds: string[] = [];
+  let skipped = 0;
+
+  // 第一遍：建目录 + 建 job + 落盘（同步，立即返回）
+  for (let i = 0; i < params.files.length; i++) {
+    const file = params.files[i];
+    if (!RE.test(file.originalname || '')) {
+      skipped++;
+      continue;
+    }
+    const rel = params.paths[i] ? params.paths[i].replace(/\\/g, '/') : '';
+    const segs = rel ? rel.split('/').filter((s) => s && s.trim()).slice(0, -1) : [];
+    let categoryId: string | undefined;
+    if (segs.length > 0) {
+      const node = await ensurePathCategories(params.subject, segs);
+      categoryId = node?.id;
+    }
+    const safeName = `${Date.now()}_${file.originalname.replace(/[^\w.\-一-龥]/g, '_')}`;
+    await fs.writeFile(path.join(UPLOAD_DIR, safeName), file.buffer);
+    const job = await createImportJob({
+      subject: params.subject,
+      fileName: safeName,
+      createdBy: params.createdBy,
+      status: 'PROCESSING',
+    });
+    jobIds.push(job.id);
+    queue.push({ file, categoryId });
+  }
+
+  // 第二遍：后台串行处理（不阻塞响应）
+  void (async () => {
+    for (let i = 0; i < queue.length; i++) {
+      const { file, categoryId } = queue[i];
+      const jobId = jobIds[i];
+      try {
+        await processImport(jobId, file, params.subject, {
+          textbookId: params.textbookId,
+          paperType: params.paperType,
+          category: params.category,
+          ocrProviderId: params.ocrProviderId,
+          categoryId,
+        });
+      } catch (e: any) {
+        console.error('文件夹导入单文件处理失败:', e);
+        await updateImportJob(jobId, { status: 'FAILED', error: String(e.message || e) }).catch(() => {});
+      }
+    }
+  })();
+
+  return { jobIds, total: params.files.length, skipped };
 }
 
 async function processImport(
@@ -372,6 +445,7 @@ async function processImport(
     category?: 'EXERCISE' | 'ASSESSMENT';
     unitIds?: string[];
     ocrProviderId?: string;
+    categoryId?: string;
   }
 ): Promise<void> {
   // 解析管理端配置的 OCR 服务商（优先指定 id，否则取默认；无则返回 null → 回退 env 或报错）
@@ -431,6 +505,11 @@ async function processImport(
     category: opts?.category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
     unitIds: opts?.unitIds,
   });
+  // 目录关联（V2）：移动/挂载到目录并同步 category 字段（初测目录 → ASSESSMENT）
+  if (opts?.categoryId) {
+    const { syncPaperCategoryField } = await import('./paperCategoryService');
+    await syncPaperCategoryField(paper.id, opts.categoryId);
+  }
   const created = await createQuestionsFromNormalized(
     subject,
     normalized,

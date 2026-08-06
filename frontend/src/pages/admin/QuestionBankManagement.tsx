@@ -30,8 +30,32 @@ interface Paper {
   unitIds?: string[];
   /** 试卷分类：EXERCISE 习题与试卷 / ASSESSMENT 初测与水平评估 */
   category?: 'EXERCISE' | 'ASSESSMENT' | null;
+  /** 目录节点（V2） */
+  categoryId?: string | null;
+  categoryNode?: { id: string; name: string; level: number; parentId: string | null } | null;
+  /** 试卷标签（V2）：PaperTag.id 数组 */
+  tagIds?: string[];
   createdAt: string;
   _count?: { items: number };
+}
+
+/** 试卷多级目录节点（V2） */
+interface CategoryNode {
+  id: string;
+  name: string;
+  level: number;
+  system: boolean;
+  immutable: boolean;
+  _count?: { papers: number; children: number };
+  children: CategoryNode[];
+}
+
+/** 试卷标签（V2） */
+interface PaperTagItem {
+  id: string;
+  name: string;
+  subject: string;
+  color?: string | null;
 }
 
 interface Question {
@@ -50,6 +74,13 @@ interface Question {
   source?: string | null;
   /** ④ AI 生成题审核态：null=无需审核，PENDING/APPROVED/REJECTED */
   reviewStatus?: string | null;
+  /** 所属试卷与目录（V2）：listQuestions 附带 */
+  paperInfo?: Array<{
+    id: string;
+    title: string;
+    categoryId: string | null;
+    categoryNode: { id: string; name: string; level: number; parentId: string | null } | null;
+  }>;
 }
 
 /** ④ AI 生成题审核统计 */
@@ -210,6 +241,19 @@ const QuestionBankManagement = () => {
   const [paperPage, setPaperPage] = useState(1);
   // 试卷分类：习题与试卷 / 初测与水平评估
   const [paperCategory, setPaperCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
+  // 多级目录（V2）
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryPickerFor, setCategoryPickerFor] = useState<Paper | null>(null);
+  // 标签（V2）
+  const [tags, setTags] = useState<PaperTagItem[]>([]);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+  const [pickedTagIds, setPickedTagIds] = useState<string[]>([]);
+  // 文件夹导入（V2）
+  const [folderImportOpen, setFolderImportOpen] = useState(false);
 
   // 题目列表
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -323,6 +367,8 @@ const QuestionBankManagement = () => {
         limit: String(PAGE_SIZE),
         category: paperCategory,
       });
+      // 目录过滤（V2）：选中目录时按目录（含子树）过滤；「初测与水平评估」目录 → category=ASSESSMENT
+      if (activeCategoryId) params.set('categoryId', activeCategoryId);
       const res = await request.get<ApiResponse<PagedResult<Paper>>>(
         `/admin/question-bank/papers?${params.toString()}`
       );
@@ -331,7 +377,32 @@ const QuestionBankManagement = () => {
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [activeSubject, paperPage, paperCategory]);
+  }, [activeSubject, paperPage, paperCategory, activeCategoryId]);
+
+  // 目录树 + 标签加载（V2）
+  const loadCategories = useCallback(async () => {
+    if (!activeSubject) return;
+    try {
+      const res = await request.get<ApiResponse<CategoryNode[]>>(
+        `/admin/question-bank/categories?subject=${encodeURIComponent(activeSubject)}`
+      );
+      setCategories(res.data);
+    } catch {
+      setCategories([]);
+    }
+  }, [activeSubject]);
+
+  const loadTags = useCallback(async () => {
+    if (!activeSubject) return;
+    try {
+      const res = await request.get<ApiResponse<PaperTagItem[]>>(
+        `/admin/question-bank/tags?subject=${encodeURIComponent(activeSubject)}`
+      );
+      setTags(res.data);
+    } catch {
+      setTags([]);
+    }
+  }, [activeSubject]);
 
   const loadQuestions = useCallback(async () => {
     if (!activeSubject) return;
@@ -344,6 +415,7 @@ const QuestionBankManagement = () => {
       if (typeFilter) params.set('type', typeFilter);
       if (sourceFilter) params.set('source', sourceFilter);
       if (reviewFilter) params.set('reviewStatus', reviewFilter);
+      if (activeCategoryId) params.set('categoryId', activeCategoryId); // 题目按目录过滤（V2）
       const res = await request.get<ApiResponse<PagedResult<Question>>>(
         `/admin/question-bank/questions?${params.toString()}`
       );
@@ -353,7 +425,7 @@ const QuestionBankManagement = () => {
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [activeSubject, questionPage, typeFilter, sourceFilter, reviewFilter]);
+  }, [activeSubject, questionPage, typeFilter, sourceFilter, reviewFilter, activeCategoryId]);
 
   // ④ 审核统计（全库口径，不随科目筛选变化）
   const loadReviewStats = useCallback(async () => {
@@ -378,6 +450,15 @@ const QuestionBankManagement = () => {
   useEffect(() => {
     void loadReviewStats();
   }, [loadReviewStats]);
+
+  // 目录树与标签随科目加载（V2）
+  useEffect(() => {
+    void loadCategories();
+    void loadTags();
+    setActiveCategoryId(''); // 切科目重置目录
+    setPaperPage(1);
+    setQuestionPage(1);
+  }, [activeSubject, loadCategories, loadTags]);
 
   // 切换科目或试卷分类时重置分页
   useEffect(() => {
@@ -408,15 +489,67 @@ const QuestionBankManagement = () => {
     }
   };
 
-  /** 调整试卷分类（习题与试卷 ↔ 初测与水平评估） */
-  const handleChangePaperCategory = async (paper: Paper, category: 'EXERCISE' | 'ASSESSMENT') => {
-    if (paper.category === category) return;
+  /** 打开目录选单（V2 改分类） */
+  const openCategoryPicker = (paper: Paper) => {
+    setCategoryPickerFor(paper);
+    setPickedTagIds(paper.tagIds || []);
+  };
+
+  /** 保存目录移动（PATCH categoryId + tags） */
+  const saveCategoryMove = async (categoryId: string | null) => {
+    if (!categoryPickerFor) return;
+    const paperId = categoryPickerFor.id;
     try {
-      await request.patch<ApiResponse>(`/admin/question-bank/papers/${paper.id}`, { category });
-      flash(`已移至「${category === 'EXERCISE' ? '习题与试卷' : '初测与水平评估'}」`);
+      await request.patch<ApiResponse>(`/admin/question-bank/papers/${paperId}`, {
+        categoryId,
+        tagIds: pickedTagIds,
+      });
+      flash('目录/标签已更新');
+      setCategoryPickerFor(null);
       void loadPapers();
     } catch (e) {
       setError(getErrorMessage(e));
+    }
+  };
+
+  /** 新建一级目录 */
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return alert('请输入目录名称');
+    try {
+      await request.post<ApiResponse>('/admin/question-bank/categories', {
+        subject: activeSubject,
+        name: newCategoryName.trim(),
+      });
+      setShowCategoryModal(false);
+      setNewCategoryName('');
+      flash('目录已创建');
+      void loadCategories();
+    } catch (e) {
+      alert(getErrorMessage(e, '创建失败'));
+    }
+  };
+
+  /** 标签管理 */
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return alert('请输入标签名称');
+    try {
+      await request.post<ApiResponse>('/admin/question-bank/tags', {
+        subject: activeSubject,
+        name: newTagName.trim(),
+      });
+      setNewTagName('');
+      void loadTags();
+    } catch (e) {
+      alert(getErrorMessage(e, '创建失败'));
+    }
+  };
+  const handleDeleteTag = async (id: string) => {
+    if (!confirm('删除标签将从所有试卷移除该标签，确定？')) return;
+    try {
+      await request.delete<ApiResponse>(`/admin/question-bank/tags/${id}`);
+      void loadTags();
+    } catch (e) {
+      alert(getErrorMessage(e, '删除失败'));
     }
   };
 
@@ -575,6 +708,14 @@ const QuestionBankManagement = () => {
                 导入试卷
               </button>
               <button
+                onClick={() => setFolderImportOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors"
+                title="选择文件夹导入，按相对路径自动生成多级分类目录"
+              >
+                <span className="material-symbols-outlined text-[20px]">folder_open</span>
+                导入文件夹
+              </button>
+              <button
                 onClick={() => setShowExport(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-[#232f48] text-white rounded-lg text-sm font-medium hover:bg-[#324467] transition-colors"
               >
@@ -668,109 +809,196 @@ const QuestionBankManagement = () => {
 
           {/* 试卷视图 */}
           {view === 'papers' && (
-            <div className="flex flex-col gap-3">
-              {/* 试卷分类页签：习题与试卷 / 初测与水平评估 */}
-              <div className="flex mb-1 rounded-lg bg-[#232f48] p-1 w-fit">
+            <div className="flex gap-5">
+              {/* 左侧：多级目录导航（V2） */}
+              <div className="w-60 shrink-0 hidden lg:block">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[#92a4c9]">分类目录</span>
+                  <button
+                    onClick={() => setShowCategoryModal(true)}
+                    className="px-2 py-1 text-[11px] rounded bg-[#232f48] border border-[#324467] text-[#92a4c9] hover:text-white hover:border-primary/60"
+                    title="添加一级目录"
+                  >
+                    + 添加分类目录
+                  </button>
+                </div>
+                <div className="rounded-xl bg-[#1a2332] border border-[#324467] p-2 max-h-[70vh] overflow-y-auto">
+                  <CategoryTree
+                    nodes={categories}
+                    activeId={activeCategoryId}
+                    onSelect={(id, isAssessment) => {
+                      setActiveCategoryId(id);
+                      setPaperPage(1);
+                      if (isAssessment) setPaperCategory('ASSESSMENT');
+                    }}
+                  />
+                </div>
                 <button
-                  onClick={() => setPaperCategory('EXERCISE')}
-                  className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    paperCategory === 'EXERCISE' ? 'bg-primary text-white' : 'text-[#92a4c9]'
-                  }`}
+                  onClick={() => setShowTagModal(true)}
+                  className="mt-2 w-full px-3 py-2 text-xs rounded-lg bg-[#232f48] border border-[#324467] text-[#92a4c9] hover:text-white hover:border-primary/60"
                 >
-                  习题与试卷
-                </button>
-                <button
-                  onClick={() => setPaperCategory('ASSESSMENT')}
-                  className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    paperCategory === 'ASSESSMENT' ? 'bg-primary text-white' : 'text-[#92a4c9]'
-                  }`}
-                >
-                  初测与水平评估
+                  标签管理（{tags.length}）
                 </button>
               </div>
-              {paperCategory === 'ASSESSMENT' && (
-                <p className="text-xs text-[#5b6b8c]">
-                  该分类不区分难度，专门用于任务初测或水平评估，训练舱初测可从此库整卷抽取或由 AI 组合。
-                </p>
-              )}
-              {papers.length === 0 ? (
-                <EmptyState text="当前科目暂无试卷，可点击右上角「导入试卷」或「新建试卷」" />
-              ) : (
-                papers.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-wrap items-center gap-4 rounded-xl bg-[#1a2332] border border-[#324467] px-5 py-4"
-                  >
-                    <div className="flex-1 min-w-[240px]">
-                      <div className="flex items-center gap-2">
-                        <span className="text-white text-sm font-semibold">{p.title}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${STATUS_LABELS[p.status]?.cls || ''}`}
-                        >
-                          {STATUS_LABELS[p.status]?.text || p.status}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${
-                            p.category === 'ASSESSMENT'
-                              ? 'bg-amber-500/15 text-amber-300'
-                              : 'bg-blue-500/15 text-blue-300'
-                          }`}
-                        >
-                          {p.category === 'ASSESSMENT' ? '初测与水平评估' : '习题与试卷'}
-                        </span>
-                      </div>
-                      <div className="text-[#92a4c9] text-xs mt-1">
-                        {p.paperType ? `${PAPER_TYPE_LABELS[p.paperType] || p.paperType} · ` : ''}
-                        {p.textbookName ? `${p.textbookName} · ` : ''}
-                        {p.grade ? `${gradeLabel(p.grade)} · ` : ''}
-                        {p._count?.items ?? 0} 题 · 创建于{' '}
-                        {new Date(p.createdAt).toLocaleString('zh-CN')}
-                        {p.sourceFile ? ` · 来源: ${p.sourceFile}` : ''}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          handleChangePaperCategory(
-                            p,
-                            p.category === 'ASSESSMENT' ? 'EXERCISE' : 'ASSESSMENT'
-                          )
-                        }
-                        className="px-3 py-1.5 text-xs text-amber-300 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors"
-                        title="在「习题与试卷」与「初测与水平评估」之间切换分类"
-                      >
-                        改分类
-                      </button>
-                      <button
-                        onClick={() => setDetailPaperId(p.id)}
-                        className="px-3 py-1.5 text-xs text-white bg-[#232f48] rounded-lg hover:bg-[#324467] transition-colors"
-                      >
-                        详情
-                      </button>
-                      {p.status !== 'PUBLISHED' && (
-                        <button
-                          onClick={() => void handlePublishPaper(p)}
-                          className="px-3 py-1.5 text-xs text-green-400 bg-green-500/10 rounded-lg hover:bg-green-500/20 transition-colors"
-                        >
-                          发布
-                        </button>
-                      )}
-                      <button
-                        onClick={() => void handleDeletePaper(p)}
-                        className="px-3 py-1.5 text-xs text-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
-                      >
-                        删除
-                      </button>
-                    </div>
+
+              {/* 右侧：试卷列表 */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col gap-3">
+                  {/* 试卷分类页签：习题与试卷 / 初测与水平评估 */}
+                  <div className="flex mb-1 rounded-lg bg-[#232f48] p-1 w-fit">
+                    <button
+                      onClick={() => {
+                        setPaperCategory('EXERCISE');
+                        setActiveCategoryId('');
+                        setPaperPage(1);
+                      }}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        paperCategory === 'EXERCISE' ? 'bg-primary text-white' : 'text-[#92a4c9]'
+                      }`}
+                    >
+                      习题与试卷
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPaperCategory('ASSESSMENT');
+                        setActiveCategoryId('');
+                        setPaperPage(1);
+                      }}
+                      className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        paperCategory === 'ASSESSMENT' ? 'bg-primary text-white' : 'text-[#92a4c9]'
+                      }`}
+                    >
+                      初测与水平评估
+                    </button>
                   </div>
-                ))
-              )}
-              <Pagination page={paperPage} pages={paperPages} onChange={setPaperPage} />
+                  {paperCategory === 'ASSESSMENT' && (
+                    <p className="text-xs text-[#5b6b8c]">
+                      该分类不区分难度，专门用于任务初测或水平评估，训练舱初测可从此库整卷抽取或由 AI 组合。
+                    </p>
+                  )}
+                  {papers.length === 0 ? (
+                    <EmptyState text="当前科目暂无试卷，可点击右上角「导入试卷」或「新建试卷」" />
+                  ) : (
+                    papers.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex flex-wrap items-center gap-4 rounded-xl bg-[#1a2332] border border-[#324467] px-5 py-4"
+                      >
+                        <div className="flex-1 min-w-[240px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white text-sm font-semibold">{p.title}</span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs ${STATUS_LABELS[p.status]?.cls || ''}`}
+                            >
+                              {STATUS_LABELS[p.status]?.text || p.status}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs ${
+                                p.category === 'ASSESSMENT'
+                                  ? 'bg-amber-500/15 text-amber-300'
+                                  : 'bg-blue-500/15 text-blue-300'
+                              }`}
+                            >
+                              {p.category === 'ASSESSMENT' ? '初测与水平评估' : '习题与试卷'}
+                            </span>
+                            {p.categoryNode && (
+                              <span className="px-2 py-0.5 rounded text-xs bg-[#232f48] text-[#92a4c9]">
+                                📁 {p.categoryNode.name}
+                              </span>
+                            )}
+                            {(p.tagIds?.length ?? 0) > 0 && (
+                              <div className="flex items-center gap-1">
+                                {(p.tagIds || []).map((tid) => {
+                                  const t = tags.find((x) => x.id === tid);
+                                  return t ? (
+                                    <span
+                                      key={tid}
+                                      className="px-1.5 py-0.5 rounded text-[10px]"
+                                      style={{ background: `${t.color || '#3b82f6'}22`, color: t.color || '#3b82f6' }}
+                                    >
+                                      #{t.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[#92a4c9] text-xs mt-1">
+                            {p.paperType ? `${PAPER_TYPE_LABELS[p.paperType] || p.paperType} · ` : ''}
+                            {p.textbookName ? `${p.textbookName} · ` : ''}
+                            {p.grade ? `${gradeLabel(p.grade)} · ` : ''}
+                            {p._count?.items ?? 0} 题 · 创建于{' '}
+                            {new Date(p.createdAt).toLocaleString('zh-CN')}
+                            {p.sourceFile ? ` · 来源: ${p.sourceFile}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openCategoryPicker(p)}
+                            className="px-3 py-1.5 text-xs text-amber-300 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors"
+                            title="移动到分类目录 / 打标签"
+                          >
+                            改分类
+                          </button>
+                          <button
+                            onClick={() => setDetailPaperId(p.id)}
+                            className="px-3 py-1.5 text-xs text-white bg-[#232f48] rounded-lg hover:bg-[#324467] transition-colors"
+                          >
+                            详情
+                          </button>
+                          {p.status !== 'PUBLISHED' && (
+                            <button
+                              onClick={() => void handlePublishPaper(p)}
+                              className="px-3 py-1.5 text-xs text-green-400 bg-green-500/10 rounded-lg hover:bg-green-500/20 transition-colors"
+                            >
+                              发布
+                            </button>
+                          )}
+                          <button
+                            onClick={() => void handleDeletePaper(p)}
+                            className="px-3 py-1.5 text-xs text-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <Pagination page={paperPage} pages={paperPages} onChange={setPaperPage} />
+                </div>
+              </div>
             </div>
           )}
 
           {/* 题目视图 */}
           {view === 'questions' && (
+            <div className="flex gap-5">
+              {/* 目录导航（V2）：最后一级是试卷；点目录过滤题目 */}
+              <div className="w-60 shrink-0 hidden lg:block">
+                <span className="text-xs font-medium text-[#92a4c9] block mb-2">分类目录</span>
+                <div className="rounded-xl bg-[#1a2332] border border-[#324467] p-2 max-h-[70vh] overflow-y-auto">
+                  <CategoryTree
+                    nodes={categories}
+                    activeId={activeCategoryId}
+                    onSelect={(id) => {
+                      setActiveCategoryId(id);
+                      setQuestionPage(1);
+                    }}
+                  />
+                </div>
+                {activeCategoryId && (
+                  <button
+                    onClick={() => {
+                      setActiveCategoryId('');
+                      setQuestionPage(1);
+                    }}
+                    className="mt-2 w-full px-3 py-1.5 text-xs text-[#92a4c9] bg-[#232f48] border border-[#324467] rounded-lg hover:text-white"
+                  >
+                    显示全部题目
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 flex-wrap">
                 <select
@@ -917,6 +1145,12 @@ const QuestionBankManagement = () => {
                             {kp}
                           </span>
                         ))}
+                        {/* 所属目录（V2） */}
+                        {q.paperInfo && q.paperInfo.length > 0 && (
+                          <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                            📁 {q.paperInfo[0].categoryNode?.name || '未分类'} · {q.paperInfo[0].title.slice(0, 18)}
+                          </span>
+                        )}
                       </div>
                       <p className="text-white text-sm mt-2 line-clamp-2 whitespace-pre-wrap">
                         {q.stem}
@@ -955,6 +1189,8 @@ const QuestionBankManagement = () => {
                 ))
               )}
               <Pagination page={questionPage} pages={questionPages} onChange={setQuestionPage} />
+              </div>
+              </div>
             </div>
           )}
         </div>
@@ -1246,6 +1482,133 @@ const QuestionBankManagement = () => {
             void loadQuestions();
           }}
         />
+      )}
+      {/* 文件夹导入（V2） */}
+      {folderImportOpen && (
+        <FolderImportModal
+          subject={activeSubject}
+          onClose={() => setFolderImportOpen(false)}
+          onStarted={(count) => {
+            flash(`已提交 ${count} 个文件，后台逐个处理中`);
+            setFolderImportOpen(false);
+            void loadPapers();
+            void loadQuestions();
+          }}
+        />
+      )}
+      {/* 添加一级目录（V2） */}
+      {showCategoryModal && (
+        <Modal title="添加分类目录（一级）" onClose={() => setShowCategoryModal(false)}>
+          <div className="p-5 space-y-4">
+            <p className="text-xs text-[#5b6b8c]">
+              将在「{activeSubject}」下创建一级目录；导入文件夹时可自动生成多级目录。
+            </p>
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="目录名称（如：期末冲刺）"
+              className="w-full bg-[#1a2332] border border-[#324467] text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowCategoryModal(false)} className="px-4 py-2 border border-[#324467] text-[#92a4c9] rounded-lg">取消</button>
+              <button
+                onClick={() => void handleCreateCategory()}
+                className="px-4 py-2 bg-primary text-white rounded-lg"
+              >
+                创建
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {/* 改分类目录选单（V2） */}
+      {categoryPickerFor && (
+        <Modal title={`移动分类 / 打标签 · ${categoryPickerFor.title.slice(0, 24)}`} onClose={() => setCategoryPickerFor(null)}>
+          <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+            <p className="text-xs text-[#5b6b8c]">选择目标目录（末级目录）；「初测与水平评估」下试卷自动归入初测库。</p>
+            <div className="rounded-lg bg-[#1a2332] border border-[#324467] p-2">
+              <button
+                onClick={() => void saveCategoryMove(null)}
+                className={`w-full text-left px-2 py-1.5 rounded-md text-xs ${
+                  !categoryPickerFor.categoryId ? 'bg-primary/20 text-primary' : 'text-[#92a4c9] hover:bg-[#232f48]'
+                }`}
+              >
+                （不分类）
+              </button>
+              <CategoryTree
+                nodes={categories}
+                activeId={categoryPickerFor.categoryId || ''}
+                onSelect={(id) => void saveCategoryMove(id)}
+              />
+            </div>
+            <div className="border-t border-[#324467] pt-3">
+              <p className="text-xs text-[#92a4c9] mb-2">试卷标签：</p>
+              {tags.length === 0 ? (
+                <p className="text-xs text-[#5b6b8c]">暂无标签，可先到「标签管理」创建</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((t) => (
+                    <label key={t.id} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="accent-primary"
+                        checked={pickedTagIds.includes(t.id)}
+                        onChange={() =>
+                          setPickedTagIds((prev) =>
+                            prev.includes(t.id) ? prev.filter((x) => x !== t.id) : [...prev, t.id]
+                          )
+                        }
+                      />
+                      <span className="text-xs px-2 py-0.5 rounded" style={{ background: `${t.color || '#3b82f6'}22`, color: t.color || '#3b82f6' }}>
+                        {t.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {tags.length > 0 && (
+                <button
+                  onClick={() => void saveCategoryMove(categoryPickerFor.categoryId || null)}
+                  className="mt-3 px-4 py-2 bg-primary text-white rounded-lg text-sm"
+                >
+                  保存标签
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+      {/* 标签管理（V2） */}
+      {showTagModal && (
+        <Modal title={`试卷标签管理 · ${activeSubject}`} onClose={() => setShowTagModal(false)}>
+          <div className="p-5 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="新标签名称（如：易错题 / 期末真题）"
+                className="flex-1 bg-[#1a2332] border border-[#324467] text-white rounded-lg px-4 py-2 focus:border-primary outline-none"
+              />
+              <button onClick={() => void handleCreateTag()} className="px-4 py-2 bg-primary text-white rounded-lg">添加</button>
+            </div>
+            <div className="space-y-2">
+              {tags.length === 0 ? (
+                <p className="text-xs text-[#5b6b8c]">暂无标签</p>
+              ) : (
+                tags.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between rounded-lg bg-[#1a2332] border border-[#324467] px-3 py-2">
+                    <span className="text-sm px-2 py-0.5 rounded" style={{ background: `${t.color || '#3b82f6'}22`, color: t.color || '#3b82f6' }}>
+                      {t.name}
+                    </span>
+                    <button onClick={() => void handleDeleteTag(t.id)} className="text-xs text-red-400 hover:text-red-300">删除</button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </Modal>
       )}
       {detailPaperId && (
         <PaperDetailModal
@@ -2454,6 +2817,182 @@ const ImportDataModal = ({
         </div>
       </div>
     </Modal>
+  );
+};
+
+/** 文件夹导入弹窗（V2）：webkitdirectory 多文件 + 相对路径 → 自动生成目录树 */
+const FolderImportModal: React.FC<{
+  subject: string;
+  onClose: () => void;
+  onStarted: (count: number) => void;
+}> = ({ subject, onClose, onStarted }) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const [paths, setPaths] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState<Array<{ name: string; status: string }>>([]);
+
+  const handleSelect = (list: FileList | null) => {
+    if (!list) return;
+    const arr = Array.from(list).filter((f) => /\.(docx|pdf|doc|txt|md|png|jpe?g|bmp)$/i.test(f.name));
+    setFiles(arr);
+    // 相对路径：webkitRelativePath 形如 "根目录/子目录/文件.docx"，全保留用于生成目录
+    setPaths(arr.map((f) => f.webkitRelativePath || f.name));
+  };
+
+  const handleImport = async () => {
+    if (files.length === 0) return alert('请先选择文件夹（将自动识别其中可解析文件）');
+    setImporting(true);
+    const form = new FormData();
+    for (const f of files) {
+      form.append('files', f);
+    }
+    form.append('paths', paths.join('\n'));
+    form.append('subject', subject);
+    form.append('paperType', 'UNIT');
+    try {
+      const res = await request.post<{ success: boolean; data: { jobIds: string[]; skipped: number } }>(
+        '/admin/question-bank/import-folder',
+        form
+      );
+      const ids = res.data?.jobIds || [];
+      setProgress(ids.map((id, i) => ({ name: files[i]?.name || id.slice(0, 8), status: 'PROCESSING' })));
+      onStarted(ids.length);
+      // 后台轮询进度（只展示前 8 个）
+      const timer = setInterval(async () => {
+        const sts: Array<{ name: string; status: string }> = [];
+        for (let i = 0; i < Math.min(ids.length, 8); i++) {
+          try {
+            const q = await request.get<{ success: boolean; data: { status: string } }>(
+              `/admin/question-bank/import/${ids[i]}`
+            );
+            sts.push({ name: files[i]?.name || '', status: q.data.status });
+          } catch {
+            sts.push({ name: files[i]?.name || '', status: 'ERROR' });
+          }
+        }
+        setProgress(sts);
+        if (sts.every((s) => s.status === 'DONE' || s.status === 'FAILED')) clearInterval(timer);
+      }, 6000);
+    } catch (e) {
+      alert(getErrorMessage(e, '导入失败'));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Modal title={`导入文件夹 · ${subject}`} onClose={onClose}>
+      <div className="p-5 space-y-4">
+        <p className="text-xs text-[#5b6b8c]">
+          选择文件夹后，将按相对路径自动生成多级分类目录（一级目录=所选文件夹名），
+          每个可解析文件（docx/pdf/txt/图片）单独建卷。文件较多时后台逐个处理，可先关闭本窗口。
+        </p>
+        <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#324467] py-8 cursor-pointer hover:border-primary/60 transition-colors">
+          <span className="material-symbols-outlined text-[32px] text-[#92a4c9]">folder_open</span>
+          <span className="text-sm text-[#92a4c9]">{files.length > 0 ? `已选 ${files.length} 个可解析文件` : '点击选择文件夹'}</span>
+          <input
+            type="file"
+            className="hidden"
+            multiple
+            // @ts-ignore webkitdirectory 为非标准属性
+            webkitdirectory=""
+            // @ts-ignore
+            directory=""
+            onChange={(e) => handleSelect(e.target.files)}
+          />
+        </label>
+        {files.length > 0 && (
+          <div className="max-h-40 overflow-y-auto rounded-lg bg-[#1a2332] border border-[#324467] p-2 space-y-1">
+            {files.slice(0, 12).map((f, i) => (
+              <div key={i} className="text-xs text-[#92a4c9] truncate">{paths[i]?.slice(0, 80) || f.name}</div>
+            ))}
+            {files.length > 12 && <div className="text-xs text-[#5b6b8c]">…共 {files.length} 个</div>}
+          </div>
+        )}
+        {progress.length > 0 && (
+          <div className="rounded-lg bg-[#1a2332] border border-[#324467] p-2 space-y-1 max-h-32 overflow-y-auto">
+            {progress.map((p, i) => (
+              <div key={`${p.name}-${i}`} className="flex items-center justify-between text-xs">
+                <span className="text-[#92a4c9] truncate">{p.name.slice(0, 30)}</span>
+                <span className={p.status === 'DONE' ? 'text-green-400' : p.status === 'FAILED' ? 'text-red-400' : 'text-amber-300'}>
+                  {p.status === 'PROCESSING' ? '处理中…' : p.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 border border-[#324467] text-[#92a4c9] rounded-lg">关闭</button>
+          <button
+            onClick={() => void handleImport()}
+            disabled={importing || files.length === 0}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-lg disabled:opacity-40"
+          >
+            {importing ? '提交中…' : '开始导入'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+/** 多级目录树（V2）：折叠展示，末级可选中；初测目录带系统标识 */
+const CategoryTree: React.FC<{
+  nodes: CategoryNode[];
+  activeId: string;
+  onSelect: (id: string, isAssessment: boolean) => void;
+  depth?: number;
+}> = ({ nodes, activeId, onSelect, depth = 0 }) => {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  return (
+    <div className="space-y-0.5">
+      {nodes.map((n) => {
+        const hasKids = n.children && n.children.length > 0;
+        const isOpen = !collapsed[n.id];
+        const isAssessment = n.system && n.name === '初测与水平评估';
+        return (
+          <div key={n.id}>
+            <div
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer text-xs transition-colors ${
+                activeId === n.id
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+              }`}
+              style={{ paddingLeft: 8 + depth * 14 }}
+              onClick={() => onSelect(n.id, !!isAssessment)}
+            >
+              {hasKids ? (
+                <button
+                  className="text-[#5b6b8c]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCollapsed((c) => ({ ...c, [n.id]: !c[n.id] }));
+                  }}
+                >
+                  <span className="material-symbols-outlined text-[14px]">{isOpen ? 'expand_more' : 'chevron_right'}</span>
+                </button>
+              ) : (
+                <span className="text-[#5b6b8c] w-[14px] text-center material-symbols-outlined text-[12px]">chevron_right</span>
+              )}
+              <span className={`truncate ${isAssessment ? 'text-amber-300' : ''}`}>
+                {isAssessment ? '🛡️' : '📁'} {n.name}
+              </span>
+              {n._count && n._count.papers > 0 && (
+                <span className="text-[10px] text-[#5b6b8c] ml-auto">{n._count.papers}</span>
+              )}
+              {n.immutable && (
+                <span className="text-[9px] text-amber-500/70" title="系统目录，禁止重命名/删除">
+                  系统
+                </span>
+              )}
+            </div>
+            {hasKids && isOpen && (
+              <CategoryTree nodes={n.children} activeId={activeId} onSelect={onSelect} depth={depth + 1} />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 };
 

@@ -119,6 +119,8 @@ export const listPapers = async (req: Request, res: Response) => {
       status: one(req.query.status) as PaperStatus | undefined,
       paperType: one(req.query.paperType) as any,
       category: one(req.query.category) as 'EXERCISE' | 'ASSESSMENT' | undefined,
+      categoryId: one(req.query.categoryId) || undefined,
+      keyword: one(req.query.keyword) || undefined,
       page: req.query.page ? Number(req.query.page) : undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     });
@@ -197,12 +199,33 @@ export const addPaperItem = async (req: Request, res: Response) => {
 
 export const updatePaper = async (req: Request, res: Response) => {
   try {
-    const { category } = req.body;
-    if (category !== 'EXERCISE' && category !== 'ASSESSMENT') {
-      return res.status(400).json({ success: false, message: 'category 必须为 EXERCISE 或 ASSESSMENT' });
+    const { category, categoryId, tagIds } = req.body;
+    const id = pid(req);
+    // 目录移动（V2）：移动目录并同步 category 字段（初测目录 → ASSESSMENT）
+    if (categoryId !== undefined) {
+      if (categoryId && typeof categoryId !== 'string') {
+        return res.status(400).json({ success: false, message: 'categoryId 参数无效' });
+      }
+      const paperCategoryService = await import('../services/paperCategoryService');
+      const newCategory = await paperCategoryService.syncPaperCategoryField(id, categoryId || null);
+      if (tagIds !== undefined) {
+        await paperCategoryService.setPaperTags(id, Array.isArray(tagIds) ? tagIds : []);
+      }
+      const paper = await questionBankService.getPaper(id);
+      return res.json({ success: true, data: { ...paper, category: newCategory } });
     }
-    const paper = await questionBankService.updatePaperCategory(pid(req), category);
-    return res.json({ success: true, data: paper });
+    // 兼容旧接口：直接改分类
+    if (category === 'EXERCISE' || category === 'ASSESSMENT') {
+      const paper = await questionBankService.updatePaperCategory(id, category);
+      return res.json({ success: true, data: paper });
+    }
+    // 仅设标签
+    if (tagIds !== undefined) {
+      const paperCategoryService = await import('../services/paperCategoryService');
+      const paper = await paperCategoryService.setPaperTags(id, Array.isArray(tagIds) ? tagIds : []);
+      return res.json({ success: true, data: paper });
+    }
+    return res.status(400).json({ success: false, message: '缺少可更新字段（category / categoryId / tagIds）' });
   } catch (e: any) {
     return res.status(400).json({ success: false, message: e.message });
   }
@@ -265,6 +288,7 @@ export const listQuestions = async (req: Request, res: Response) => {
       grade: one(req.query.grade),
       term: one(req.query.term),
       unitId: one(req.query.unitId),
+      categoryId: one(req.query.categoryId) || undefined,
       source: one(req.query.source),
       reviewStatus: one(req.query.reviewStatus),
       page: req.query.page ? Number(req.query.page) : undefined,
@@ -474,3 +498,149 @@ export const listDifficultyNeedsReview = async (req: Request, res: Response) => 
     return res.status(500).json({ success: false, message: e.message });
   }
 };
+
+
+// ============ 多级目录（V2） ============
+
+/** GET /admin/question-bank/categories?subject= —— 目录树（含系统初测目录） */
+export const listCategories = async (req: Request, res: Response) => {
+  try {
+    const subject = one(req.query.subject) || '';
+    const svc = await import('../services/paperCategoryService');
+    const tree = await svc.getCategoryTree(subject || undefined);
+    return res.json({ success: true, data: tree });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/** POST /admin/question-bank/categories —— 新建一级目录 { subject, name } */
+export const createCategory = async (req: Request, res: Response) => {
+  try {
+    const { subject, name } = req.body;
+    if (!subject || !name) return res.status(400).json({ success: false, message: '缺少 subject 或 name' });
+    const svc = await import('../services/paperCategoryService');
+    const node = await svc.createRootCategory(String(subject), String(name));
+    return res.status(201).json({ success: true, data: node });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+/** PATCH /admin/question-bank/categories/:id —— 重命名（immutable 目录禁止） */
+export const renameCategory = async (req: Request, res: Response) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ success: false, message: '缺少 name' });
+    const svc = await import('../services/paperCategoryService');
+    const node = await svc.renameCategory(pid(req), String(name));
+    return res.json({ success: true, data: node });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+/** DELETE /admin/question-bank/categories/:id —— 删除（immutable 目录禁止；级联子目录） */
+export const deleteCategory = async (req: Request, res: Response) => {
+  try {
+    const svc = await import('../services/paperCategoryService');
+    await svc.deleteCategory(pid(req));
+    return res.json({ success: true, message: '目录已删除' });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+// ============ 试卷标签（V2） ============
+
+/** GET /admin/question-bank/tags?subject= */
+export const listTags = async (req: Request, res: Response) => {
+  try {
+    const subject = one(req.query.subject) || '';
+    const svc = await import('../services/paperCategoryService');
+    return res.json({ success: true, data: await svc.listTags(subject || undefined) });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+/** POST /admin/question-bank/tags —— { subject, name, color? } */
+export const createTag = async (req: Request, res: Response) => {
+  try {
+    const { subject, name, color } = req.body;
+    if (!subject || !name) return res.status(400).json({ success: false, message: '缺少 subject 或 name' });
+    const svc = await import('../services/paperCategoryService');
+    const tag = await svc.createTag(String(subject), String(name), color);
+    return res.status(201).json({ success: true, data: tag });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+/** PATCH /admin/question-bank/tags/:id —— { name?, color? } */
+export const updateTag = async (req: Request, res: Response) => {
+  try {
+    const { name, color } = req.body;
+    const svc = await import('../services/paperCategoryService');
+    const tag = await svc.renameTag(pid(req), name, color);
+    return res.json({ success: true, data: tag });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+/** DELETE /admin/question-bank/tags/:id */
+export const deleteTag = async (req: Request, res: Response) => {
+  try {
+    const svc = await import('../services/paperCategoryService');
+    await svc.deleteTag(pid(req));
+    return res.json({ success: true, message: '标签已删除' });
+  } catch (e: any) {
+    return res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+// ============ 文件夹导入（V2）：多文件 + 相对路径自动生成目录 ============
+
+// 文件夹导入专用 multer：允许可解析格式（docx/pdf/doc/txt/图片），20MB/文件
+const uploadFolder = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.(docx|pdf|txt|text|md|markdown|png|jpe?g|bmp|gif|webp|doc)$/i.test(file.originalname);
+    if (ok) cb(null, true);
+    else cb(new Error('仅支持 docx / pdf / txt / md / 图片 格式'));
+  },
+});
+
+/**
+ * POST /admin/question-bank/import-folder
+ * multipart: files[]（multer array）+ subject + paths[]（每个文件的相对路径，用 \n 分隔）
+ * 前端用 <input webkitdirectory> 收集 webkitRelativePath
+ */
+export const importFolder = [
+  uploadFolder.array('files', 200),
+  async (req: Request, res: Response) => {
+    try {
+      const files = (req as any).files as Express.Multer.File[] | undefined;
+      const subject = String((req.body as any).subject || '').trim();
+      if (!files || files.length === 0) return res.status(400).json({ success: false, message: '未收到文件' });
+      if (!subject) return res.status(400).json({ success: false, message: '缺少 subject' });
+      const pathsRaw = String((req.body as any).paths || '');
+      const paths = pathsRaw.split('\n').map((s: string) => s.trim()).filter(Boolean);
+      const result = await questionImportService.startFolderImport({
+        files,
+        paths,
+        subject,
+        createdBy: getUserId(req),
+        textbookId: (req.body as any).textbookId || undefined,
+        paperType: (req.body as any).paperType || undefined,
+        category: (req.body as any).category === 'ASSESSMENT' ? 'ASSESSMENT' : 'EXERCISE',
+        ocrProviderId: (req.body as any).ocrProviderId || undefined,
+      });
+      return res.status(202).json({ success: true, data: result });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, message: e.message });
+    }
+  },
+];

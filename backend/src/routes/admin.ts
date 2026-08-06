@@ -807,6 +807,85 @@ router.post('/question-bank/import', questionBankController.uploadAndImport);
 router.get('/question-bank/import/:id', (req, res) =>
   questionBankController.getImportJob(req, res)
 );
+/**
+ * @route   POST /api/admin/question-bank/import-folder
+ * @desc    文件夹导入：多文件 + 相对路径自动生成多级目录（V2）
+ * @access  Admin
+ * @body    files[] + subject + paths[]（换行分隔的相对路径）
+ */
+router.post('/question-bank/import-folder', questionBankController.importFolder);
+
+/**
+ * @route   GET /api/admin/question-bank/categories?subject=
+ * @desc    试卷多级分类目录树（含系统初测目录）
+ * @access  Admin
+ */
+router.get('/question-bank/categories', (req, res) =>
+  questionBankController.listCategories(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/categories
+ * @desc    新建一级分类目录
+ * @access  Admin
+ */
+router.post('/question-bank/categories', (req, res) =>
+  questionBankController.createCategory(req, res)
+);
+
+/**
+ * @route   PATCH /api/admin/question-bank/categories/:id
+ * @desc    重命名目录（系统目录禁止）
+ * @access  Admin
+ */
+router.patch('/question-bank/categories/:id', (req, res) =>
+  questionBankController.renameCategory(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/question-bank/categories/:id
+ * @desc    删除目录（系统目录禁止；级联子目录）
+ * @access  Admin
+ */
+router.delete('/question-bank/categories/:id', (req, res) =>
+  questionBankController.deleteCategory(req, res)
+);
+
+/**
+ * @route   GET /api/admin/question-bank/tags?subject=
+ * @desc    试卷标签列表
+ * @access  Admin
+ */
+router.get('/question-bank/tags', (req, res) =>
+  questionBankController.listTags(req, res)
+);
+
+/**
+ * @route   POST /api/admin/question-bank/tags
+ * @desc    新建试卷标签
+ * @access  Admin
+ */
+router.post('/question-bank/tags', (req, res) =>
+  questionBankController.createTag(req, res)
+);
+
+/**
+ * @route   PATCH /api/admin/question-bank/tags/:id
+ * @desc    重命名/换色标签
+ * @access  Admin
+ */
+router.patch('/question-bank/tags/:id', (req, res) =>
+  questionBankController.updateTag(req, res)
+);
+
+/**
+ * @route   DELETE /api/admin/question-bank/tags/:id
+ * @desc    删除标签（从所有试卷移除）
+ * @access  Admin
+ */
+router.delete('/question-bank/tags/:id', (req, res) =>
+  questionBankController.deleteTag(req, res)
+);
 
 /**
  * @route   GET /api/admin/question-bank/export

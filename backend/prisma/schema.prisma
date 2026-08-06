@@ -217,10 +217,52 @@ model QuestionPaper {
   // ASSESSMENT 库专门用于任务初测或水平评估，不区分难度，训练舱初测可从中提取套卷或组合
   category   QuestionPaperCategory @default(EXERCISE) @map("category")
 
+  // 多级目录（V2）：所属分类目录节点（末级目录）；移动目录时同步维护 category 字段
+  categoryId String? @map("category_id")
+  categoryNode PaperCategory? @relation("PaperCategoryPapers", fields: [categoryId], references: [id])
+
+  // 试卷标签（V2）：存 PaperTag.id 数组
+  tagIds String[] @default([]) @map("tag_ids")
+
   items QuestionPaperItem[]
   importJobs QuestionImportJob[]
 
   @@map("question_papers")
+}
+
+// 试卷多级分类目录（V2）：树形结构，按学科隔离
+// - 一级目录（parentId=null）手动创建；导入文件夹时按相对路径自动生成多级
+// - system 目录（如「初测与水平评估」）：被训练舱 AI 调用，immutable 禁止重命名/删除
+// - 试卷挂载在末级目录（QuestionPaper.categoryId）；移动目录时同步维护 category 字段
+model PaperCategory {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String   @default("") // 所属学科（"" = 全局/未归属）
+  parentId  String?  @map("parent_id")
+  level     Int      @default(1)  // 1=一级目录，2=二级…（导入生成）
+  system    Boolean  @default(false) // 系统内置目录（如初测与水平评估）
+  immutable Boolean  @default(false) // 禁止重命名/删除
+  sortOrder Int      @default(0)  @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent   PaperCategory?  @relation("PaperCategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children PaperCategory[] @relation("PaperCategoryTree")
+  papers   QuestionPaper[] @relation("PaperCategoryPapers")
+
+  @@index([subject, parentId])
+  @@map("paper_categories")
+}
+
+// 试卷标签（V2）：可按学科维护常用标签
+model PaperTag {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String   @default("")
+  color     String?  @default("#3b82f6")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([subject])
+  @@map("paper_tags")
 }
 
 // 卷内题目（带顺序与分值）

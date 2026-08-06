@@ -113,6 +113,8 @@ export interface PaperQuery {
   status?: PaperStatus;
   paperType?: 'UNIT' | 'MIDTERM' | 'FINAL' | 'ZHONGKAO' | 'GAOKAO';
   category?: 'EXERCISE' | 'ASSESSMENT';
+  categoryId?: string; // 目录节点（含其子树）
+  keyword?: string; // 标题模糊搜索
   page?: number;
   limit?: number;
 }
@@ -126,6 +128,17 @@ export async function listPapers(query: PaperQuery) {
   if (query.paperType) where.paperType = query.paperType;
   // 题库分类筛选：习题与试卷(EXERCISE) / 初测与水平评估(ASSESSMENT)
   if (query.category) where.category = query.category;
+  // 目录节点过滤：命中该节点及所有子孙目录下的试卷
+  if (query.categoryId) {
+    const node = await prisma.paperCategory.findUnique({ where: { id: query.categoryId } });
+    if (node) {
+      const subIds = await collectDescendantIds(node.id);
+      where.categoryId = { in: [node.id, ...subIds] };
+    } else {
+      where.categoryId = null; // 目录不存在 → 空结果
+    }
+  }
+  if (query.keyword) where.title = { contains: query.keyword, mode: 'insensitive' };
 
   const [items, total] = await Promise.all([
     prisma.questionPaper.findMany({
@@ -133,7 +146,10 @@ export async function listPapers(query: PaperQuery) {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
-      include: { _count: { select: { items: true } } },
+      include: {
+        _count: { select: { items: true } },
+        categoryNode: { select: { id: true, name: true, level: true, parentId: true } },
+      },
     }),
     prisma.questionPaper.count({ where }),
   ]);
@@ -154,6 +170,28 @@ export async function listPapers(query: PaperQuery) {
   }));
 
   return { items: itemsWithName, total, page, limit };
+}
+
+/** 收集节点及其全部子孙 id（目录子树） */
+async function collectDescendantIds(rootId: string): Promise<string[]> {
+  const all = await prisma.paperCategory.findMany({ select: { id: true, parentId: true } });
+  const childrenMap = new Map<string, string[]>();
+  all.forEach((n) => {
+    if (n.parentId) {
+      if (!childrenMap.has(n.parentId)) childrenMap.set(n.parentId, []);
+      childrenMap.get(n.parentId)!.push(n.id);
+    }
+  });
+  const result: string[] = [];
+  const stack = [rootId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const c of childrenMap.get(cur) || []) {
+      result.push(c);
+      stack.push(c);
+    }
+  }
+  return result;
 }
 
 // ============ 知识点先修依赖（edu-learning-path 方法论，P1-3） ============
@@ -325,6 +363,8 @@ export interface QuestionQuery {
   grade?: string;
   term?: string;
   unitId?: string;
+  /** 目录节点：该目录及其子孙目录下所有试卷的题目（V2） */
+  categoryId?: string;
   /** 来源筛选：IMPORT | MANUAL | AI_GENERATED */
   source?: string;
   /** ④ 审核状态筛选：PENDING | APPROVED | REJECTED | NONE(无需审核) */
@@ -347,6 +387,16 @@ export async function listQuestions(query: QuestionQuery) {
   if (query.paperId) {
     where.paperItems = { some: { paperId: query.paperId } };
   }
+  // 目录过滤（V2）：命中该目录及子孙目录下所有试卷的题目
+  if (query.categoryId) {
+    const node = await prisma.paperCategory.findUnique({ where: { id: query.categoryId } });
+    if (node) {
+      const subIds = await collectDescendantIds(node.id);
+      where.paperItems = { some: { paper: { categoryId: { in: [node.id, ...subIds] } } } };
+    } else {
+      where.paperItems = { some: { paperId: '__none__' } }; // 目录不存在 → 空
+    }
+  }
   if (query.grade) where.grade = query.grade;
   if (query.term) where.term = query.term;
   if (query.source) where.source = query.source;
@@ -364,11 +414,33 @@ export async function listQuestions(query: QuestionQuery) {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
+      include: {
+        paperItems: {
+          select: {
+            paper: {
+              select: {
+                id: true,
+                title: true,
+                categoryId: true,
+                categoryNode: { select: { id: true, name: true, level: true, parentId: true } },
+              },
+            },
+          },
+        },
+      },
     }),
     prisma.question.count({ where }),
   ]);
 
-  return { items: items.map(serializeQuestion), total, page, limit };
+  return {
+    items: items.map((q) => ({
+      ...serializeQuestion(q),
+      paperInfo: q.paperItems.map((pi: any) => pi.paper).filter((p: any) => p && p.id),
+    })),
+    total,
+    page,
+    limit,
+  };
 }
 
 /**
