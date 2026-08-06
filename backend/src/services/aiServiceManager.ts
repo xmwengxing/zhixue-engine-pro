@@ -70,13 +70,15 @@ function capToContext(maxTokens: number, contextWindow?: number): number {
 class OpenAIAdapter {
   private client: OpenAI;
   private model: string;
+  private reasoningEffort?: string; // 推理模型可设 'none' 关思维链直出 content（如 sensenova-6.7-flash-lite）
 
-  constructor(apiKey: string, endpoint: string, model: string) {
+  constructor(apiKey: string, endpoint: string, model: string, reasoningEffort?: string) {
     this.client = new OpenAI({
       apiKey,
       baseURL: endpoint || undefined,
     });
     this.model = model;
+    this.reasoningEffort = reasoningEffort;
   }
 
   async generate(prompt: string, options: AIOptions): Promise<AIResponse> {
@@ -105,6 +107,8 @@ class OpenAIAdapter {
           messages,
           max_tokens: mt,
           temperature: options.temperature || 0.7,
+          // 推理模型关闭思维链（extra.reasoningEffort='none' 时直出 content，速度与稳定性最佳）
+          ...(this.reasoningEffort ? { reasoning_effort: this.reasoningEffort as any } : {}),
         },
         { signal: options.signal }
       );
@@ -379,7 +383,7 @@ export class AIServiceManager {
         { retryable: false }
       );
     }
-    return new OpenAIAdapter(provider.apiKey, provider.endpoint, provider.model);
+    return new OpenAIAdapter(provider.apiKey, provider.endpoint, provider.model, provider.extra?.reasoningEffort);
   }
 
   // 取缓存的适配器（provider 配置变更后由 clearCaches 失效）

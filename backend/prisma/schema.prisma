@@ -626,6 +626,8 @@ model AIProvider {
   maxTokens        Int?     @map("max_tokens") // 单次输出最大 token（留空=各适配器官方默认）
   streamEnabled    Boolean  @default(false) @map("stream_enabled") // 是否允许流式响应
   supportsReasoning Boolean  @default(false) @map("supports_reasoning") // 是否为推理模型（输出可能落在 reasoning 字段）
+  // —— 厂商自定义参数（透传给适配器，如 reasoningEffort: "none" 关闭推理模型思维链直出 content）——
+  extra        Json?    // 自由键值
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
