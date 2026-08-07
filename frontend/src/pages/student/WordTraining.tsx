@@ -4,12 +4,43 @@ import request from '../../utils/request';
 import { getErrorMessage } from '../../types/error';
 
 /**
- * 英语单词训练舱（听写/默写）
+ * 英语单词训练舱（听写/默写/选择）
  * - 听写：edge-tts 发音（后端代理）逐词播放，Web Speech API 兜底
  * - 默写：按组显示中文释义，学员输入英文
+ * - 选择：显示英文 + 4 选 1 中文释义
  * - 组间隔倒计时自动进入下一组；完成本轮后强制进入 AI 词汇老师短语填空
  * - 退出/中断保存进度，重新进入可恢复（含未完成填空）
+ * - 反馈刺激：答对 🎉 弹跳+上行音；答错 😵💫 摇头+卡片抖动+低频警示音+正确答案脉冲
  */
+
+/** 反馈动画 keyframes（自包含，避免污染全局） */
+const FEEDBACK_CSS = `
+  @keyframes word-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-7px) rotate(-1deg); }
+    40% { transform: translateX(7px) rotate(1deg); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes word-pop {
+    0% { transform: scale(0.2) translateY(14px); opacity: 0; }
+    55% { transform: scale(1.18) translateY(-4px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  @keyframes word-wiggle {
+    0%, 100% { transform: rotate(-10deg) scale(1); }
+    50% { transform: rotate(10deg) scale(1.12); }
+  }
+  @keyframes word-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+  }
+  .word-shake { animation: word-shake 0.45s ease-in-out; }
+  .word-pop { animation: word-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .word-wiggle { animation: word-wiggle 0.7s ease-in-out infinite; }
+  .word-pulse { animation: word-pulse 0.9s ease-out 2; }
+`;
 
 interface WordItem {
   id: string;
@@ -55,7 +86,7 @@ export default function WordTraining() {
   const [totalGroups, setTotalGroups] = useState(0);
   const [wordIndex, setWordIndex] = useState(0); // 组内第几个词
   const [input, setInput] = useState('');
-  const [feedback, setFeedback] = useState<{ word: string; correct: boolean } | null>(null);
+  const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
   const [countingDown, setCountingDown] = useState(0); // 组间隔倒计时
   const [cloze, setCloze] = useState<ClozeItem[]>([]);
@@ -66,6 +97,38 @@ export default function WordTraining() {
   const [playing, setPlaying] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // ===== 答题音效（Web Audio 合成，无需音频文件）=====
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const playAnswerSound = useCallback((kind: 'correct' | 'wrong') => {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        audioCtxRef.current = new Ctor();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') void ctx.resume();
+      // 答对：上行双音（523→784 正弦，轻快）；答错：低频警示双音（196→155 方波，低沉）
+      const freqs = kind === 'correct' ? [523.25, 783.99] : [196.0, 155.56];
+      freqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = kind === 'correct' ? 'sine' : 'square';
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + i * 0.16;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(kind === 'correct' ? 0.16 : 0.11, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.26);
+      });
+    } catch {
+      /* 音效失败不影响答题 */
+    }
+  }, []);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 初始化：恢复进行中会话，否则开始新会话
@@ -200,7 +263,8 @@ export default function WordTraining() {
     // 判分基准：CHOICE 比释义；其余比单词（后端同规则，这里仅本地即时反馈）
     const ref = config?.mode === 'CHOICE' ? currentWord.meaning : currentWord.word;
     const correctLocal = answer.trim().toLowerCase() === ref.trim().toLowerCase();
-    setFeedback({ word: currentWord.word, correct: correctLocal });
+    setFeedback({ word: currentWord.word, correct: correctLocal, answer: ref });
+    playAnswerSound(correctLocal ? 'correct' : 'wrong');
     setResults((prev) => [...prev, { word: currentWord.word, correct: correctLocal, input: answer }]);
     if (config?.mode === 'DICTATION') speechSynthesis.cancel();
     // 逐词落库（异步，不阻塞答题）：判定 + 错题集 + 进度推进（组中途退出可恢复）
@@ -467,6 +531,7 @@ export default function WordTraining() {
   const modeLabel = isDictation ? '听写' : isChoice ? '选择' : '默写';
   return (
     <div className="min-h-screen bg-[#111722] py-6">
+      <style>{FEEDBACK_CSS}</style>
       <div className="max-w-3xl mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
           <button onClick={exitSave} className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]">
@@ -543,26 +608,31 @@ export default function WordTraining() {
             {isChoice ? (
               /* CHOICE 选择模式：4 选 1 中文释义 */
               <div className="grid grid-cols-1 gap-3">
-                {(currentWord.options || []).map((opt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => submitWord(opt.text)}
-                    disabled={!!feedback}
-                    className="px-4 py-3 rounded-lg bg-[#1a2332] border border-[#324467] text-white text-left hover:border-blue-500/60 hover:bg-[#232f48] transition-colors disabled:opacity-50"
-                  >
-                    <span className="mr-2 text-[#5b6b8c]">{'ABCD'[i]}.</span>
-                    {opt.text}
-                  </button>
-                ))}
-                {feedback && (
-                  <p
-                    className={`mt-1 text-center text-lg ${
-                      feedback.correct ? 'text-green-400' : 'text-red-300'
-                    }`}
-                  >
-                    {feedback.correct ? '✓ 正确！' : `✗ 正确答案：${currentWord.meaning}`}
-                  </p>
-                )}
+                {(currentWord.options || []).map((opt, i) => {
+                  // 反馈期间高亮：正确答案绿色脉冲，选错的选项红色
+                  const isCorrectOpt = feedback && !feedback.correct && opt.text === currentWord.meaning;
+                  const isWrongPick = feedback && !feedback.correct && opt.text === feedback.answer;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => submitWord(opt.text)}
+                      disabled={!!feedback}
+                      className={`px-4 py-3 rounded-lg border text-white text-left transition-colors ${
+                        isCorrectOpt
+                          ? 'bg-green-500/15 border-green-500/60 word-pulse'
+                          : isWrongPick
+                          ? 'bg-red-500/15 border-red-500/60'
+                          : 'bg-[#1a2332] border-[#324467] hover:border-blue-500/60 hover:bg-[#232f48] disabled:opacity-50'
+                      }`}
+                    >
+                      <span className="mr-2 text-[#5b6b8c]">{'ABCD'[i]}.</span>
+                      {opt.text}
+                      {isCorrectOpt && <span className="ml-2 text-green-400 text-xs">✓ 正确答案</span>}
+                      {isWrongPick && <span className="ml-2 text-red-400 text-xs">✗</span>}
+                    </button>
+                  );
+                })}
+                {feedback && <FeedbackBanner key={feedback.word + String(feedback.correct)} correct={feedback.correct} answer={feedback.answer} />}
               </div>
             ) : (
               <>
@@ -579,15 +649,7 @@ export default function WordTraining() {
                   spellCheck={false}
                 />
 
-                {feedback && (
-                  <p
-                    className={`mt-3 text-center text-lg ${
-                      feedback.correct ? 'text-green-400' : 'text-red-300'
-                    }`}
-                  >
-                    {feedback.correct ? '✓ 正确！' : `✗ 正确答案：${feedback.word}`}
-                  </p>
-                )}
+                {feedback && <FeedbackBanner key={feedback.word + String(feedback.correct)} correct={feedback.correct} answer={feedback.answer} />}
 
                 <button
                   onClick={() => submitWord()}
@@ -604,3 +666,35 @@ export default function WordTraining() {
     </div>
   );
 }
+
+/** 答题反馈条：答对 🎉 弹跳；答错 😵💫 摇头+卡片抖动+正确答案红色脉冲 */
+const FeedbackBanner = ({ correct, answer }: { correct: boolean; answer: string }) => {
+  return (
+    <div
+      className={`mt-3 rounded-lg border px-4 py-3 text-center ${
+        correct
+          ? 'bg-green-500/10 border-green-500/40 word-pop'
+          : 'bg-red-500/10 border-red-500/40 word-shake'
+      }`}
+    >
+      <div className="text-3xl leading-none mb-1">
+        {correct ? (
+          <span className="word-pop inline-block">🎉</span>
+        ) : (
+          <span className="word-wiggle inline-block">😵‍💫</span>
+        )}
+      </div>
+      <p className={`text-base font-medium ${correct ? 'text-green-300' : 'text-red-300'}`}>
+        {correct ? '太棒了，答对了！' : '哎呀，答错啦！'}
+      </p>
+      {!correct && (
+        <p className="mt-1.5 text-sm text-[#92a4c9]">
+          正确答案：
+          <span className="ml-1 px-2 py-0.5 rounded bg-red-500/15 text-red-300 font-bold text-base inline-block word-pulse">
+            {answer}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+};
