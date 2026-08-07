@@ -169,7 +169,12 @@ export const deleteSpecialTask = async (req: Request, res: Response, next: NextF
     const { deleteTaskWithDeps } = await import('../services/taskDeletionService');
     const result = await deleteTaskWithDeps(taskId, { checkActive: true });
     res.json({ success: true, data: result });
-  } catch (e) {
+  } catch (e: any) {
+    // 进行中会话拦截 → 400 业务错误（与家长端口径一致）
+    if (typeof e.message === 'string' && e.message.includes('训练会话')) {
+      res.status(400).json({ error: { code: 'TASK_IN_PROGRESS', message: e.message } });
+      return;
+    }
     next(e);
   }
 };

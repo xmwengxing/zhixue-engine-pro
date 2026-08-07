@@ -24,7 +24,12 @@ export async function attachLastRecords(tasks: any[]): Promise<any[]> {
  * - 不删除 PointsTransaction（relatedId 非 FK，已获积分不受影响）
  * - 进行中会话拦截：TrainingSession ACTIVE / WordSession IN_PROGRESS
  *   （让学员先结束训练，避免误删进行中的数据）
+ * - WordSession「进行中」判定加 30 分钟活跃窗口：学员正常退出（保存进度）时
+ *   WordSession 保持 IN_PROGRESS 以便恢复，但 updatedAt 随答题实时刷新；
+ *   离开训练超过窗口视为已放弃 → 允许删除并顺带清理残留会话（防孤儿任务卡死删除）
  */
+const WORD_ACTIVE_WINDOW_MS = 30 * 60 * 1000; // 30 分钟活跃窗口
+
 export async function deleteTaskWithDeps(
   taskId: string,
   opts: { checkActive: boolean }
@@ -38,14 +43,18 @@ export async function deleteTaskWithDeps(
   // 单词会话无 Task 关系字段，单独查询
   const wordSessions = await prisma.wordSession.findMany({
     where: { taskId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, updatedAt: true },
   });
 
   if (opts.checkActive) {
     const hasActive = task.trainingSessions.some((s) => s.status === 'ACTIVE');
-    const hasActiveWord = wordSessions.some((s) => s.status === 'IN_PROGRESS');
     if (hasActive) throw new Error('该任务有正在进行的训练会话，请让学员先结束训练后再删除');
-    if (hasActiveWord) throw new Error('该任务有正在进行的单词训练，请让学员先结束训练后再删除');
+    // 仅在 30 分钟活跃窗口内的 IN_PROGRESS 会话才视为「正在训练」；陈旧残留允许删除
+    const now = Date.now();
+    const hasActiveWord = wordSessions.some(
+      (s) => s.status === 'IN_PROGRESS' && now - new Date(s.updatedAt).getTime() < WORD_ACTIVE_WINDOW_MS
+    );
+    if (hasActiveWord) throw new Error('该任务有正在进行的训练会话（学员 30 分钟内活跃），请先结束训练后再删除');
   }
 
   const sessionIds = task.trainingSessions.map((s) => s.id);
