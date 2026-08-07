@@ -12,9 +12,9 @@ export const WordTaskCreateModal = ({
   onClose: () => void;
   onCreated: () => void;
 }) => {
-  const [mode, setMode] = useState<'DICTATION' | 'SPELLING'>('DICTATION');
+  const [mode, setMode] = useState<'DICTATION' | 'SPELLING' | 'CHOICE'>('DICTATION');
   const [stage, setStage] = useState('初中');
-  const [stages, setStages] = useState<Array<{ stage: string; count: number }>>([]);
+  const [stages, setStages] = useState<Array<{ stage: string; count: number; label?: string }>>([]);
   const [orderMode, setOrderMode] = useState<'SEQUENCE' | 'RANDOM'>('SEQUENCE');
   const [groupSize, setGroupSize] = useState(2);
   const [intervalSec, setIntervalSec] = useState(5);
@@ -78,7 +78,7 @@ export const WordTaskCreateModal = ({
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-lg font-medium text-white">新建英语单词任务</h3>
-              <p className="text-sm text-[#5b6b8c] mt-0.5">听写 / 默写，AI 词汇老师自动出题加深记忆</p>
+              <p className="text-sm text-[#5b6b8c] mt-0.5">听写 / 默写 / 选择，AI 词汇老师自动出题加深记忆</p>
             </div>
             <button onClick={onClose} className="text-[#5b6b8c] hover:text-white text-xl leading-none">
               ×
@@ -94,6 +94,7 @@ export const WordTaskCreateModal = ({
                   [
                     { v: 'DICTATION', label: '听写', desc: '播放发音，输入单词' },
                     { v: 'SPELLING', label: '默写', desc: '显示中文，输入英文' },
+                    { v: 'CHOICE', label: '选择', desc: '显示英文，选正确释义' },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -119,7 +120,7 @@ export const WordTaskCreateModal = ({
               <select value={stage} onChange={(e) => setStage(e.target.value)} className={inputCls}>
                 {stages.map((s) => (
                   <option key={s.stage} value={s.stage}>
-                    {s.stage}（{s.count} 词）
+                    {s.label || s.stage}（{s.count} 词）
                   </option>
                 ))}
                 {stages.length === 0 && <option value="初中">初中</option>}
