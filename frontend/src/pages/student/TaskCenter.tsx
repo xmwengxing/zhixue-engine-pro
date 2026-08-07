@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Badge, Empty, Loading } from '../../components/shared';
 import request from '../../utils/request';
+import { getErrorMessage } from '../../types/error';
 import { getStudentTasks, type Task } from '../../services/studentTrainingService';
 import StudentSpecialTaskModal from '../../components/student/StudentSpecialTaskModal';
 import WordTaskCreateModal from '../../components/student/WordTaskCreateModal';
@@ -152,6 +153,17 @@ export const TaskCenter = () => {
     });
   };
 
+  /** 删除专项任务（积分保留） */
+  const handleDeleteTask = async (task: Task) => {
+    if (!window.confirm(`确定删除任务「${task.title}」？已获得的积分不会受影响。`)) return;
+    try {
+      await request.delete(`/student/special-tasks/${task.id}`);
+      void loadTasks();
+    } catch (e) {
+      window.alert(getErrorMessage(e, '删除失败（仅可删除自己创建的专项任务）'));
+    }
+  };
+
   /**
    * 渲染单个任务卡片（两个分区共用）
    */
@@ -226,13 +238,14 @@ export const TaskCenter = () => {
           {/* 操作按钮 */}
           <div className="mt-auto flex flex-col gap-2">
             {isSpecial && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => void loadRecords(task)}
-              >
-                历史记录
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => void loadRecords(task)}>
+                  历史记录
+                </Button>
+                <Button variant="outline" className="flex-1 !text-red-400 !border-red-500/40 hover:!bg-red-500/10" onClick={() => void handleDeleteTask(task)}>
+                  删除
+                </Button>
+              </div>
             )}
             {task.status === 'COMPLETED' ? (
               <Button
@@ -384,11 +397,11 @@ export const TaskCenter = () => {
         </div>
 
         {/* 专项攻克任务区：排除单词任务（单词任务在下方独立版块展示） */}
-        {specialTasks.filter((t) => t.mode !== 'WORD').length === 0 ? (
-          <Empty description="暂无专项攻克任务，点击右上角「新建任务」主动发起" />
+        {specialTasks.filter((t) => t.mode !== 'WORD' && t.status !== 'COMPLETED').length === 0 ? (
+          <Empty description="暂无进行中的专项任务，点击右上角「新建任务」主动发起" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {specialTasks.filter((t) => t.mode !== 'WORD').map((task) => renderTaskCard(task, true))}
+            {specialTasks.filter((t) => t.mode !== 'WORD' && t.status !== 'COMPLETED').map((task) => renderTaskCard(task, true))}
           </div>
         )}
       </div>
@@ -399,7 +412,7 @@ export const TaskCenter = () => {
           <span className="material-symbols-outlined text-amber-400 text-2xl">translate</span>
           <h2 className="text-xl font-bold text-white">英语单词</h2>
           <span className="text-sm text-[#5b6b8c]">
-            （听写 / 默写 · AI 词汇老师短语填空 · 艾宾浩斯复习）
+            （听写 / 默写 / 选择 · AI 词汇老师短语填空 · 艾宾浩斯复习）
           </span>
           <div className="flex-1" />
           <Button
@@ -418,14 +431,92 @@ export const TaskCenter = () => {
           </Button>
         </div>
 
-        {specialTasks.filter((t) => t.mode === 'WORD').length === 0 ? (
-          <Empty description="暂无单词任务，点击「新建单词任务」开始听写/默写" />
+        {specialTasks.filter((t) => t.mode === 'WORD' && t.status !== 'COMPLETED').length === 0 ? (
+          <Empty description="暂无进行中的单词任务，点击「新建单词任务」开始听写/默写" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {specialTasks.filter((t) => t.mode === 'WORD').map((task) => renderTaskCard(task, true))}
+            {specialTasks.filter((t) => t.mode === 'WORD' && t.status !== 'COMPLETED').map((task) => renderTaskCard(task, true))}
           </div>
         )}
       </div>
+
+      {/* 历史任务表（专项已完成任务明细查询） */}
+      {(() => {
+        const history = specialTasks.filter((t) => t.status === 'COMPLETED');
+        if (history.length === 0) return null;
+        return (
+          <div className="mt-10">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="material-symbols-outlined text-[#92a4c9] text-2xl">history</span>
+              <h2 className="text-xl font-bold text-white">历史任务</h2>
+              <span className="text-sm text-[#5b6b8c]">已完成专项任务（{history.length}）</span>
+            </div>
+            <div className="rounded-xl bg-[#1a2332] border border-[#324467] overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[#5b6b8c] border-b border-[#324467]">
+                    <th className="py-3 px-4 font-medium">任务</th>
+                    <th className="py-3 px-2 font-medium">学科</th>
+                    <th className="py-3 px-2 font-medium">类型</th>
+                    <th className="py-3 px-2 font-medium">关联</th>
+                    <th className="py-3 px-2 font-medium">最近正确率</th>
+                    <th className="py-3 px-2 font-medium">创建时间</th>
+                    <th className="py-3 px-2 font-medium">创建者</th>
+                    <th className="py-3 px-2 font-medium">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((t) => {
+                    const last = t.lastRecord as any;
+                    const rate = last
+                      ? last.total > 0
+                        ? Math.round((last.correct / Math.max(1, last.correct + last.wrong)) * 100)
+                        : 0
+                      : null;
+                    return (
+                      <tr key={t.id} className="border-b border-[#1a2332] hover:bg-[#232f48]/50">
+                        <td className="py-3 px-4 text-white font-medium max-w-[220px] truncate">{t.title}</td>
+                        <td className="py-3 px-2 text-[#92a4c9]">{t.subject || '—'}</td>
+                        <td className="py-3 px-2 text-[#92a4c9]">
+                          {t.mode === 'WORD' ? '单词' : (SPECIAL_TYPE_LABELS[t.specialType || ''] || '专项')}
+                        </td>
+                        <td className="py-3 px-2 text-[#92a4c9]">
+                          {t.mode === 'WORD' ? (t.config?.stage === 'CET4' ? 'CET-4 词库' : `${t.config?.stage ?? ''}词库`) : `${t.config?.questionCount ?? '—'} 题`}
+                        </td>
+                        <td className="py-3 px-2">
+                          {rate !== null ? (
+                            <span className={rate >= 60 ? 'text-green-400' : 'text-amber-300'}>{rate}%</span>
+                          ) : (
+                            <span className="text-[#5b6b8c]">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-[#5b6b8c]">{formatTime(t.createdAt)}</td>
+                        <td className="py-3 px-2 text-[#5b6b8c]">{t.creator?.username || '—'}</td>
+                        <td className="py-3 px-2">
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => void loadRecords(t)}
+                              className="px-2 py-1 text-xs text-[#92a4c9] bg-[#232f48] rounded hover:text-white"
+                            >
+                              明细
+                            </button>
+                            <button
+                              onClick={() => void handleDeleteTask(t)}
+                              className="px-2 py-1 text-xs text-red-400 bg-red-500/10 rounded hover:bg-red-500/20"
+                            >
+                              删除
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 主动学习入口：新建专项任务弹窗 */}
       <StudentSpecialTaskModal

@@ -112,7 +112,10 @@ export class StudentTrainingService {
         prisma.task.count({ where }),
       ]);
 
-      return { tasks, total, page, limit };
+      // 附带最近专项训练记录（历史任务表）
+      const { attachLastRecords } = await import('./taskDeletionService');
+      const tasksWithRecords = await attachLastRecords(tasks as any[]);
+      return { tasks: tasksWithRecords, total, page, limit };
     } catch (error) {
       logger.error('获取学员任务列表失败:', error);
       throw new Error('获取学员任务列表失败');

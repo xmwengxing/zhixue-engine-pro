@@ -30,6 +30,14 @@ interface Task {
       realName: string;
     };
   };
+  /** 最近一条专项训练记录（历史任务表正确率） */
+  lastRecord?: {
+    total: number;
+    correct: number;
+    wrong: number;
+    summary: string | null;
+    createdAt: string;
+  } | null;
 }
 
 /** P3 双轨：专项类型中文标签 */
@@ -502,7 +510,7 @@ export default function TaskList() {
                 <table className="min-w-full divide-y divide-[#324467]">
                   <thead className="bg-[#1a2332]">
                     <tr>
-                      {['任务标题', '学员', '学科 / 类型', '状态', '创建时间', '操作'].map((h) => (
+                      {['任务标题', '学员', '学科 / 类型', '关联', '状态', '最近正确率', '创建时间', '操作'].map((h) => (
                         <th
                           key={h}
                           className="px-6 py-3 text-left text-xs font-medium text-[#92a4c9] uppercase tracking-wider whitespace-nowrap"
@@ -579,6 +587,33 @@ export default function TaskList() {
                                   </div>
                                 )}
                               </div>
+                            );
+                          })()}
+                        </td>
+                        {/* 关联字段：词库/题量 */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[#92a4c9]">
+                          {task.mode === 'WORD' ? (
+                            <span>
+                              {task.config?.stage === 'CET4'
+                                ? 'CET-4 词库'
+                                : `${task.config?.stage ?? ''}词库`}
+                              · {task.config?.mode === 'DICTATION' ? '听写' : task.config?.mode === 'CHOICE' ? '选择' : '默写'}
+                            </span>
+                          ) : (
+                            <span>{task.config?.questionCount ?? '—'} 题</span>
+                          )}
+                        </td>
+                        {/* 最近正确率（历史记录） */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {(() => {
+                            const last = task.lastRecord as any;
+                            if (!last) return <span className="text-[#5b6b8c]">—</span>;
+                            const rate = last.total > 0 ? Math.round((last.correct / Math.max(1, last.correct + last.wrong)) * 100) : 0;
+                            return (
+                              <span className={rate >= 60 ? 'text-green-400' : 'text-amber-300'}>
+                                {rate}%
+                                <span className="text-[#5b6b8c] ml-1">（{new Date(last.createdAt).toLocaleDateString('zh-CN')}）</span>
+                              </span>
                             );
                           })()}
                         </td>

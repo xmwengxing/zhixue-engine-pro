@@ -15,7 +15,7 @@ export interface Task {
     questionCount: number;
     difficulty: number;
     // 单词任务配置（mode=WORD）
-    mode?: 'DICTATION' | 'SPELLING';
+    mode?: 'DICTATION' | 'SPELLING' | 'CHOICE';
     stage?: string;
     orderMode?: 'SEQUENCE' | 'RANDOM';
     groupSize?: number;
@@ -34,6 +34,14 @@ export interface Task {
   category?: 'SUBJECT_MAIN' | 'SPECIAL';
   subject?: string | null;
   specialType?: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER' | 'WORD' | null;
+  /** 最近一条专项训练记录（历史任务表正确率/摘要） */
+  lastRecord?: {
+    total: number;
+    correct: number;
+    wrong: number;
+    summary: string | null;
+    createdAt: string;
+  } | null;
 }
 
 export interface Question {

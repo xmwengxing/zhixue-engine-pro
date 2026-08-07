@@ -258,8 +258,12 @@ export class ParentTaskService {
         };
       });
 
+      // 附带最近专项训练记录（历史任务表正确率/摘要）
+      const { attachLastRecords } = await import('./taskDeletionService');
+      const listWithRecords = await attachLastRecords(list);
+
       return {
-        tasks: list,
+        tasks: listWithRecords,
         total,
         page,
         limit,
@@ -1728,94 +1732,24 @@ export class ParentTaskService {
    */
   async deleteTask(taskId: string, parentId: string) {
     try {
-      // 查询任务，包含学员信息
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        include: {
-          student: true, // 包含学员信息，检查学员是否被删除
-          trainingSessions: {
-            select: {
-              id: true,
-              status: true,
-            },
-          },
-        },
-      });
-
-      if (!task) {
-        throw new Error('任务不存在');
-      }
-
+      const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true, createdBy: true } });
+      if (!task) throw new Error('任务不存在');
       // 验证权限：亲子关系 或 本人创建（学员被删/解绑后仍可清理自己建的任务）
       const boundStudentIds = await this.getBoundStudentIds(parentId);
       if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
         throw new Error('无权删除该任务');
       }
-
-      // 检查学员是否已被删除
-      const studentDeleted = !task.student || task.student.status === 'DELETED';
-
-      // 删除限制口径（放宽）：
-      // 仅当「学员仍存在」且「存在 ACTIVE 训练会话」时禁止删除。
-      // 说明：历史上按 status === 'IN_PROGRESS' 拦截，会导致大量「孤儿任务」
-      // （如冒烟测试遗留、会话已中断但状态未回写）永远无法清理。
-      if (!studentDeleted) {
-        const hasActiveSessions = task.trainingSessions.some(
-          (session) => session.status === 'ACTIVE'
-        );
-
-        if (hasActiveSessions) {
-          throw new Error('该任务有正在进行的训练会话，请让学员先结束训练后再删除');
-        }
-      } else {
-        logger.info(`任务 ${taskId} 的学员已被删除，允许删除任务`);
-      }
-
-      // Prisma schema 未配置 onDelete: Cascade，需手动按依赖顺序清理
-      const sessionIds = task.trainingSessions.map((s) => s.id);
-
-      await prisma.$transaction(async (tx) => {
-        if (sessionIds.length > 0) {
-          const answers = await tx.answer.findMany({
-            where: { sessionId: { in: sessionIds } },
-            select: { id: true },
-          });
-          const answerIds = answers.map((a) => a.id);
-
-          if (answerIds.length > 0) {
-            // 错题引用答题记录，需先删除
-            await tx.errorQuestion.deleteMany({ where: { answerId: { in: answerIds } } });
-            await tx.answer.deleteMany({ where: { id: { in: answerIds } } });
-          }
-
-          await tx.aIConversation.deleteMany({ where: { sessionId: { in: sessionIds } } });
-        }
-
-        // 报告同时引用 task 与 session
-        await tx.report.deleteMany({ where: { taskId } });
-
-        if (sessionIds.length > 0) {
-          await tx.trainingSession.deleteMany({ where: { id: { in: sessionIds } } });
-        }
-
-        await tx.task.delete({ where: { id: taskId } });
-      });
-
-      logger.info(`任务删除成功: ${taskId}, 家长: ${parentId}${studentDeleted ? ' (学员已删除)' : ''}`);
-
-      return {
-        success: true,
-        message: '任务删除成功',
-      };
-    } catch (error) {
+      // 复用公共删除逻辑（含 WordSession/SpecialTaskRecord/归档等依赖清理，保留积分流水）
+      const { deleteTaskWithDeps } = await import('./taskDeletionService');
+      const result = await deleteTaskWithDeps(taskId, { checkActive: true });
+      logger.info(`任务删除成功: ${taskId}, 家长: ${parentId}`);
+      return result;
+    } catch (error: any) {
       logger.error('删除任务失败:', error);
       throw error;
     }
   }
 
-  /**
-   * 设置家长激励寄语（存储于 task.config.parentEncouragement）
-   */
   async setEncouragement(taskId: string, parentId: string, message: string) {
     const task = await prisma.task.findUnique({ where: { id: taskId } });
 

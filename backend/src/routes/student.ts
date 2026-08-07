@@ -462,3 +462,13 @@ export default router;
 router.get('/special-records', (req, res, next) =>
   specialTaskRecordController.studentListRecords(req, res, next)
 );
+
+
+/**
+ * @route   DELETE /api/student/special-tasks/:id
+ * @desc    删除学员自建专项任务（进行中会话拦截；积分流水保留）
+ * @access  Student
+ */
+router.delete('/special-tasks/:id', (req, res, next) =>
+  studentTrainingController.deleteSpecialTask(req, res, next)
+);

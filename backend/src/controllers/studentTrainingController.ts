@@ -145,6 +145,35 @@ export const createSpecialTask = async (
   }
 };
 
+/** 删除专项任务（仅本人创建；进行中会话拦截；积分流水保留）DELETE /api/student/special-tasks/:id */
+export const deleteSpecialTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未授权访问' } });
+      return;
+    }
+    const taskId = String(req.params.id);
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, createdBy: true, category: true } });
+    await prisma.$disconnect();
+    if (!task) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      return;
+    }
+    if (task.createdBy !== studentId || task.category !== 'SPECIAL') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: '只能删除自己创建的专项任务' } });
+      return;
+    }
+    const { deleteTaskWithDeps } = await import('../services/taskDeletionService');
+    const result = await deleteTaskWithDeps(taskId, { checkActive: true });
+    res.json({ success: true, data: result });
+  } catch (e) {
+    next(e);
+  }
+};
+
 /**
  * 开始训练
  * POST /api/student/training/start/:taskId
