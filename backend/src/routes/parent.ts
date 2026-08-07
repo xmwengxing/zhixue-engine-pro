@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { parentChildController } from '../controllers/parentChildController';
 import { parentOverviewController } from '../controllers/parentOverviewController';
+import { specialTaskRecordController } from '../controllers/specialTaskRecordController';
 import { parentTaskController } from '../controllers/parentTaskController';
 import { parentReportController } from '../controllers/parentReportController';
 import { parentWishController } from '../controllers/parentWishController';
@@ -541,3 +542,13 @@ router.post('/points/appeals/:appealId/review', (req, res, next) =>
 );
 
 export default router;
+
+
+/**
+ * @route   GET /api/parent/children/:studentId/special-records
+ * @desc    专项攻克任务训练记录明细（家长端）
+ * @access  Parent（校验亲子关系）
+ */
+router.get('/children/:studentId/special-records', (req, res, next) =>
+  specialTaskRecordController.parentListRecords(req, res, next)
+);

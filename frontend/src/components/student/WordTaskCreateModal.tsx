@@ -14,7 +14,7 @@ export const WordTaskCreateModal = ({
 }) => {
   const [mode, setMode] = useState<'DICTATION' | 'SPELLING' | 'CHOICE'>('DICTATION');
   const [stage, setStage] = useState('初中');
-  const [stages, setStages] = useState<Array<{ stage: string; count: number; label?: string }>>([]);
+  const [stages, setStages] = useState<Array<{ stage: string; count: number; label?: string; dueToday?: number }>>([]);
   const [orderMode, setOrderMode] = useState<'SEQUENCE' | 'RANDOM'>('SEQUENCE');
   const [groupSize, setGroupSize] = useState(2);
   const [intervalSec, setIntervalSec] = useState(5);
@@ -69,6 +69,9 @@ export const WordTaskCreateModal = ({
     }
   };
 
+  // 到期复习提醒（每日复习配额：到期单词每天复习一轮，见后端 pickWords）
+  const dueTotal = stages.reduce((acc, s) => acc + (s.dueToday || 0), 0);
+
   if (!open) return null;
 
   return (
@@ -86,6 +89,12 @@ export const WordTaskCreateModal = ({
           </div>
 
           <div className="space-y-4">
+            {/* 到期复习提醒（每日配额） */}
+            {dueTotal > 0 && (
+              <div className="p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 text-sm text-amber-300">
+                🦆 今日共有 <span className="font-bold">{dueTotal}</span> 个单词待复习，训练时会优先安排（每个词每天最多复习一轮）
+              </div>
+            )}
             {/* 模式 */}
             <div>
               <label className={labelCls}>模式</label>

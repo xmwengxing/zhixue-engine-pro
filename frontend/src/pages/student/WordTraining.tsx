@@ -15,6 +15,7 @@ interface WordItem {
   id: string;
   word: string;
   phonetic: string;
+  pos: string;
   meaning: string;
   /** CHOICE 选择模式：4 选 1 中文释义选项（后端生成） */
   options?: Array<{ text: string; correct: boolean }>;
@@ -271,6 +272,7 @@ export default function WordTraining() {
       const res = await request.post('/student/word-task/cloze/check', {
         answer: q.answer,
         input: clozeInput,
+        sessionId,
       });
       const correct = res.data?.correct === true;
       setClozeFeedback({ correct, answer: q.answer });
@@ -506,18 +508,32 @@ export default function WordTraining() {
                 <p className="mt-3 text-[#5b6b8c] text-sm">点击喇叭重新播放发音</p>
               </div>
             ) : isChoice ? (
-              /* CHOICE：显示英文单词 + 音标，4 选 1 中文释义 */
+              /* CHOICE：显示英文单词 + 音标 + 词性，4 选 1 中文释义 */
               <div className="text-center mb-6">
-                <p className="text-xl text-white">{currentWord.word}</p>
+                <p className="text-xl text-white">
+                  {currentWord.word}
+                  {currentWord.pos && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 align-middle">
+                      {currentWord.pos}
+                    </span>
+                  )}
+                </p>
                 {currentWord.phonetic && (
                   <p className="mt-1 text-[#5b6b8c] text-sm">/ {currentWord.phonetic} /</p>
                 )}
                 <p className="mt-1 text-[#5b6b8c] text-sm">请选择该单词的正确释义</p>
               </div>
             ) : (
-              /* SPELLING：显示中文释义，输入英文 */
+              /* SPELLING：显示中文释义 + 词性，输入英文 */
               <div className="text-center mb-6">
-                <p className="text-xl text-white">{currentWord.meaning}</p>
+                <p className="text-xl text-white">
+                  {currentWord.meaning}
+                  {currentWord.pos && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 align-middle">
+                      {currentWord.pos}
+                    </span>
+                  )}
+                </p>
                 {currentWord.phonetic && (
                   <p className="mt-1 text-[#5b6b8c] text-sm">/ {currentWord.phonetic} /</p>
                 )}

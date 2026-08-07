@@ -12,7 +12,7 @@ function unauthorized(res: Response) {
 export const getStages = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user?.userId) { unauthorized(res); return; }
-    const stages = await wordTaskService.getWordStages();
+    const stages = await wordTaskService.getWordStages(req.user?.userId);
     res.json({ success: true, data: stages });
   } catch (e) {
     next(e);
@@ -74,13 +74,17 @@ export const submitWord = async (req: Request, res: Response, next: NextFunction
         ? wordTaskService.checkWordInput(input, word.meaning)
         : wordTaskService.checkWordInput(input, word.word);
     await wordTaskService.recordWordResult(studentId, word.id, correct);
-    // 推进进度 + 记录组内已答（逐词落库）
+    // 推进进度 + 记录组内已答（逐词落库）+ 会话统计（供历史记录）
     const doneInGroup: string[] = Array.isArray(session.doneInGroup) ? (session.doneInGroup as string[]) : [];
     if (!doneInGroup.includes(word.id)) doneInGroup.push(word.id);
     const nextIndex = Math.min(session.index + 1, session.total);
+    const stats: { wordsCorrect: number; wordsWrong: number; clozeCorrect: number; clozeTotal: number } =
+      (session.stats as any) || { wordsCorrect: 0, wordsWrong: 0, clozeCorrect: 0, clozeTotal: 0 };
+    if (correct) stats.wordsCorrect += 1;
+    else stats.wordsWrong += 1;
     await prisma.wordSession.update({
       where: { id: session.id },
-      data: { index: nextIndex, doneInGroup },
+      data: { index: nextIndex, doneInGroup, stats },
     });
 
     // 积分：答对 1 词 +1（词汇量×准确率）；复习旧词答对 +2（幂等）
@@ -225,8 +229,23 @@ export const clozeCheck = async (req: Request, res: Response, next: NextFunction
   try {
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
-    const { answer, input } = req.body ?? {};
+    const { answer, input, sessionId } = req.body ?? {};
     const correct = wordTaskService.checkClozeAnswer(String(input ?? ''), String(answer ?? ''));
+    // 记录填空统计（供历史记录）
+    if (sessionId) {
+      try {
+        const session = await prisma.wordSession.findFirst({ where: { id: String(sessionId), studentId } });
+        if (session) {
+          const stats: { wordsCorrect: number; wordsWrong: number; clozeCorrect: number; clozeTotal: number } =
+            (session.stats as any) || { wordsCorrect: 0, wordsWrong: 0, clozeCorrect: 0, clozeTotal: 0 };
+          stats.clozeTotal += 1;
+          if (correct) stats.clozeCorrect += 1;
+          await prisma.wordSession.update({ where: { id: session.id }, data: { stats } });
+        }
+      } catch {
+        /* 统计失败不影响判分 */
+      }
+    }
     res.json({ success: true, data: { correct, answer } });
   } catch (e) {
     next(e);
@@ -256,6 +275,35 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
     // 任务状态同步：填空完成 → 任务 COMPLETED；仅保存进度 → 保持 IN_PROGRESS
     if (completed) {
       await prisma.task.update({ where: { id: session.taskId }, data: { status: 'COMPLETED' } });
+      // 生成训练历史记录（每次短语填空完成一条）
+      try {
+        const task = await prisma.task.findUnique({ where: { id: session.taskId }, select: { specialType: true } });
+        const stats: { wordsCorrect: number; wordsWrong: number; clozeCorrect: number; clozeTotal: number } =
+          (session.stats as any) || { wordsCorrect: 0, wordsWrong: 0, clozeCorrect: 0, clozeTotal: 0 };
+        const total = session.total || 0;
+        const correct = stats.wordsCorrect || 0;
+        const wrong = stats.wordsWrong || 0;
+        const durationSec = Math.round((Date.now() - new Date(session.createdAt).getTime()) / 1000);
+        const rate = total > 0 ? Math.round((correct / Math.max(1, correct + wrong)) * 100) : 0;
+        const summary = `完成 ${total} 词，答对 ${correct}，短语填空 ${stats.clozeCorrect}/${stats.clozeTotal || total}`;
+        await prisma.specialTaskRecord.create({
+          data: {
+            taskId: session.taskId,
+            studentId,
+            specialType: task?.specialType || 'WORD',
+            mode: session.mode,
+            total,
+            correct,
+            wrong,
+            clozeTotal: stats.clozeTotal || 0,
+            clozeCorrect: stats.clozeCorrect || 0,
+            durationSec: Math.max(1, durationSec),
+            summary: `${summary}（正确率 ${rate}%）`,
+          },
+        });
+      } catch (recordError) {
+        console.error('单词训练记录生成失败:', recordError);
+      }
     }
     res.json({ success: true, data: { status: 'OK' } });
   } catch (e) {
@@ -319,7 +367,7 @@ export const tts = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-async function loadWords(ids: string[]): Promise<Array<{ id: string; word: string; phonetic: string; meaning: string }>> {
+async function loadWords(ids: string[]): Promise<Array<{ id: string; word: string; phonetic: string; pos: string; meaning: string }>> {
   if (!ids.length) return [];
   const rows = await prisma.word.findMany({ where: { id: { in: ids } } });
   // 保持组内顺序
@@ -327,9 +375,9 @@ async function loadWords(ids: string[]): Promise<Array<{ id: string; word: strin
   return ids
     .map((id) => {
       const w = map.get(id);
-      return w ? { id: w.id, word: w.word, phonetic: w.phonetic, meaning: w.meaning } : null;
+      return w ? { id: w.id, word: w.word, phonetic: w.phonetic, pos: w.pos || "", meaning: w.meaning } : null;
     })
-    .filter((x): x is { id: string; word: string; phonetic: string; meaning: string } => x !== null);
+    .filter((x): x is { id: string; word: string; phonetic: string; pos: string; meaning: string } => x !== null);
 }
 
 

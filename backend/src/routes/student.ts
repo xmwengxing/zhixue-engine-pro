@@ -13,6 +13,7 @@ import * as adminMaterialController from '../controllers/adminMaterialController
 import { parentTaskController } from '../controllers/parentTaskController';
 import { wordTaskController } from '../controllers/wordTaskController';
 import { dailyCalendarController } from '../controllers/dailyCalendarController';
+import { specialTaskRecordController } from '../controllers/specialTaskRecordController';
 import { pointsController } from '../controllers/pointsController';
 import aiStreamRouter from './aiStream';
 import { idempotencyMiddleware } from '../middlewares/idempotency';
@@ -450,3 +451,14 @@ router.get('/wishes/:id', studentWishController.getWish.bind(studentWishControll
 router.post('/wishes/:id/confirm', studentWishController.confirmWish.bind(studentWishController));
 
 export default router;
+
+
+/**
+ * @route   GET /api/student/special-records
+ * @desc    专项攻克任务训练记录明细（单词每轮短语填空一条；其他专项整卷一条）
+ * @access  Student
+ * @query   taskId / specialType / page / limit
+ */
+router.get('/special-records', (req, res, next) =>
+  specialTaskRecordController.studentListRecords(req, res, next)
+);

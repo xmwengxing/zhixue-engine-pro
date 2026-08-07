@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Badge, Empty, Loading } from '../../components/shared';
+import request from '../../utils/request';
 import { getStudentTasks, type Task } from '../../services/studentTrainingService';
 import StudentSpecialTaskModal from '../../components/student/StudentSpecialTaskModal';
 import WordTaskCreateModal from '../../components/student/WordTaskCreateModal';
@@ -30,6 +31,41 @@ export const TaskCenter = () => {
   const [mistakesOpen, setMistakesOpen] = useState(false);
   const [mistakes, setMistakes] = useState<Array<{ word: string; meaning: string; wrongCount: number; nextReviewAt: string | null }>>([]);
   const [mistakesLoading, setMistakesLoading] = useState(false);
+  // 专项任务历史记录（V2）
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [recordsFor, setRecordsFor] = useState<Task | null>(null);
+  const [records, setRecords] = useState<Array<{
+    id: string;
+    specialType: string;
+    mode: string;
+    total: number;
+    correct: number;
+    wrong: number;
+    clozeTotal: number;
+    clozeCorrect: number;
+    durationSec: number;
+    summary: string | null;
+    createdAt: string;
+  }>>([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+
+  /** 加载专项任务历史记录 */
+  const loadRecords = async (task: Task) => {
+    setRecordsOpen(true);
+    setRecordsFor(task);
+    setRecordsLoading(true);
+    setRecords([]);
+    try {
+      const res = await request.get<{ success: boolean; data: { items: typeof records } }>(
+        `/student/special-records?taskId=${task.id}&limit=50`
+      );
+      setRecords(res.data.items || []);
+    } catch {
+      setRecords([]);
+    } finally {
+      setRecordsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadTasks();
@@ -188,7 +224,16 @@ export const TaskCenter = () => {
           </div>
 
           {/* 操作按钮 */}
-          <div className="mt-auto">
+          <div className="mt-auto flex flex-col gap-2">
+            {isSpecial && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => void loadRecords(task)}
+              >
+                历史记录
+              </Button>
+            )}
             {task.status === 'COMPLETED' ? (
               <Button
                 variant="outline"
@@ -446,6 +491,49 @@ export const TaskCenter = () => {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 专项任务历史记录弹窗（V2） */}
+      {recordsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setRecordsOpen(false)}>
+          <div className="max-w-2xl w-full bg-[#232f48] border border-[#324467] rounded-lg shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-[#324467]">
+              <div>
+                <h3 className="text-lg font-medium text-white">训练历史记录</h3>
+                <p className="text-xs text-[#5b6b8c] mt-0.5">{recordsFor?.title}</p>
+              </div>
+              <button onClick={() => setRecordsOpen(false)} className="text-[#5b6b8c] hover:text-white text-xl leading-none">×</button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              {recordsLoading ? (
+                <p className="text-sm text-[#5b6b8c] text-center py-8">加载中…</p>
+              ) : records.length === 0 ? (
+                <p className="text-sm text-[#5b6b8c] text-center py-8">暂无训练记录（完成一轮训练后生成）</p>
+              ) : (
+                <div className="space-y-2">
+                  {records.map((r) => (
+                    <div key={r.id} className="rounded-lg bg-[#1a2332] border border-[#324467] p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white font-medium">{r.summary || `${r.specialType} 训练`}</span>
+                        <span className="text-xs text-[#5b6b8c]">
+                          {new Date(r.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1.5 text-xs text-[#92a4c9]">
+                        <span>模式：{r.mode === 'EXAM_PAPER' ? '整卷' : r.mode === 'DICTATION' ? '听写' : r.mode === 'SPELLING' ? '默写' : r.mode === 'CHOICE' ? '选择' : r.mode}</span>
+                        <span>题/词：{r.total}</span>
+                        <span className="text-green-400">对 {r.correct}</span>
+                        {r.wrong > 0 && <span className="text-red-300">错 {r.wrong}</span>}
+                        {r.clozeTotal > 0 && <span>填空 {r.clozeCorrect}/{r.clozeTotal}</span>}
+                        <span>耗时 {Math.floor(r.durationSec / 60)}分{r.durationSec % 60}秒</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

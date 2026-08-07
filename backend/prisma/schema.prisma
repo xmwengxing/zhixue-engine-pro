@@ -818,6 +818,7 @@ model Word {
   stage     String   // 小学 | 初中 | 高中
   word      String   // 单词（小写）
   phonetic  String   @default("") // 音标（PDF 破损可空）
+  pos       String   @default("") // 词性（v./n./adj.…，CET4 库有值）
   meaning   String   // 中文释义
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -836,6 +837,7 @@ model WordMistake {
   correctCount Int       @default(0) @map("correct_count") // 累计正确次数
   level        Int       @default(0) // 掌握层级 0=新词 1..7（艾宾浩斯档位）
   lastWrongAt  DateTime? @map("last_wrong_at")
+  reviewedAt   DateTime? @map("reviewed_at") // 最近复习时间（每日复习配额：当天复习过的不再抽）
   nextReviewAt DateTime? @map("next_review_at") // 下次复习时间
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -859,12 +861,36 @@ model WordSession {
   status    String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
   clozeJson Json?    @map("cloze_json") // 已生成的短语填空（未完成可恢复）
   clozeDone Boolean  @default(false) @map("cloze_done")
+  stats      Json?    @map("stats") // 本次会话统计 { wordsCorrect, wordsWrong, clozeCorrect, clozeTotal }（供历史记录）
   doneInGroup Json?  @map("done_in_group") // 当前组内已答 wordId（逐词落库，组中途退出可恢复）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([studentId, status])
   @@map("word_sessions")
+}
+
+// 专项攻克任务训练记录（V2）：每轮训练完成生成一条，供历史记录明细查询
+// - WORD：每次短语填空（CLOZE）完成后生成
+// - 其他专项（UNIT/KNOWLEDGE_POINT/ERROR_BOOK/PAPER）：整卷提交完成时生成
+model SpecialTaskRecord {
+  id           String   @id @default(uuid())
+  taskId       String   @map("task_id")
+  studentId    String   @map("student_id")
+  specialType  String   @map("special_type") // UNIT | KNOWLEDGE_POINT | ERROR_BOOK | PAPER | WORD
+  mode         String   @default("") // 训练模式：EXAM_PAPER / DICTATION | SPELLING | CHOICE
+  total        Int      @default(0) // 本轮回合数/词数
+  correct      Int      @default(0)
+  wrong        Int      @default(0)
+  clozeTotal   Int      @default(0) @map("cloze_total") // 单词专用：短语填空数
+  clozeCorrect Int      @default(0) @map("cloze_correct") // 单词专用：短语填空答对数
+  durationSec  Int      @default(0) @map("duration_sec") // 本轮回合耗时（秒）
+  summary      String?  // 简述（如：完成 20 词，正确 16，短语填空 5/6）
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@index([studentId, specialType])
+  @@map("special_task_records")
 }
 
 // 学科总任务每日训练记录（日程表 + 每日体量约束达标判定）

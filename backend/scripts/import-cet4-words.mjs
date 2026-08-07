@@ -29,7 +29,9 @@ function parseWords(md) {
     const meaning = m[4].trim();
     if (!word || !meaning || seen.has(word)) continue;
     seen.add(word);
-    words.push({ word, phonetic, meaning: (pos ? pos + ' ' : '') + meaning });
+    // 词性字段化：pos 单独存；meaning 仅释义（CET4 原 md 的释义可能仍带前缀，清理一次）
+    const cleanMeaning = meaning.replace(/^(v|n|adj|adv|prep|conj|pron|num|art|int|abbr|vt|vi|aux|modal|det).?s+/i, '');
+    words.push({ word, phonetic, pos, meaning: cleanMeaning });
   }
   return words;
 }
@@ -64,10 +66,10 @@ async function main() {
       select: { id: true },
     });
     if (existing) {
-      await prisma.word.update({ where: { id: existing.id }, data: { phonetic: w.phonetic, meaning: w.meaning } });
+      await prisma.word.update({ where: { id: existing.id }, data: { phonetic: w.phonetic, pos: w.pos || '', meaning: w.meaning } });
       updated++;
     } else {
-      await prisma.word.create({ data: { stage: STAGE, word: w.word, phonetic: w.phonetic, meaning: w.meaning } });
+      await prisma.word.create({ data: { stage: STAGE, word: w.word, phonetic: w.phonetic, pos: w.pos || '', meaning: w.meaning } });
       created++;
     }
     if ((i + 1) % 500 === 0) console.log(`  已处理 ${i + 1}/${words.length}...`);

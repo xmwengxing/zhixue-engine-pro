@@ -78,12 +78,41 @@ export async function ensureWordTeacherInstruction(): Promise<{
 }
 
 /** 词库阶段概览（动态：读库内实际 stage，自动包含 CET4 等新词库） */
-export async function getWordStages() {
+export async function getWordStages(studentId?: string) {
   const groups = await prisma.word.groupBy({ by: ['stage'], _count: { _all: true } });
   const order = ['小学', '初中', '高中', 'CET4'];
   const labels: Record<string, string> = { CET4: '英语四级词汇表 (CET-4) 完整版' };
+  // 到期提醒：当前学员各词库今日待复习数（nextReviewAt<=now、level<7、今天未复习）
+  let dueMap: Record<string, number> = {};
+  if (studentId) {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const due = await prisma.wordMistake.groupBy({
+      by: ['wordId'],
+      where: {
+        studentId,
+        nextReviewAt: { lte: now },
+        level: { gt: 0, lt: 7 },
+        OR: [{ reviewedAt: null }, { reviewedAt: { lt: todayStart } }],
+      },
+      _count: { _all: true },
+    });
+    const ids = due.map((d) => d.wordId);
+    if (ids.length > 0) {
+      const words = await prisma.word.findMany({ where: { id: { in: ids } }, select: { id: true, stage: true } });
+      dueMap = words.reduce((acc, w) => {
+        acc[w.stage] = (acc[w.stage] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    }
+  }
   return groups
-    .map((g) => ({ stage: g.stage, count: g._count._all, label: labels[g.stage] || g.stage }))
+    .map((g) => ({
+      stage: g.stage,
+      count: g._count._all,
+      label: labels[g.stage] || g.stage,
+      dueToday: dueMap[g.stage] || 0,
+    }))
     .sort((a, b) => {
       const ia = order.indexOf(a.stage);
       const ib = order.indexOf(b.stage);
@@ -99,10 +128,19 @@ export async function pickWords(
   roundSize: number
 ): Promise<string[]> {
   const now = new Date();
-  // 1) 到期错词（nextReviewAt <= now；level=7 视为已掌握，不再强制复习）
+  // 每日复习配额：当天（自然日 0 点起）已复习过的词不再重复抽取，防止到期堆积
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // 1) 到期错词（nextReviewAt <= now；level=7 视为已掌握不再复习；今天已复习过的不抽）
+  //    错词加权：按逾期程度优先，其次错误次数多的优先
   const dueMistakes = await prisma.wordMistake.findMany({
-    where: { studentId, word: { stage }, nextReviewAt: { lte: now }, level: { gt: 0, lt: 7 } },
-    orderBy: { nextReviewAt: 'asc' },
+    where: {
+      studentId,
+      word: { stage },
+      nextReviewAt: { lte: now },
+      level: { gt: 0, lt: 7 },
+      OR: [{ reviewedAt: null }, { reviewedAt: { lt: todayStart } }],
+    },
+    orderBy: [{ nextReviewAt: 'asc' }, { wrongCount: 'desc' }],
     select: { wordId: true },
   });
   const dueIds = dueMistakes.map((m) => m.wordId);
@@ -138,6 +176,7 @@ export async function recordWordResult(
   wordId: string,
   correct: boolean
 ): Promise<void> {
+  const now = new Date();
   const existing = await prisma.wordMistake.findUnique({
     where: { studentId_wordId: { studentId, wordId } },
   });
@@ -153,11 +192,13 @@ export async function recordWordResult(
         correctCount: 1,
         level: nextLevel,
         nextReviewAt: nextLevel >= 7 ? null : nextReviewAt,
+        reviewedAt: now,
       },
       update: {
         correctCount: { increment: 1 },
         level: nextLevel,
         nextReviewAt,
+        reviewedAt: now,
       },
     });
   } else {
@@ -168,14 +209,16 @@ export async function recordWordResult(
         wordId,
         wrongCount: 1,
         level: 1,
-        lastWrongAt: new Date(),
-        nextReviewAt: new Date(Date.now() + EBBINGHAUS_INTERVALS_MS[1]),
+        lastWrongAt: now,
+        nextReviewAt: new Date(now.getTime() + EBBINGHAUS_INTERVALS_MS[1]),
+        reviewedAt: now,
       },
       update: {
         wrongCount: { increment: 1 },
         level: 1,
-        lastWrongAt: new Date(),
-        nextReviewAt: new Date(Date.now() + EBBINGHAUS_INTERVALS_MS[1]),
+        lastWrongAt: now,
+        nextReviewAt: new Date(now.getTime() + EBBINGHAUS_INTERVALS_MS[1]),
+        reviewedAt: now,
       },
     });
   }
@@ -235,7 +278,7 @@ export function checkWordInput(input: string, word: string): boolean {
 export async function attachChoiceOptions(
   words: Array<{ id: string; word: string; phonetic: string; meaning: string }>,
   stage: string
-): Promise<Array<{ id: string; word: string; phonetic: string; meaning: string; options: Array<{ text: string; correct: boolean }> }>> {
+): Promise<Array<{ id: string; word: string; phonetic: string; pos: string; meaning: string; options: Array<{ text: string; correct: boolean }> }>> {
   const meanings = new Set(words.map((w) => w.meaning.trim()));
   const distractors: string[] = [];
   if (distractors.length < 3) {
@@ -267,7 +310,7 @@ export async function attachChoiceOptions(
       const j = Math.floor(Math.random() * (i + 1));
       [opts[i], opts[j]] = [opts[j], opts[i]];
     }
-    return { ...w, options: opts };
+    return { ...w, pos: (w as any).pos || "", options: opts };
   });
 }
 
@@ -282,7 +325,19 @@ export interface ClozeQuestion {
 /** 调用 AI 词汇老师生成短语填空题（实时、不入题库） */
 export async function generateCloze(learnedWords: Array<{ word: string; meaning: string }>): Promise<ClozeQuestion[]> {
   if (learnedWords.length === 0) throw new Error('没有可出题的单词');
-  const teacher = await ensureWordTeacherInstruction();
+  // 模板兜底：AI 词汇老师不可用时按词义生成基础填空题，保证训练流程不中断
+  const fallback = (): ClozeQuestion[] =>
+    learnedWords.slice(0, 10).map((w) => ({
+      sentence: `请写出与「${w.meaning}」对应的英文单词：____`,
+      answer: w.word,
+      hint: `目标单词：${w.word}（首字母 ${w.word.charAt(0).toUpperCase()}）`,
+    }));
+  let teacher: { systemPrompt: string } | null = null;
+  try {
+    teacher = await ensureWordTeacherInstruction();
+  } catch {
+    return fallback();
+  }
   const wordList = learnedWords
     .slice(0, 10)
     .map((w) => `${w.word}（${w.meaning}）`)
@@ -293,37 +348,36 @@ export async function generateCloze(learnedWords: Array<{ word: string; meaning:
     raw = await aiServiceManager.callAI(prompt, {
       temperature: 0.4,
       maxTokens: 3000,
-      timeout: 150000, // 本地 9B 出题实测 44~93s，放宽到 150s
-      maxRetries: 0, // 慢生成重试只会重复耗时
+      timeout: 150000,
+      maxRetries: 1,
       systemPrompt: teacher.systemPrompt,
-      providerName: process.env.WORD_CLOZE_PROVIDER || 'Ollama-Vocab', // 词汇老师专用（Qwopus Q4，更快更稳）
+      // 词汇老师：默认走全局优先级 AI 服务商（当前 sensenova），不再硬编码本地 Ollama
     });
   } catch (e: any) {
-    logger.warn('[word] AI 词汇老师出题失败:', e.message);
-    throw new Error('AI 词汇老师暂时无法出题，请稍后重试');
+    logger.warn('[word] AI 词汇老师出题失败，使用模板兜底:', e.message);
+    return fallback();
   }
-  // 容错解析 JSON 数组
   const cleaned = (raw || '')
     .replace(/```(?:json)?/gi, '')
     .replace(/```/g, '')
     .trim();
   const start = cleaned.indexOf('[');
   const end = cleaned.lastIndexOf(']');
-  if (start < 0 || end <= start) throw new Error('AI 词汇老师返回格式异常');
+  if (start < 0 || end <= start) return fallback();
   let list: unknown;
   try {
     list = JSON.parse(cleaned.slice(start, end + 1));
   } catch {
-    throw new Error('AI 词汇老师返回格式异常');
+    return fallback();
   }
-  if (!Array.isArray(list) || list.length === 0) throw new Error('AI 词汇老师未返回题目');
-  return list
+  if (!Array.isArray(list) || list.length === 0) return fallback();
+  const questions = list
     .filter((q: any) => q && typeof q.sentence === 'string' && typeof q.answer === 'string')
     .slice(0, 10)
     .map((q: any) => ({ sentence: q.sentence, answer: q.answer, hint: q.hint }));
+  return questions.length > 0 ? questions : fallback();
 }
 
-/** 短语填空题判定：忽略大小写与空白 */
 export function checkClozeAnswer(input: string, answer: string): boolean {
   return (input || '').trim().toLowerCase() === (answer || '').trim().toLowerCase();
 }

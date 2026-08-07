@@ -195,6 +195,30 @@ export async function gradeExamPaper(
   });
   await prisma.task.update({ where: { id: session.taskId }, data: { status: 'COMPLETED' } });
 
+  // 专项攻克任务历史记录（非单词专项：整卷提交完成生成一条；单词走 wordTaskController）
+  try {
+    const task = await prisma.task.findUnique({ where: { id: session.taskId }, select: { specialType: true } });
+    if (task?.specialType && task.specialType !== 'WORD') {
+      const durationSec = Math.round((Date.now() - new Date(session.startedAt).getTime()) / 1000);
+      const rate = items.length > 0 ? Math.round((correctCount / items.length) * 100) : 0;
+      await prisma.specialTaskRecord.create({
+        data: {
+          taskId: session.taskId,
+          studentId: session.studentId,
+          specialType: task.specialType,
+          mode: 'EXAM_PAPER',
+          total: items.length,
+          correct: correctCount,
+          wrong: Math.max(0, items.length - correctCount),
+          durationSec: Math.max(1, durationSec),
+          summary: `完成 ${items.length} 题，答对 ${correctCount}，得分 ${totalScore}/${maxScore}（正确率 ${rate}%）`,
+        },
+      });
+    }
+  } catch (recordError) {
+    console.error('专项训练记录生成失败:', recordError);
+  }
+
   logger.info(
     `组卷任务批改完成: 会话 ${sessionId}, 正确 ${correctCount}/${items.length}, 得分 ${totalScore}/${maxScore}`
   );
