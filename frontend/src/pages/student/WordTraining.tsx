@@ -16,6 +16,8 @@ interface WordItem {
   word: string;
   phonetic: string;
   meaning: string;
+  /** CHOICE 选择模式：4 选 1 中文释义选项（后端生成） */
+  options?: Array<{ text: string; correct: boolean }>;
 }
 
 interface ClozeItem {
@@ -25,7 +27,7 @@ interface ClozeItem {
 }
 
 interface WordConfig {
-  mode: 'DICTATION' | 'SPELLING';
+  mode: 'DICTATION' | 'SPELLING' | 'CHOICE';
   stage: string;
   orderMode: string;
   groupSize: number;
@@ -190,17 +192,21 @@ export default function WordTraining() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.mode, currentWord?.id, phase, countingDown]);
 
-  const submitWord = () => {
-    if (!currentWord || !input.trim()) return;
-    const correct = input.trim().toLowerCase() === currentWord.word.trim().toLowerCase();
-    setFeedback({ word: currentWord.word, correct });
-    setResults((prev) => [...prev, { word: currentWord.word, correct, input: input.trim() }]);
+  const submitWord = (choiceText?: string) => {
+    // CHOICE 模式：choiceText 为选中释义；其余模式读输入框
+    const answer = choiceText !== undefined ? choiceText : input;
+    if (!currentWord || !answer.trim()) return;
+    // 判分基准：CHOICE 比释义；其余比单词（后端同规则，这里仅本地即时反馈）
+    const ref = config?.mode === 'CHOICE' ? currentWord.meaning : currentWord.word;
+    const correctLocal = answer.trim().toLowerCase() === ref.trim().toLowerCase();
+    setFeedback({ word: currentWord.word, correct: correctLocal });
+    setResults((prev) => [...prev, { word: currentWord.word, correct: correctLocal, input: answer }]);
     if (config?.mode === 'DICTATION') speechSynthesis.cancel();
     // 逐词落库（异步，不阻塞答题）：判定 + 错题集 + 进度推进（组中途退出可恢复）
     void request
       .post(`/student/word-task/submit-word/${sessionId}`, {
         wordId: currentWord.id,
-        input: input.trim(),
+        input: answer,
       })
       .catch(() => {
         /* 落库失败不影响本次答题 */
@@ -455,6 +461,8 @@ export default function WordTraining() {
 
   // ===== 单词训练阶段 =====
   const isDictation = config.mode === 'DICTATION';
+  const isChoice = config.mode === 'CHOICE';
+  const modeLabel = isDictation ? '听写' : isChoice ? '选择' : '默写';
   return (
     <div className="min-h-screen bg-[#111722] py-6">
       <div className="max-w-3xl mx-auto px-4">
@@ -463,7 +471,7 @@ export default function WordTraining() {
             ← 退出（保存进度）
           </button>
           <div className="text-sm text-[#92a4c9]">
-            {isDictation ? '听写' : '默写'} · 第 {groupIndex + 1}/{totalGroups || 1} 组 ·{' '}
+            {modeLabel} · 第 {groupIndex + 1}/{totalGroups || 1} 组 ·{' '}
             {wordIndex + 1}/{group.length} 词
           </div>
         </div>
@@ -497,7 +505,17 @@ export default function WordTraining() {
                 </button>
                 <p className="mt-3 text-[#5b6b8c] text-sm">点击喇叭重新播放发音</p>
               </div>
+            ) : isChoice ? (
+              /* CHOICE：显示英文单词 + 音标，4 选 1 中文释义 */
+              <div className="text-center mb-6">
+                <p className="text-xl text-white">{currentWord.word}</p>
+                {currentWord.phonetic && (
+                  <p className="mt-1 text-[#5b6b8c] text-sm">/ {currentWord.phonetic} /</p>
+                )}
+                <p className="mt-1 text-[#5b6b8c] text-sm">请选择该单词的正确释义</p>
+              </div>
             ) : (
+              /* SPELLING：显示中文释义，输入英文 */
               <div className="text-center mb-6">
                 <p className="text-xl text-white">{currentWord.meaning}</p>
                 {currentWord.phonetic && (
@@ -506,36 +524,64 @@ export default function WordTraining() {
               </div>
             )}
 
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submitWord()}
-              placeholder={isDictation ? '输入你听到的单词' : '输入对应的英文单词'}
-              className={inputCls}
-              autoFocus
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck={false}
-            />
+            {isChoice ? (
+              /* CHOICE 选择模式：4 选 1 中文释义 */
+              <div className="grid grid-cols-1 gap-3">
+                {(currentWord.options || []).map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitWord(opt.text)}
+                    disabled={!!feedback}
+                    className="px-4 py-3 rounded-lg bg-[#1a2332] border border-[#324467] text-white text-left hover:border-blue-500/60 hover:bg-[#232f48] transition-colors disabled:opacity-50"
+                  >
+                    <span className="mr-2 text-[#5b6b8c]">{'ABCD'[i]}.</span>
+                    {opt.text}
+                  </button>
+                ))}
+                {feedback && (
+                  <p
+                    className={`mt-1 text-center text-lg ${
+                      feedback.correct ? 'text-green-400' : 'text-red-300'
+                    }`}
+                  >
+                    {feedback.correct ? '✓ 正确！' : `✗ 正确答案：${currentWord.meaning}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && submitWord()}
+                  placeholder={isDictation ? '输入你听到的单词' : '输入对应的英文单词'}
+                  className={inputCls}
+                  autoFocus
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                />
 
-            {feedback && (
-              <p
-                className={`mt-3 text-center text-lg ${
-                  feedback.correct ? 'text-green-400' : 'text-red-300'
-                }`}
-              >
-                {feedback.correct ? '✓ 正确！' : `✗ 正确答案：${feedback.word}`}
-              </p>
+                {feedback && (
+                  <p
+                    className={`mt-3 text-center text-lg ${
+                      feedback.correct ? 'text-green-400' : 'text-red-300'
+                    }`}
+                  >
+                    {feedback.correct ? '✓ 正确！' : `✗ 正确答案：${feedback.word}`}
+                  </p>
+                )}
+
+                <button
+                  onClick={() => submitWord()}
+                  disabled={!input.trim()}
+                  className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
+                >
+                  提交
+                </button>
+              </>
             )}
-
-            <button
-              onClick={submitWord}
-              disabled={!input.trim()}
-              className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
-            >
-              提交
-            </button>
           </div>
         )}
       </div>

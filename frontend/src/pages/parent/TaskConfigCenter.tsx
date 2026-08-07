@@ -142,7 +142,7 @@ export default function TaskConfigCenter() {
     questionCount: 10,
     title: '',
     // WORD：英语单词任务配置
-    wordMode: 'DICTATION' as 'DICTATION' | 'SPELLING',
+    wordMode: 'DICTATION' as 'DICTATION' | 'SPELLING' | 'CHOICE',
     wordStage: '初中',
     wordOrderMode: 'SEQUENCE' as 'SEQUENCE' | 'RANDOM',
     wordGroupSize: 2,
@@ -2135,6 +2135,7 @@ export default function TaskConfigCenter() {
                           [
                             { v: 'DICTATION', label: '听写', desc: '播放发音，输入单词' },
                             { v: 'SPELLING', label: '默写', desc: '显示中文，输入英文' },
+                            { v: 'CHOICE', label: '选择', desc: '显示英文，选正确释义' },
                           ] as const
                         ).map((opt) => (
                           <button
@@ -2162,9 +2163,14 @@ export default function TaskConfigCenter() {
                         onChange={(e) => setSpecialForm({ ...specialForm, wordStage: e.target.value })}
                         className="w-full px-4 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white focus:ring-2 focus:ring-purple-500"
                       >
-                        {['小学', '初中', '高中'].map((s) => (
-                          <option key={s} value={s}>
-                            {s}
+                        {[
+                          { v: '小学', label: '小学' },
+                          { v: '初中', label: '初中' },
+                          { v: '高中', label: '高中' },
+                          { v: 'CET4', label: '英语四级词汇表 (CET-4) 完整版' },
+                        ].map((s) => (
+                          <option key={s.v} value={s.v}>
+                            {s.label}
                           </option>
                         ))}
                       </select>

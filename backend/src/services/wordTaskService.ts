@@ -28,7 +28,7 @@ export const EBBINGHAUS_INTERVALS_MS: Record<number, number> = {
 };
 
 export interface WordTaskConfig {
-  mode: 'DICTATION' | 'SPELLING';
+  mode: 'DICTATION' | 'SPELLING' | 'CHOICE';
   stage: string;
   orderMode: 'SEQUENCE' | 'RANDOM';
   groupSize: number;   // 1-5
@@ -41,7 +41,9 @@ export interface WordTaskConfig {
 export function validateWordConfig(raw: any): WordTaskConfig {
   if (!raw || typeof raw !== 'object') throw new Error('单词任务需要 wordConfig 配置');
   const mode = raw.mode;
-  if (mode !== 'DICTATION' && mode !== 'SPELLING') throw new Error('单词任务模式必须为听写（DICTATION）或默写（SPELLING）');
+  if (mode !== 'DICTATION' && mode !== 'SPELLING' && mode !== 'CHOICE') {
+    throw new Error('单词任务模式必须为听写（DICTATION）、默写（SPELLING）或选择（CHOICE）');
+  }
   const stage = String(raw.stage || '');
   if (!stage) throw new Error('单词任务必须指定阶段（小学/初中/高中）');
   const orderMode = raw.orderMode === 'RANDOM' ? 'RANDOM' : 'SEQUENCE';
@@ -75,15 +77,18 @@ export async function ensureWordTeacherInstruction(): Promise<{
   return { id: ins.id, subject: ins.subject, systemPrompt: ins.systemPrompt, providerId: ins.providerId };
 }
 
-/** 查询阶段词库概览（小学/初中/高中各多少词） */
+/** 词库阶段概览（动态：读库内实际 stage，自动包含 CET4 等新词库） */
 export async function getWordStages() {
-  const stages = ['小学', '初中', '高中'];
-  const out = [];
-  for (const stage of stages) {
-    const count = await prisma.word.count({ where: { stage } });
-    out.push({ stage, count });
-  }
-  return out;
+  const groups = await prisma.word.groupBy({ by: ['stage'], _count: { _all: true } });
+  const order = ['小学', '初中', '高中', 'CET4'];
+  const labels: Record<string, string> = { CET4: '英语四级词汇表 (CET-4) 完整版' };
+  return groups
+    .map((g) => ({ stage: g.stage, count: g._count._all, label: labels[g.stage] || g.stage }))
+    .sort((a, b) => {
+      const ia = order.indexOf(a.stage);
+      const ib = order.indexOf(b.stage);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
 }
 
 /** 根据艾宾浩斯状态抽词：到期错词优先（≤50%）+ 新词补足 */
@@ -94,9 +99,9 @@ export async function pickWords(
   roundSize: number
 ): Promise<string[]> {
   const now = new Date();
-  // 1) 到期错词（nextReviewAt <= now），按逾期程度排序
+  // 1) 到期错词（nextReviewAt <= now；level=7 视为已掌握，不再强制复习）
   const dueMistakes = await prisma.wordMistake.findMany({
-    where: { studentId, word: { stage }, nextReviewAt: { lte: now }, level: { gt: 0 } },
+    where: { studentId, word: { stage }, nextReviewAt: { lte: now }, level: { gt: 0, lt: 7 } },
     orderBy: { nextReviewAt: 'asc' },
     select: { wordId: true },
   });
@@ -127,7 +132,7 @@ export async function pickWords(
   return [...duePart, ...freshIds];
 }
 
-/** 更新单词错题集 + 艾宾浩斯层级 */
+/** 更新单词错题集 + 艾宾浩斯层级（答对升档；level=7 封顶且视为已掌握，不再安排复习） */
 export async function recordWordResult(
   studentId: string,
   wordId: string,
@@ -138,7 +143,8 @@ export async function recordWordResult(
   });
   if (correct) {
     const nextLevel = Math.min((existing?.level ?? 0) + 1, 7);
-    const interval = EBBINGHAUS_INTERVALS_MS[nextLevel] ?? EBBINGHAUS_INTERVALS_MS[7];
+    // level>=7：已掌握 → 不再安排复习（nextReviewAt 置空，避免 30 天后再次被抽中）
+    const nextReviewAt = nextLevel >= 7 ? null : new Date(Date.now() + EBBINGHAUS_INTERVALS_MS[nextLevel]);
     await prisma.wordMistake.upsert({
       where: { studentId_wordId: { studentId, wordId } },
       create: {
@@ -146,12 +152,12 @@ export async function recordWordResult(
         wordId,
         correctCount: 1,
         level: nextLevel,
-        nextReviewAt: new Date(Date.now() + interval),
+        nextReviewAt: nextLevel >= 7 ? null : nextReviewAt,
       },
       update: {
         correctCount: { increment: 1 },
         level: nextLevel,
-        nextReviewAt: new Date(Date.now() + interval),
+        nextReviewAt,
       },
     });
   } else {
@@ -220,6 +226,49 @@ export function buildGroups(session: { wordIds: unknown; total: number }, groupS
 /** 单词答题判定（听写/默写统一：忽略大小写与首尾空格） */
 export function checkWordInput(input: string, word: string): boolean {
   return (input || '').trim().toLowerCase() === (word || '').trim().toLowerCase();
+}
+
+/**
+ * CHOICE 选择测验：为组内每个词生成 4 选 1 中文释义选项
+ * 正确项 = 词义；干扰项 = 同词库随机 3 个不同 meaning（去重，不足则用兜底文案）
+ */
+export async function attachChoiceOptions(
+  words: Array<{ id: string; word: string; phonetic: string; meaning: string }>,
+  stage: string
+): Promise<Array<{ id: string; word: string; phonetic: string; meaning: string; options: Array<{ text: string; correct: boolean }> }>> {
+  const meanings = new Set(words.map((w) => w.meaning.trim()));
+  const distractors: string[] = [];
+  if (distractors.length < 3) {
+    const rows = await prisma.word.findMany({
+      where: { stage, NOT: { id: { in: words.map((w) => w.id) } } },
+      select: { meaning: true },
+      take: 50,
+      orderBy: { word: 'asc' },
+    });
+    // Fisher-Yates 洗牌后取不重复的干扰项
+    const pool = rows.map((r) => r.meaning.trim()).filter((m) => m && !meanings.has(m));
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    for (const m of pool) {
+      if (distractors.length >= 3) break;
+      if (!distractors.includes(m)) distractors.push(m);
+    }
+  }
+  while (distractors.length < 3) distractors.push('（释义）');
+  return words.map((w) => {
+    const opts: Array<{ text: string; correct: boolean }> = [
+      { text: w.meaning.trim(), correct: true },
+      ...distractors.map((d) => ({ text: d, correct: false })),
+    ];
+    // 打乱选项顺序
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    return { ...w, options: opts };
+  });
 }
 
 // ============ AI 词汇老师短语填空 ============
@@ -307,6 +356,7 @@ export const wordTaskService = {
   ensureWordTeacherInstruction,
   getWordStages,
   pickWords,
+  attachChoiceOptions,
   recordWordResult,
   startWordSession,
   buildGroups,

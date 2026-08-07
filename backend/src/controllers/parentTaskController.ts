@@ -893,6 +893,7 @@ class ParentTaskController {
         questionCount,
         title,
         examConfig,
+        wordConfig,
       } = req.body;
 
       if (!studentId || !subject) {
@@ -900,11 +901,11 @@ class ParentTaskController {
           error: { code: 'INVALID_PARAMETER', message: 'studentId 和 subject 为必填项' },
         });
       }
-      if (!specialType || !['UNIT', 'KNOWLEDGE_POINT', 'ERROR_BOOK', 'PAPER'].includes(specialType)) {
+      if (!specialType || !['UNIT', 'KNOWLEDGE_POINT', 'ERROR_BOOK', 'PAPER', 'WORD'].includes(specialType)) {
         return res.status(400).json({
           error: {
             code: 'INVALID_PARAMETER',
-            message: 'specialType 必须是 UNIT、KNOWLEDGE_POINT、ERROR_BOOK 或 PAPER',
+            message: 'specialType 必须是 UNIT、KNOWLEDGE_POINT、ERROR_BOOK、PAPER 或 WORD',
           },
         });
       }
@@ -924,6 +925,7 @@ class ParentTaskController {
         questionCount: questionCount ? Number(questionCount) : undefined,
         title,
         examConfig,
+        wordConfig,
       });
 
       return res.status(201).json({

@@ -36,7 +36,11 @@ export const startWord = async (req: Request, res: Response, next: NextFunction)
     const session = await wordTaskService.startWordSession(task.id, studentId, config);
     const groups = wordTaskService.buildGroups(session, config.groupSize);
     // 首组单词（含释义，供默写提示；听写时前端隐藏释义）
-    const firstGroup = await loadWords(groups[0] || []);
+    let firstGroup = await loadWords(groups[0] || []);
+    // CHOICE 选择模式：为每个词附带 4 选 1 中文释义选项
+    if (config.mode === 'CHOICE' && firstGroup.length > 0) {
+      firstGroup = await wordTaskService.attachChoiceOptions(firstGroup as any, config.stage);
+    }
     res.json({ success: true, data: { sessionId: session.id, groups: groups.length, total: session.total, group: firstGroup, config } });
   } catch (e) {
     next(e);
@@ -64,7 +68,11 @@ export const submitWord = async (req: Request, res: Response, next: NextFunction
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '单词不存在' } });
       return;
     }
-    const correct = wordTaskService.checkWordInput(input, word.word);
+    // CHOICE 选择模式：input 是选中的中文释义；其余模式 input 是英文单词
+    const correct =
+      session.mode === 'CHOICE'
+        ? wordTaskService.checkWordInput(input, word.meaning)
+        : wordTaskService.checkWordInput(input, word.word);
     await wordTaskService.recordWordResult(studentId, word.id, correct);
     // 推进进度 + 记录组内已答（逐词落库）
     const doneInGroup: string[] = Array.isArray(session.doneInGroup) ? (session.doneInGroup as string[]) : [];
@@ -118,11 +126,11 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
       return;
     }
     const config = (await prisma.task.findUnique({ where: { id: session.taskId } }))?.config as any as WordTaskConfig;
-    const groups = wordTaskService.buildGroups(session, config?.groupSize ?? 1);
+    const groups = wordTaskService.buildGroups(session, config.groupSize);
     const nextIdx = (groupIndex ?? 0) + 1;
     const done = nextIdx >= groups.length;
     if (done) {
-      // 单词听写/默写完成 → 强制进入短语填空
+      // 单词训练完成 → 强制进入短语填空
       const learned = (await loadWords(groups.flat())).map((w) => ({ word: w.word, meaning: w.meaning }));
       const cloze = await wordTaskService.generateCloze(learned);
       await prisma.wordSession.update({
@@ -147,7 +155,11 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     }
     // 进入新组：清空组内进度
     await prisma.wordSession.update({ where: { id: session.id }, data: { doneInGroup: [] as any } });
-    const group = await loadWords(groups[nextIdx] || []);
+    let group = await loadWords(groups[nextIdx] || []);
+    // CHOICE 选择模式：为每个词附带 4 选 1 中文释义选项
+    if (config?.mode === 'CHOICE' && group.length > 0) {
+      group = await wordTaskService.attachChoiceOptions(group as any, config.stage);
+    }
     res.json({ success: true, data: { done: false, groupIndex: nextIdx, group } });
   } catch (e) {
     next(e);
