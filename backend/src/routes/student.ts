@@ -479,6 +479,15 @@ router.delete('/special-tasks/:id', (req, res, next) =>
  * @desc    终止专项任务（结束进行中会话 → 任务 COMPLETED，便于删除）
  * @access  Student
  */
+/**
+ * @route   POST /api/student/special-tasks/:id/restart
+ * @desc    重启专项任务（历史任务恢复卡片，重新开始）
+ * @access  Student
+ */
+router.post('/special-tasks/:id/restart', (req, res, next) =>
+  studentTrainingController.restartSpecialTask(req, res, next)
+);
+
 router.post('/special-tasks/:id/terminate', (req, res, next) =>
   studentTrainingController.terminateSpecialTask(req, res, next)
 );

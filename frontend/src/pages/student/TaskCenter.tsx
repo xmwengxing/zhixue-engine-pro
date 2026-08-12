@@ -176,6 +176,17 @@ export const TaskCenter = () => {
     }
   };
 
+  /** 重启任务（历史任务恢复卡片，重新开始） */
+  const handleRestartTask = async (task: Task) => {
+    if (!window.confirm(`重启任务「${task.title}」？将恢复任务卡片，可重新开始训练。`)) return;
+    try {
+      await request.post(`/student/special-tasks/${task.id}/restart`);
+      void loadTasks();
+    } catch (e) {
+      window.alert(getErrorMessage(e, '重启任务失败'));
+    }
+  };
+
   /** 终止任务（结束进行中会话 → 便于删除） */
   const handleTerminateTask = async (task: Task) => {
     if (!window.confirm(`终止任务「${task.title}」？将结束进行中的训练，之后可删除任务。`)) return;
@@ -319,9 +330,9 @@ export const TaskCenter = () => {
                 <Button
                   variant="primary"
                   className="flex-1"
-                  onClick={() => handleStartTraining(task.id, task.mode)}
+                  onClick={() => void handleRestartTask(task)}
                 >
-                  再练一遍
+                  重启任务
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={() => void loadRecords(task)}>
                   查看明细
@@ -566,6 +577,13 @@ export const TaskCenter = () => {
                         <td className="py-3 px-2 text-[#5b6b8c]">{t.creator?.username || '—'}</td>
                         <td className="py-3 px-2">
                           <div className="flex gap-1.5">
+                            <button
+                              onClick={() => void handleRestartTask(t)}
+                              className="px-2 py-1 text-xs text-emerald-400 bg-emerald-500/10 rounded hover:bg-emerald-500/20"
+                              title="恢复任务卡片，重新开始训练"
+                            >
+                              重启
+                            </button>
                             <button
                               onClick={() => void loadRecords(t)}
                               className="px-2 py-1 text-xs text-[#92a4c9] bg-[#232f48] rounded hover:text-white"

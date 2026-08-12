@@ -179,6 +179,31 @@ export const deleteSpecialTask = async (req: Request, res: Response, next: NextF
   }
 };
 
+/** 重启专项任务（历史任务恢复卡片，重新开始）POST /api/student/special-tasks/:id/restart */
+export const restartSpecialTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未授权访问' } });
+      return;
+    }
+    const taskId = String(req.params.id);
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true } });
+    await prisma.$disconnect();
+    if (!task || task.studentId !== studentId) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      return;
+    }
+    // 重启：任务置 PENDING 恢复卡片（重新开始训练）；不清历史会话——归档词仍参与查重
+    await prisma.task.update({ where: { id: taskId }, data: { status: 'PENDING' } });
+    res.json({ success: true, data: { status: 'PENDING' } });
+  } catch (e) {
+    next(e);
+  }
+};
+
 /** 终止专项任务（结束进行中会话，便于删除）POST /api/student/special-tasks/:id/terminate */
 export const terminateSpecialTask = async (req: Request, res: Response, next: NextFunction) => {
   try {

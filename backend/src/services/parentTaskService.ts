@@ -792,6 +792,9 @@ export class ParentTaskService {
 
     const questionBankService = await import('./questionBankService');
     let questionIds: string[] = [];
+    // 专项任务序号：按模式各自排号（删除释放最小可用）；默认标题加「N组」后缀
+    const wcMode = (data as any).wordConfig?.mode as string | undefined;
+    const seq = await this.nextSpecialSeq(data.studentId, data.specialType, wcMode);
     let targetRef: any = {};
     let defaultTitle = '';
     const count = data.questionCount ?? 10;
@@ -892,7 +895,7 @@ export class ParentTaskService {
         data: {
           studentId: data.studentId,
           createdBy: parentId,
-          title: data.title || defaultTitle,
+          title: data.title || defaultTitle + ` ${seq}组`,
           mode: 'EXAM_PAPER',
           category: 'SPECIAL',
           subject: data.subject,
@@ -928,7 +931,7 @@ export class ParentTaskService {
         data: {
           studentId: data.studentId,
           createdBy: parentId,
-          title: data.title || `英语单词 · ${wc.mode === 'DICTATION' ? '听写' : '默写'}（${wc.stage}）`,
+          title: data.title || `英语单词 · ${wc.mode === 'DICTATION' ? '听写' : wc.mode === 'CHOICE' ? '选择' : '默写'}（${wc.stage}）${seq}组`,
           mode: 'WORD',
           category: 'SPECIAL',
           subject: '英语',
@@ -938,6 +941,7 @@ export class ParentTaskService {
             source: 'SPECIAL',
             specialType: 'WORD',
             ...wc,
+            seq,
             aiTeacherId: teacher.id,
           },
           status: 'PENDING',
@@ -1740,6 +1744,27 @@ export class ParentTaskService {
     }
     const { terminateTaskWithSessions } = await import('./taskDeletionService');
     return terminateTaskWithSessions(taskId);
+  }
+
+  /** 计算专项任务序号：该学员该模式现有序号集合中取最小可用（删除即释放） */
+  private async nextSpecialSeq(studentId: string, specialType: 'UNIT' | 'KNOWLEDGE_POINT' | 'ERROR_BOOK' | 'PAPER' | 'WORD', mode?: string): Promise<number> {
+    const tasks = await prisma.task.findMany({
+      where: { studentId, category: 'SPECIAL', specialType },
+      select: { config: true },
+    });
+    const used = new Set<number>();
+    for (const t of tasks) {
+      const c = t.config as any;
+      if (!c) continue;
+      if (specialType === 'WORD') {
+        if (c.mode === mode) { const n = Number(c.seq); if (Number.isFinite(n) && n > 0) used.add(n); }
+      } else {
+        const n = Number(c.seq); if (Number.isFinite(n) && n > 0) used.add(n);
+      }
+    }
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
   }
 
   async deleteTask(taskId: string, parentId: string) {
