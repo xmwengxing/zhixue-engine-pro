@@ -309,6 +309,7 @@ export default function WordTraining() {
     const ref = config?.mode === 'CHOICE' ? currentWord.meaning : currentWord.word;
     const correctLocal = answer.trim().toLowerCase() === ref.trim().toLowerCase();
     setFeedback({ word: currentWord.word, correct: correctLocal, answer: ref });
+    setInput(''); // 提交即清空输入框：防止再次点击「提交」重启计时器/重复落库
     playAnswerSound(correctLocal ? 'correct' : 'wrong');
     setResults((prev) => [...prev, { word: currentWord.word, correct: correctLocal, input: answer }]);
     if (config?.mode === 'DICTATION') speechSynthesis.cancel();
@@ -717,10 +718,10 @@ export default function WordTraining() {
 
                 <button
                   onClick={() => submitWord()}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || !!feedback}
                   className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
                 >
-                  提交
+                  {feedback ? '已提交，等待跳转…' : '提交'}
                 </button>
               </>
             )}
