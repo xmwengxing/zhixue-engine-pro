@@ -242,10 +242,10 @@ export async function startWordSession(
   studentId: string,
   taskConfig: WordTaskConfig
 ) {
-  // 任务间去重：其他任务（含进行中/已完成）已提取过的单词不再出现在本任务
-  // （任务删除时 WordSession 连带清理 → 词自动释放）
+  // 任务间去重（按模式）：同模式的其他任务已用词不重复抽取；
+  // 不同模式（默写/听写/选择）允许共用同组词（如先默写后听写同一批词）
   const otherSessions = await prisma.wordSession.findMany({
-    where: { studentId, taskId: { not: taskId } },
+    where: { studentId, taskId: { not: taskId }, mode: taskConfig.mode },
     select: { wordIds: true },
   });
   const usedByOthers = new Set<string>();

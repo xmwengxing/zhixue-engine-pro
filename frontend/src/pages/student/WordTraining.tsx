@@ -96,6 +96,7 @@ export default function WordTraining() {
   const clozeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cloze, setCloze] = useState<ClozeItem[]>([]);
   const [clozeIdx, setClozeIdx] = useState(0);
+  const [showPhonetic, setShowPhonetic] = useState(true); // 听写音标显示开关（点击可隐藏）
   const [lastGroupIdx, setLastGroupIdx] = useState(0); // 当前填空对应的组索引（多组循环用）
   // ===== 右侧历史明细栏（每组短语完成后展示该组词+填空情况）=====
   const [groupHistory, setGroupHistory] = useState<
@@ -673,6 +674,16 @@ export default function WordTraining() {
                   </span>
                 </button>
                 <p className="mt-3 text-[#5b6b8c] text-sm">点击喇叭重新播放发音</p>
+                {/* 音标（点击可隐藏/显示） */}
+                {currentWord.phonetic && (
+                  <button
+                    onClick={() => setShowPhonetic((v) => !v)}
+                    className="mt-1 text-[#92a4c9] hover:text-white text-sm"
+                    title={showPhonetic ? '点击隐藏音标' : '点击显示音标'}
+                  >
+                    {showPhonetic ? `/ ${currentWord.phonetic} /` : '👁 音标已隐藏（点击显示）'}
+                  </button>
+                )}
               </div>
             ) : isChoice ? (
               /* CHOICE：显示英文单词 + 音标 + 词性，4 选 1 中文释义 */
