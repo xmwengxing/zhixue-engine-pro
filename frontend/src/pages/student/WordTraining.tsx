@@ -97,6 +97,13 @@ export default function WordTraining() {
   const [cloze, setCloze] = useState<ClozeItem[]>([]);
   const [clozeIdx, setClozeIdx] = useState(0);
   const [lastGroupIdx, setLastGroupIdx] = useState(0); // 当前填空对应的组索引（多组循环用）
+  // ===== 右侧历史明细栏（每组短语完成后展示该组词+填空情况）=====
+  const [groupHistory, setGroupHistory] = useState<
+    Array<{ groupIndex: number; words: Array<{ word: string; correct: boolean }>; clozeCorrect: number; clozeTotal: number }>
+  >([]);
+  const curGroupWordsRef = useRef<Array<{ word: string; correct: boolean }>>([]); // 当前组已答词（同步 ref）
+  const clozeStatsRef = useRef({ correct: 0, total: 0 }); // 填空累计（同步 ref）
+  const groupClozeStartRef = useRef({ correct: 0, total: 0 }); // 本组填空开始时的累计（差值=本组）
   const [clozeInput, setClozeInput] = useState('');
   const [clozeFeedback, setClozeFeedback] = useState<{ correct: boolean; answer: string; translation?: string } | null>(null);
   const [clozeStats, setClozeStats] = useState({ correct: 0, total: 0 });
@@ -229,6 +236,13 @@ export default function WordTraining() {
       }
       speechSynthesis.cancel();
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      // 等音频「播放完成」再播下一遍（play() 只在播放开始时 resolve，必须等 onended）
+      const playToEnd = (el: HTMLAudioElement) =>
+        new Promise<void>((resolve) => {
+          el.onended = () => resolve();
+          el.onerror = () => resolve();
+          void el.play().catch(() => resolve());
+        });
       const times = Math.max(1, repeat);
       try {
         const res = await request.post('/student/word-task/tts', { word }, { responseType: 'blob' });
@@ -237,7 +251,7 @@ export default function WordTraining() {
           if (!audioRef.current) audioRef.current = new Audio();
           for (let i = 0; i < times; i++) {
             audioRef.current.src = URL.createObjectURL(blob);
-            await audioRef.current.play();
+            await playToEnd(audioRef.current);
             if (i < times - 1) await sleep(800); // 遍间间隔 0.8s
           }
           setPlaying(false);
@@ -245,13 +259,16 @@ export default function WordTraining() {
         }
         throw new Error('empty');
       } catch {
-        // Web Speech 兜底（同样重复 3 遍）
+        // Web Speech 兜底（同样重复 3 遍，等每句自然播完再播下一句）
         try {
           for (let i = 0; i < times; i++) {
-            const u = new SpeechSynthesisUtterance(word);
-            u.lang = 'en-US';
-            speechSynthesis.cancel();
-            speechSynthesis.speak(u);
+            await new Promise<void>((resolve) => {
+              const u = new SpeechSynthesisUtterance(word);
+              u.lang = 'en-US';
+              u.onend = () => resolve();
+              u.onerror = () => resolve();
+              speechSynthesis.speak(u);
+            });
             if (i < times - 1) await sleep(800);
           }
         } catch {
@@ -299,8 +316,9 @@ export default function WordTraining() {
       });
       const d = res.data;
       if (d.phase === 'CLOZE' || d.done) {
-        // 本组学完 → 强制进入该组短语填空（填空基于本组词）
+        // 本组学完 → 强制进入该组短语填空（填空基于本组词）；记录本组填空起点（历史明细差值）
         setLastGroupIdx(groupIndex);
+        groupClozeStartRef.current = { ...clozeStatsRef.current };
         setCloze(d.cloze || []);
         setClozeIdx(0);
         setPhase('CLOZE');
@@ -326,6 +344,8 @@ export default function WordTraining() {
     setFeedback({ word: currentWord.word, correct: correctLocal, answer: ref });
     setInput(''); // 提交即清空输入框：防止再次点击「提交」重启计时器/重复落库
     playAnswerSound(correctLocal ? 'correct' : 'wrong');
+    // 当前组已答词计入历史明细（组短语完成后展示）
+    curGroupWordsRef.current = [...curGroupWordsRef.current, { word: currentWord.word, correct: correctLocal }];
     setResults((prev) => [...prev, { word: currentWord.word, correct: correctLocal, input: answer }]);
     if (config?.mode === 'DICTATION') speechSynthesis.cancel();
     // 逐词落库（异步，不阻塞答题）：判定 + 错题集 + 进度推进（组中途退出可恢复）
@@ -370,7 +390,9 @@ export default function WordTraining() {
       });
       const correct = res.data?.correct === true;
       setClozeFeedback({ correct, answer: q.answer, translation: q.translation || '' });
-      setClozeStats((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
+      const nextStats = { correct: clozeStatsRef.current.correct + (correct ? 1 : 0), total: clozeStatsRef.current.total + 1 };
+      clozeStatsRef.current = nextStats;
+      setClozeStats(nextStats);
       // 8s 后自动进入下一题（可点「下一个」提前跳转）
       if (clozeTimerRef.current) clearTimeout(clozeTimerRef.current);
       clozeTimerRef.current = setTimeout(() => goNextClozeRef.current(), 8000);
@@ -381,6 +403,17 @@ export default function WordTraining() {
 
   const finishCloze = async () => {
     try {
+      // 本组短语完成 → 计入右侧历史明细（本组词 + 本组填空情况）
+      const words = curGroupWordsRef.current;
+      const clozeTotal = clozeStatsRef.current.total - groupClozeStartRef.current.total;
+      const clozeCorrect = clozeStatsRef.current.correct - groupClozeStartRef.current.correct;
+      if (words.length > 0 || clozeTotal > 0) {
+        setGroupHistory((prev) => [
+          ...prev,
+          { groupIndex: lastGroupIdx, words, clozeCorrect, clozeTotal },
+        ]);
+      }
+      curGroupWordsRef.current = [];
       // 多组模式：本组填空完成 → 还有组则返回下一组继续，否则任务完成
       const res = await request.post(`/student/word-task/finish/${sessionId}`, {
         clozeDone: true,
@@ -443,7 +476,8 @@ export default function WordTraining() {
     const wrong = results.filter((r) => !r.correct);
     return (
       <div className="min-h-screen bg-[#111722] py-10">
-        <div className="max-w-2xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 flex gap-6 items-start">
+          <div className="max-w-2xl mx-auto flex-1 min-w-0">
           <div className="bg-[#232f48] rounded-lg p-8 text-center mb-6">
             <h1 className="text-2xl font-bold text-white mb-2">🎉 本轮单词训练完成</h1>
             <p className="text-[#92a4c9]">
@@ -486,6 +520,8 @@ export default function WordTraining() {
             </button>
           </div>
         </div>
+        <HistorySidebar groupHistory={groupHistory} />
+      </div>
       </div>
     );
   }
@@ -511,7 +547,8 @@ export default function WordTraining() {
     const parts = q.sentence.split('____');
     return (
       <div className="min-h-screen bg-[#111722] py-6">
-        <div className="max-w-3xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 flex gap-6 items-start">
+          <div className="max-w-3xl mx-auto flex-1 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <button onClick={exitSave} className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]">
               ← 退出（保存进度）
@@ -579,6 +616,8 @@ export default function WordTraining() {
               {clozeIdx + 1 < cloze.length ? '提交' : '完成填空'}
             </button>
           </div>
+          </div>
+          <HistorySidebar groupHistory={groupHistory} />
         </div>
       </div>
     );
@@ -591,7 +630,9 @@ export default function WordTraining() {
   return (
     <div className="min-h-screen bg-[#111722] py-6">
       <style>{FEEDBACK_CSS}</style>
-      <div className="max-w-3xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4 flex gap-6 items-start">
+        {/* 左侧：训练区 */}
+        <div className="max-w-3xl mx-auto flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <button onClick={exitSave} className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]">
             ← 退出（保存进度）
@@ -745,14 +786,73 @@ export default function WordTraining() {
             )}
           </div>
         )}
+        </div>
+        <HistorySidebar groupHistory={groupHistory} />
       </div>
     </div>
   );
 }
 
+/** 右侧历史明细栏：每组短语完成后展示该组词+填空情况；错词红色 */
+const HistorySidebar = ({
+  groupHistory,
+}: {
+  groupHistory: Array<{ groupIndex: number; words: Array<{ word: string; correct: boolean }>; clozeCorrect: number; clozeTotal: number }>;
+}) => (
+  <aside className="hidden lg:block w-72 shrink-0">
+    <div className="sticky top-6 rounded-lg bg-[#1a2332] border border-[#324467] p-4 max-h-[calc(100vh-3rem)] overflow-y-auto">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-[18px] text-[#92a4c9]">history</span>
+        <h3 className="text-sm font-medium text-white">历史明细</h3>
+      </div>
+      {groupHistory.length === 0 ? (
+        <p className="text-xs text-[#5b6b8c] leading-relaxed">完成一组短语练习后，该组单词与填空情况会显示在这里</p>
+      ) : (
+        <div className="space-y-3">
+          {groupHistory.map((g) => (
+            <div key={g.groupIndex} className="rounded-lg bg-[#232f48] border border-[#324467] p-2.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-white">第 {g.groupIndex + 1} 组</span>
+                <span
+                  className={`text-xs ${
+                    g.clozeTotal > 0 && g.clozeCorrect < g.clozeTotal ? 'text-amber-300' : 'text-emerald-400'
+                  }`}
+                >
+                  短语 {g.clozeCorrect}/{g.clozeTotal}
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                {g.words.map((w, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between text-xs ${
+                      w.correct ? 'text-emerald-400' : 'text-red-400 font-medium'
+                    }`}
+                  >
+                    <span className="truncate mr-2">{w.word}</span>
+                    <span className="shrink-0">{w.correct ? '✓' : '✗'}</span>
+                  </div>
+                ))}
+                {g.clozeTotal > 0 && (
+                  <div
+                    className={`mt-1 pt-1 border-t border-[#324467] text-xs ${
+                      g.clozeCorrect === g.clozeTotal ? 'text-emerald-400' : 'text-amber-300'
+                    }`}
+                  >
+                    短语填空：{g.clozeCorrect} 对 / {g.clozeTotal} 题
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </aside>
+);
+
 /** 答题反馈条：答对 🎉 弹跳；答错 😵💫 摇头+卡片抖动+正确答案红色脉冲 */
-const FeedbackBanner = ({ correct, answer }: { correct: boolean; answer: string }) => {
-  return (
+const FeedbackBanner = ({ correct, answer }: { correct: boolean; answer: string }) => {  return (
     <div
       className={`mt-3 rounded-lg border px-4 py-3 text-center ${
         correct
