@@ -152,6 +152,7 @@ model Question {
   type            QuestionType
   content         Json     // 题目内容（JSON 格式）
   answer          String
+  analysis        String?  // 题目解析（答案解析独立字段；兼容 content.analysis）
   difficulty      Int      // 1-5
   knowledgePoints String[] @map("knowledge_points")
   createdAt       DateTime @default(now()) @map("created_at")

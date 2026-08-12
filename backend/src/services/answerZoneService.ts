@@ -150,6 +150,12 @@ export async function gradeExamPaper(
     maxScore += max;
 
     const graded = await gradeOne(q, a);
+    // 补题目解析（Question.analysis 独立字段 / content.analysis 兼容）：答对答错都展示，加深理解
+    const qAnalysis =
+      q.analysis || (q.content && typeof q.content === 'object' && (q.content as { analysis?: string }).analysis) || null;
+    if (qAnalysis) {
+      graded.analysis = graded.analysis ? `${graded.analysis}｜${qAnalysis}` : qAnalysis;
+    }
     const isCorrect = graded.isCorrect;
     const item: ExamGradeResultItem = {
       questionId: q.id,
