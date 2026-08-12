@@ -210,6 +210,7 @@ export default function WordTraining() {
     if (d.phase === 'CLOZE' || d.done) {
       setCloze(d.cloze || []);
       setClozeIdx(0);
+      setLastGroupIdx(d.clozeGroup ?? 0); // 恢复填空对应的组索引（多组循环 finish 用）
     } else {
       setGroup(d.group || []);
       setGroupIndex(d.groupIndex || 0);

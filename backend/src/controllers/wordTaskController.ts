@@ -133,13 +133,20 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     const groups = wordTaskService.buildGroups(session, config.groupSize);
     const nextIdx = (groupIndex ?? 0) + 1;
     const done = nextIdx >= groups.length;
-    // 每组完成后强制进入短语填空（填空基于「本组」词，加深记忆）；最后一组 done=true
+    // 每组完成后强制进入短语填空（填空基于「本组」词）；优先复用预生成填空（零等待）
     const completedGroup = groups[groupIndex ?? 0] || [];
-    const learned = (await loadWords(completedGroup)).map((w) => ({ word: w.word, meaning: w.meaning }));
-    const cloze = await wordTaskService.generateCloze(learned);
+    let cloze: any = null;
+    const pre = session.clozeJson as any;
+    if (pre && pre.group === (groupIndex ?? 0) && Array.isArray(pre.cloze)) {
+      cloze = pre.cloze;
+    }
+    if (!cloze) {
+      const learned = (await loadWords(completedGroup)).map((w) => ({ word: w.word, meaning: w.meaning }));
+      cloze = await wordTaskService.generateCloze(learned);
+    }
     await prisma.wordSession.update({
       where: { id: session.id },
-      data: { clozeJson: cloze as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
+      data: { clozeJson: null as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
     });
     // 积分：每组完成 +5（组内答对已按词计分）
     try {
@@ -191,7 +198,10 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       config,
     };
     if (done) {
-      data.cloze = (session.clozeJson as any) || null;
+      // clozeJson 兼容：预生成结构 {group, cloze} → 取 cloze 数组；旧结构直接数组
+      const pre = session.clozeJson as any;
+      data.cloze = pre && Array.isArray(pre.cloze) ? pre.cloze : pre;
+      data.clozeGroup = pre && typeof pre.group === 'number' ? pre.group : 0;
       data.clozeDone = session.clozeDone;
       if (!data.cloze) {
         const learned = (await loadWords(groups.flat())).map((w) => ({ word: w.word, meaning: w.meaning }));
@@ -262,9 +272,22 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
       const groups = wordTaskService.buildGroups(session, config.groupSize || 1);
       const nextIdx = Number(groupIndex) + 1;
       if (nextIdx < groups.length) {
+        // 预生成下一组短语填空（存 clozeJson）：下组词尾进入填空时零等待
+        let nextCloze: any = null;
+        try {
+          const learned = (await loadWords(groups[nextIdx] || [])).map((w) => ({ word: w.word, meaning: w.meaning }));
+          nextCloze = await wordTaskService.generateCloze(learned);
+        } catch {
+          nextCloze = null;
+        }
         await prisma.wordSession.update({
           where: { id: session.id },
-          data: { clozeDone: false, doneInGroup: [] as any, status: 'IN_PROGRESS' },
+          data: {
+            clozeDone: false,
+            doneInGroup: [] as any,
+            status: 'IN_PROGRESS',
+            clozeJson: nextCloze ? ({ group: nextIdx, cloze: nextCloze } as any) : null,
+          },
         });
         let group = await loadWords(groups[nextIdx] || []);
         if (config.mode === 'CHOICE' && group.length > 0) {
