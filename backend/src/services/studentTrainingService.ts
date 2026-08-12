@@ -265,6 +265,20 @@ export class StudentTrainingService {
         }
       }
 
+      // 重启任务（恢复重练）：优先复用上次会话的题目（原有内容从头开始）
+      const frozenQids = (config as any).lastQuestionIds as string[] | undefined;
+      if (Array.isArray(frozenQids) && frozenQids.length) {
+        const found = await prisma.question.findMany({ where: { id: { in: frozenQids } } });
+        const byId = new Map(found.map((q) => [q.id, q]));
+        const reused = frozenQids
+          .map((id) => byId.get(id))
+          .filter((q): q is NonNullable<typeof q> => !!q);
+        if (reused.length > 0) {
+          questions = reused;
+          logger.info(`重启任务：复用上次会话题目 ${reused.length} 道`);
+        }
+      }
+
       // 创建新的训练会话
       const session = await prisma.trainingSession.create({
         data: {

@@ -191,13 +191,37 @@ export const restartSpecialTask = async (req: Request, res: Response, next: Next
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
     const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true } });
-    await prisma.$disconnect();
     if (!task || task.studentId !== studentId) {
+      await prisma.$disconnect();
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
       return;
     }
-    // 重启：任务置 PENDING 恢复卡片（重新开始训练）；不清历史会话——归档词仍参与查重
-    await prisma.task.update({ where: { id: taskId }, data: { status: 'PENDING' } });
+    // 重启：任务置 PENDING 恢复卡片（从头重练）；冻结上次会话内容（原词/原题），
+    // 不清历史会话（归档词仍参与查重）
+    const [lastWord, lastTraining] = await Promise.all([
+      prisma.wordSession.findFirst({
+        where: { taskId, studentId },
+        orderBy: { createdAt: 'desc' },
+        select: { wordIds: true },
+      }),
+      prisma.trainingSession.findFirst({
+        where: { taskId, studentId },
+        orderBy: { startedAt: 'desc' },
+        select: { questions: true },
+      }),
+    ]);
+    const updateData: any = { status: 'PENDING' };
+    const taskRow = await prisma.task.findUnique({ where: { id: taskId }, select: { config: true } });
+    const config = (taskRow?.config as any) || {};
+    if (lastWord && Array.isArray(lastWord.wordIds) && (lastWord.wordIds as string[]).length) {
+      config.lastWordIds = lastWord.wordIds;
+      updateData.config = config;
+    } else if (lastTraining && Array.isArray(lastTraining.questions) && lastTraining.questions.length) {
+      config.lastQuestionIds = lastTraining.questions;
+      updateData.config = config;
+    }
+    await prisma.task.update({ where: { id: taskId }, data: updateData });
+    await prisma.$disconnect();
     res.json({ success: true, data: { status: 'PENDING' } });
   } catch (e) {
     next(e);

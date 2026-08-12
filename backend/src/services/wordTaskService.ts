@@ -254,13 +254,18 @@ export async function startWordSession(
       for (const w of s.wordIds as string[]) usedByOthers.add(w);
     }
   }
-  const wordIds = await pickWords(
-    studentId,
-    taskConfig.stage,
-    taskConfig.orderMode,
-    taskConfig.roundSize,
-    [...usedByOthers]
-  );
+  // 重启任务（恢复重练）：复用冻结的原词表（lastWordIds），从头开始；否则按查重规则抽词
+  const frozen = (taskConfig as any).lastWordIds as string[] | undefined;
+  const wordIds =
+    Array.isArray(frozen) && frozen.length > 0
+      ? frozen
+      : await pickWords(
+          studentId,
+          taskConfig.stage,
+          taskConfig.orderMode,
+          taskConfig.roundSize,
+          [...usedByOthers]
+        );
   if (wordIds.length === 0) {
     throw new Error(`「${taskConfig.stage}」阶段暂无可用单词，请先导入词库`);
   }
