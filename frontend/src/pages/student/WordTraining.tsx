@@ -105,6 +105,7 @@ export default function WordTraining() {
   const curGroupWordsRef = useRef<Array<{ word: string; correct: boolean }>>([]); // 当前组已答词（同步 ref）
   const clozeStatsRef = useRef({ correct: 0, total: 0 }); // 填空累计（同步 ref）
   const groupClozeStartRef = useRef({ correct: 0, total: 0 }); // 本组填空开始时的累计（差值=本组）
+  const curClozeItemsRef = useRef<Array<{ sentence: string; translation: string; correct: boolean }>>([]); // 本组已答短语题（含中文释义）
   const [clozeInput, setClozeInput] = useState('');
   const [clozeFeedback, setClozeFeedback] = useState<{ correct: boolean; answer: string; translation?: string } | null>(null);
   const [clozeStats, setClozeStats] = useState({ correct: 0, total: 0 });
@@ -394,6 +395,11 @@ export default function WordTraining() {
       const nextStats = { correct: clozeStatsRef.current.correct + (correct ? 1 : 0), total: clozeStatsRef.current.total + 1 };
       clozeStatsRef.current = nextStats;
       setClozeStats(nextStats);
+      // 本组短语题计入历史明细（含中文释义；组完成后展示）
+      curClozeItemsRef.current = [
+        ...curClozeItemsRef.current,
+        { sentence: q.sentence, translation: q.translation || '', correct },
+      ];
       // 8s 后自动进入下一题（可点「下一个」提前跳转）
       if (clozeTimerRef.current) clearTimeout(clozeTimerRef.current);
       clozeTimerRef.current = setTimeout(() => goNextClozeRef.current(), 8000);
@@ -404,17 +410,19 @@ export default function WordTraining() {
 
   const finishCloze = async () => {
     try {
-      // 本组短语完成 → 计入右侧历史明细（本组词 + 本组填空情况）
+      // 本组短语完成 → 计入右侧历史明细（本组词 + 本组短语题含中文释义）
       const words = curGroupWordsRef.current;
       const clozeTotal = clozeStatsRef.current.total - groupClozeStartRef.current.total;
       const clozeCorrect = clozeStatsRef.current.correct - groupClozeStartRef.current.correct;
+      const clozeItems = curClozeItemsRef.current;
       if (words.length > 0 || clozeTotal > 0) {
         setGroupHistory((prev) => [
           ...prev,
-          { groupIndex: lastGroupIdx, words, clozeCorrect, clozeTotal },
+          { groupIndex: lastGroupIdx, words, clozeCorrect, clozeTotal, clozeItems },
         ]);
       }
       curGroupWordsRef.current = [];
+      curClozeItemsRef.current = [];
       // 多组模式：本组填空完成 → 还有组则返回下一组继续，否则任务完成
       const res = await request.post(`/student/word-task/finish/${sessionId}`, {
         clozeDone: true,
@@ -804,11 +812,17 @@ export default function WordTraining() {
   );
 }
 
-/** 右侧历史明细栏：每组短语完成后展示该组词+填空情况；错词红色 */
+/** 右侧历史明细栏：每组短语完成后展示该组词+短语题（含中文释义）；错词/错题红色 */
 const HistorySidebar = ({
   groupHistory,
 }: {
-  groupHistory: Array<{ groupIndex: number; words: Array<{ word: string; correct: boolean }>; clozeCorrect: number; clozeTotal: number }>;
+  groupHistory: Array<{
+    groupIndex: number;
+    words: Array<{ word: string; correct: boolean }>;
+    clozeCorrect: number;
+    clozeTotal: number;
+    clozeItems?: Array<{ sentence: string; translation: string; correct: boolean }>;
+  }>;
 }) => (
   <aside className="hidden lg:block w-72 shrink-0">
     <div className="sticky top-6 rounded-lg bg-[#1a2332] border border-[#324467] p-4 max-h-[calc(100vh-3rem)] overflow-y-auto">
@@ -844,13 +858,16 @@ const HistorySidebar = ({
                     <span className="shrink-0">{w.correct ? '✓' : '✗'}</span>
                   </div>
                 ))}
-                {g.clozeTotal > 0 && (
-                  <div
-                    className={`mt-1 pt-1 border-t border-[#324467] text-xs ${
-                      g.clozeCorrect === g.clozeTotal ? 'text-emerald-400' : 'text-amber-300'
-                    }`}
-                  >
-                    短语填空：{g.clozeCorrect} 对 / {g.clozeTotal} 题
+                {g.clozeItems && g.clozeItems.length > 0 && (
+                  <div className="mt-1 pt-1 border-t border-[#324467] space-y-1">
+                    {g.clozeItems.map((c, i) => (
+                      <div key={i} className="text-xs leading-snug">
+                        <div className={`${c.correct ? 'text-emerald-400' : 'text-red-400 font-medium'}`}>
+                          {c.correct ? '✓' : '✗'} {c.sentence.replace('____', '___')}
+                        </div>
+                        {c.translation && <div className="text-[#5b6b8c] mt-0.5">📖 {c.translation}</div>}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

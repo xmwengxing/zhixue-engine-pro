@@ -374,17 +374,29 @@ export interface ClozeQuestion {
   translation?: string; // 整句中文释义（提交后展示，作答前不显示）
 }
 
-/** 调用 AI 词汇老师生成短语填空题（实时、不入题库） */
+/** 短语题洗牌：打乱出题顺序，避免学员照搬单词原顺序填写 */
+export function shuffleCloze(list: ClozeQuestion[]): ClozeQuestion[] {
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** 调用 AI 词汇老师生成短语填空题（实时、不入题库；返回前统一洗牌） */
 export async function generateCloze(learnedWords: Array<{ word: string; meaning: string }>): Promise<ClozeQuestion[]> {
   if (learnedWords.length === 0) throw new Error('没有可出题的单词');
   // 模板兜底：AI 词汇老师不可用时按词义生成基础填空题，保证训练流程不中断
   const fallback = (): ClozeQuestion[] =>
-    learnedWords.slice(0, 10).map((w) => ({
-      sentence: `请写出与「${w.meaning}」对应的英文单词：____`,
-      answer: w.word,
-      hint: `目标单词：${w.word}（首字母 ${w.word.charAt(0).toUpperCase()}）`,
-      translation: `（中文释义：${w.meaning}）`,
-    }));
+    shuffleCloze(
+      learnedWords.slice(0, 10).map((w) => ({
+        sentence: `请写出与「${w.meaning}」对应的英文单词：____`,
+        answer: w.word,
+        hint: `目标单词：${w.word}（首字母 ${w.word.charAt(0).toUpperCase()}）`,
+        translation: `（中文释义：${w.meaning}）`,
+      }))
+    );
   let teacher: { systemPrompt: string } | null = null;
   try {
     teacher = await ensureWordTeacherInstruction();
@@ -439,7 +451,7 @@ export async function generateCloze(learnedWords: Array<{ word: string; meaning:
       hint: q.hint,
       translation: q.translation || '',
     }));
-  return questions.length > 0 ? questions : fallback();
+  return questions.length > 0 ? shuffleCloze(questions) : fallback();
 }
 
 export function checkClozeAnswer(input: string, answer: string): boolean {
