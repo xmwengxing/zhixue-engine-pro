@@ -90,7 +90,7 @@ export default function WordTraining() {
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
-  const [countingDown, setCountingDown] = useState(0); // 组间隔倒计时
+  const [countingDown] = useState(0); // 保留：听写 speak 依赖（恒 0，组间隔已移除）
   // 自动跳转定时器（手动「下一个」时需清除，防重复跳转）
   const wordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clozeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -269,8 +269,31 @@ export default function WordTraining() {
     if (wordIndex + 1 < group.length) {
       setWordIndex(wordIndex + 1);
     } else {
-      // 本组完成 → 进入下一组（组间隔倒计时）
-      void submitGroup();
+      // 本组完成 → 直接拉取下一组（提交后的跳转间隔倒计时已覆盖等待，不再额外等组间隔）
+      void fetchNextGroup();
+    }
+  };
+
+  /** 请求下一组（词尾自动衔接；无间隔等待） */
+  const fetchNextGroup = async () => {
+    try {
+      const res = await request.post(`/student/word-task/group/${sessionId}`, {
+        groupIndex,
+      });
+      const d = res.data;
+      if (d.done) {
+        // 进入短语填空
+        setCloze(d.cloze || []);
+        setClozeIdx(0);
+        setPhase('CLOZE');
+        return;
+      }
+      setGroup(d.group);
+      setGroupIndex(d.groupIndex);
+      setWordIndex(0);
+      setInput('');
+    } catch (e) {
+      setError(getErrorMessage(e, '获取下一组失败'));
     }
   };
 
@@ -294,48 +317,10 @@ export default function WordTraining() {
       .catch(() => {
         /* 落库失败不影响本次答题 */
       });
-    // 3s 后自动进入下一词（可点「下一个」提前跳转）
+    // 跳转间隔后自动进入下一词（可点「下一个」提前跳转）；间隔读任务配置 3/5/8s
     if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
-    wordTimerRef.current = setTimeout(goNextWord, 3000);
-  };
-
-  const submitGroup = async () => {
-    try {
-      const res = await request.post(`/student/word-task/group/${sessionId}`, {
-        groupIndex,
-      });
-      const d = res.data;
-      if (d.done) {
-        // 进入短语填空
-        setCloze(d.cloze || []);
-        setClozeIdx(0);
-        setPhase('CLOZE');
-        return;
-      }
-      setGroup(d.group);
-      setGroupIndex(d.groupIndex);
-      setWordIndex(0);
-      setInput('');
-      // 组间隔倒计时（默认 5s）
-      const sec = config?.intervalSec ?? 5;
-      setCountingDown(sec);
-      const timer = setInterval(() => {
-        setCountingDown((c) => {
-          if (c <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-      const wait = sec * 1000;
-      setTimeout(() => {
-        clearInterval(timer);
-        setCountingDown(0);
-      }, wait);
-    } catch (e) {
-      setError(getErrorMessage(e, '获取下一组失败'));
-    }
+    const sec = config ? (Number(config.intervalSec) > 0 ? Number(config.intervalSec) : 3) : 3;
+    wordTimerRef.current = setTimeout(goNextWord, sec * 1000);
   };
 
   // ===== 短语填空 =====
