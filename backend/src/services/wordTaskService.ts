@@ -269,20 +269,6 @@ export async function startWordSession(
     where: { studentId, taskId, status: 'IN_PROGRESS' },
     data: { status: 'COMPLETED' },
   });
-  // 预生成第一组短语填空（存 clozeJson；组尾零等待自动跳转，AI 出题在 start 阶段完成）
-  let firstCloze: ClozeQuestion[] = [];
-  try {
-    const groups0 = buildGroups({ wordIds, total: wordIds.length }, taskConfig.groupSize || 10);
-    if (groups0[0]?.length) {
-      const learned = await prisma.word.findMany({
-        where: { id: { in: groups0[0] } },
-        select: { word: true, meaning: true },
-      });
-      firstCloze = await generateCloze(learned.map((w) => ({ word: w.word, meaning: w.meaning })));
-    }
-  } catch {
-    firstCloze = [];
-  }
   const session = await prisma.wordSession.create({
     data: {
       taskId,
@@ -292,9 +278,30 @@ export async function startWordSession(
       wordIds,
       total: wordIds.length,
       status: 'IN_PROGRESS',
-      clozeJson: firstCloze.length ? ({ group: 0, cloze: firstCloze } as any) : null,
     },
   });
+  // 异步预生成第一组短语填空（不阻塞 start 响应）：组尾进入填空时零等待；
+  // 用户答题期间（≥10 词 × 数秒）预生成早已完成
+  void (async () => {
+    try {
+      const groups0 = buildGroups({ wordIds, total: wordIds.length }, taskConfig.groupSize || 10);
+      if (groups0[0]?.length) {
+        const learned = await prisma.word.findMany({
+          where: { id: { in: groups0[0] } },
+          select: { word: true, meaning: true },
+        });
+        const cloze = await generateCloze(learned.map((w) => ({ word: w.word, meaning: w.meaning })));
+        if (cloze.length) {
+          await prisma.wordSession.update({
+            where: { id: session.id },
+            data: { clozeJson: { group: 0, cloze } as any },
+          });
+        }
+      }
+    } catch {
+      /* 预生成失败 → nextGroup 兜底现生成 */
+    }
+  })();
   // 任务状态同步：开始训练 → IN_PROGRESS（任务列表显示「继续训练」）
   await prisma.task.update({ where: { id: taskId }, data: { status: 'IN_PROGRESS' } });
   return session;
