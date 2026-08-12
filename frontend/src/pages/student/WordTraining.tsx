@@ -56,6 +56,8 @@ interface ClozeItem {
   sentence: string;
   answer: string;
   hint?: string;
+  /** 整句中文释义（提交后展示，作答前不显示） */
+  translation?: string;
 }
 
 interface WordConfig {
@@ -89,10 +91,13 @@ export default function WordTraining() {
   const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
   const [countingDown, setCountingDown] = useState(0); // 组间隔倒计时
+  // 自动跳转定时器（手动「下一个」时需清除，防重复跳转）
+  const wordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clozeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cloze, setCloze] = useState<ClozeItem[]>([]);
   const [clozeIdx, setClozeIdx] = useState(0);
   const [clozeInput, setClozeInput] = useState('');
-  const [clozeFeedback, setClozeFeedback] = useState<{ correct: boolean; answer: string } | null>(null);
+  const [clozeFeedback, setClozeFeedback] = useState<{ correct: boolean; answer: string; translation?: string } | null>(null);
   const [clozeStats, setClozeStats] = useState({ correct: 0, total: 0 });
   const [playing, setPlaying] = useState(false);
 
@@ -256,6 +261,19 @@ export default function WordTraining() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.mode, currentWord?.id, phase, countingDown]);
 
+  /** 进入下一词（自动定时 / 「下一个」按钮共用） */
+  const goNextWord = () => {
+    if (!feedback) return; // 防重复触发
+    setFeedback(null);
+    setInput('');
+    if (wordIndex + 1 < group.length) {
+      setWordIndex(wordIndex + 1);
+    } else {
+      // 本组完成 → 进入下一组（组间隔倒计时）
+      void submitGroup();
+    }
+  };
+
   const submitWord = (choiceText?: string) => {
     // CHOICE 模式：choiceText 为选中释义；其余模式读输入框
     const answer = choiceText !== undefined ? choiceText : input;
@@ -276,17 +294,9 @@ export default function WordTraining() {
       .catch(() => {
         /* 落库失败不影响本次答题 */
       });
-    // 0.8s 后进入下一词
-    setTimeout(() => {
-      setFeedback(null);
-      setInput('');
-      if (wordIndex + 1 < group.length) {
-        setWordIndex(wordIndex + 1);
-      } else {
-        // 本组完成 → 进入下一组（组间隔倒计时）
-        void submitGroup();
-      }
-    }, 800);
+    // 3s 后自动进入下一词（可点「下一个」提前跳转）
+    if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
+    wordTimerRef.current = setTimeout(goNextWord, 3000);
   };
 
   const submitGroup = async () => {
@@ -329,6 +339,18 @@ export default function WordTraining() {
   };
 
   // ===== 短语填空 =====
+  /** 进入下一道填空（自动定时 / 「下一个」按钮共用） */
+  const goNextCloze = () => {
+    if (!clozeFeedback) return; // 防重复触发
+    setClozeFeedback(null);
+    setClozeInput('');
+    if (clozeIdx + 1 < cloze.length) {
+      setClozeIdx(clozeIdx + 1);
+    } else {
+      void finishCloze();
+    }
+  };
+
   const submitCloze = async () => {
     const q = cloze[clozeIdx];
     if (!q || !clozeInput.trim()) return;
@@ -339,17 +361,11 @@ export default function WordTraining() {
         sessionId,
       });
       const correct = res.data?.correct === true;
-      setClozeFeedback({ correct, answer: q.answer });
+      setClozeFeedback({ correct, answer: q.answer, translation: q.translation || '' });
       setClozeStats((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
-      setTimeout(() => {
-        setClozeFeedback(null);
-        setClozeInput('');
-        if (clozeIdx + 1 < cloze.length) {
-          setClozeIdx(clozeIdx + 1);
-        } else {
-          void finishCloze();
-        }
-      }, 900);
+      // 8s 后自动进入下一题（可点「下一个」提前跳转）
+      if (clozeTimerRef.current) clearTimeout(clozeTimerRef.current);
+      clozeTimerRef.current = setTimeout(goNextCloze, 8000);
     } catch (e) {
       setError(getErrorMessage(e, '判定失败'));
     }
@@ -493,7 +509,7 @@ export default function WordTraining() {
               </span>
               {parts[1]}
             </p>
-            {q.hint && <p className="text-sm text-[#5b6b8c] mb-4">💡 {q.hint}</p>}
+            {/* 作答前不显示任何答案/提示，避免提前暴露 */}
             <input
               ref={inputRef}
               value={clozeInput}
@@ -504,20 +520,41 @@ export default function WordTraining() {
               autoFocus
             />
             {clozeFeedback && (
-              <p
-                className={`mt-3 text-sm ${
-                  clozeFeedback.correct ? 'text-green-400' : 'text-red-300'
+              <div
+                className={`mt-3 rounded-lg border px-4 py-3 ${
+                  clozeFeedback.correct
+                    ? 'bg-green-500/10 border-green-500/40 word-pop'
+                    : 'bg-red-500/10 border-red-500/40 word-shake'
                 }`}
               >
-                {clozeFeedback.correct ? '✓ 正确！' : `✗ 正确答案：${clozeFeedback.answer}`}
-              </p>
+                <p className={`text-sm font-medium ${clozeFeedback.correct ? 'text-green-300' : 'text-red-300'}`}>
+                  {clozeFeedback.correct ? '✓ 正确！' : `✗ 正确答案：${clozeFeedback.answer}`}
+                </p>
+                {clozeFeedback.translation && (
+                  <p className="mt-1 text-sm text-[#92a4c9]">
+                    <span className="text-[#5b6b8c]">整句释义：</span>
+                    {clozeFeedback.translation}
+                  </p>
+                )}
+              </div>
+            )}
+            {clozeFeedback && (
+              <button
+                onClick={() => {
+                  if (clozeTimerRef.current) clearTimeout(clozeTimerRef.current);
+                  goNextCloze();
+                }}
+                className="mt-3 w-full py-2.5 rounded-lg bg-[#232f48] border border-[#324467] text-white hover:border-blue-500/60 hover:bg-[#232f48]/80 transition-colors"
+              >
+                下一个 →
+              </button>
             )}
             <button
               onClick={submitCloze}
-              disabled={!clozeInput.trim()}
-              className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
+              disabled={!clozeInput.trim() || !!clozeFeedback}
+              className="mt-3 w-full py-3 rounded-lg bg-blue-600 text-white disabled:bg-[#324467] disabled:text-[#5b6b8c]"
             >
-              {clozeIdx + 1 < cloze.length ? '下一题' : '完成填空'}
+              {clozeIdx + 1 < cloze.length ? '提交' : '完成填空'}
             </button>
           </div>
         </div>
@@ -633,6 +670,17 @@ export default function WordTraining() {
                   );
                 })}
                 {feedback && <FeedbackBanner key={feedback.word + String(feedback.correct)} correct={feedback.correct} answer={feedback.answer} />}
+                {feedback && (
+                  <button
+                    onClick={() => {
+                      if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
+                      goNextWord();
+                    }}
+                    className="mt-3 w-full py-2.5 rounded-lg bg-[#232f48] border border-[#324467] text-white hover:border-blue-500/60 hover:bg-[#232f48]/80 transition-colors"
+                  >
+                    下一个 →
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -650,6 +698,17 @@ export default function WordTraining() {
                 />
 
                 {feedback && <FeedbackBanner key={feedback.word + String(feedback.correct)} correct={feedback.correct} answer={feedback.answer} />}
+                {feedback && (
+                  <button
+                    onClick={() => {
+                      if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
+                      goNextWord();
+                    }}
+                    className="mt-3 w-full py-2.5 rounded-lg bg-[#232f48] border border-[#324467] text-white hover:border-blue-500/60 hover:bg-[#232f48]/80 transition-colors"
+                  >
+                    下一个 →
+                  </button>
+                )}
 
                 <button
                   onClick={() => submitWord()}

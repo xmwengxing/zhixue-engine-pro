@@ -320,6 +320,7 @@ export interface ClozeQuestion {
   sentence: string;
   answer: string;
   hint?: string;
+  translation?: string; // 整句中文释义（提交后展示，作答前不显示）
 }
 
 /** 调用 AI 词汇老师生成短语填空题（实时、不入题库） */
@@ -331,6 +332,7 @@ export async function generateCloze(learnedWords: Array<{ word: string; meaning:
       sentence: `请写出与「${w.meaning}」对应的英文单词：____`,
       answer: w.word,
       hint: `目标单词：${w.word}（首字母 ${w.word.charAt(0).toUpperCase()}）`,
+      translation: `（中文释义：${w.meaning}）`,
     }));
   let teacher: { systemPrompt: string } | null = null;
   try {
@@ -342,7 +344,13 @@ export async function generateCloze(learnedWords: Array<{ word: string; meaning:
     .slice(0, 10)
     .map((w) => `${w.word}（${w.meaning}）`)
     .join('、');
-  const prompt = `请根据以下已学单词出短语/搭配填空题（每题空位用 ____ 表示，括号给目标单词提示）：\n${wordList}`;
+  const prompt = `请根据以下已学单词出短语/搭配填空题，每题必须包含：
+- sentence：英文句子，填空处用 ____ 表示
+- answer：填空处应填的单词
+- hint：不含答案的提示（如语境提示，不要直接给出目标单词）
+- translation：整句的中文释义（必须提供，供提交后对照学习）
+返回 JSON 数组，格式：[{sentence, answer, hint, translation}]
+单词列表：\n${wordList}`;
   let raw: string;
   try {
     raw = await aiServiceManager.callAI(prompt, {
@@ -374,7 +382,12 @@ export async function generateCloze(learnedWords: Array<{ word: string; meaning:
   const questions = list
     .filter((q: any) => q && typeof q.sentence === 'string' && typeof q.answer === 'string')
     .slice(0, 10)
-    .map((q: any) => ({ sentence: q.sentence, answer: q.answer, hint: q.hint }));
+    .map((q: any) => ({
+      sentence: q.sentence,
+      answer: q.answer,
+      hint: q.hint,
+      translation: q.translation || '',
+    }));
   return questions.length > 0 ? questions : fallback();
 }
 
