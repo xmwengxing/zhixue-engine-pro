@@ -89,3 +89,38 @@ export async function deleteTaskWithDeps(
 
   return { success: true, message: '任务删除成功' };
 }
+
+/**
+ * 终止任务：结束全部进行中会话（ACTIVE TrainingSession / IN_PROGRESS WordSession → 完成态），
+ * 任务置 COMPLETED。用于「终止任务 → 删除」链路（删除时不再被进行中会话拦截）。
+ * 不产生积分，不清除既有积分/训练记录。
+ */
+export async function terminateTaskWithSessions(taskId: string): Promise<{ success: boolean; message: string }> {
+  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true } });
+  if (!task) throw new Error('任务不存在');
+  await prisma.$transaction(async (tx) => {
+    await tx.trainingSession.updateMany({ where: { taskId, status: 'ACTIVE' }, data: { status: 'COMPLETED' } });
+    await tx.wordSession.updateMany({ where: { taskId, status: 'IN_PROGRESS' }, data: { status: 'COMPLETED' } });
+    await tx.task.update({ where: { id: taskId }, data: { status: 'COMPLETED' } });
+  });
+  return { success: true, message: '任务已终止' };
+}
+
+/** 更新单词任务跳转间隔（秒）：3/5/8 */
+export async function updateWordIntervalSec(
+  taskId: string,
+  intervalSec: number,
+  opts: { checkOwner?: (t: any) => boolean } = {}
+): Promise<{ success: boolean; intervalSec: number }> {
+  const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, mode: true, specialType: true, config: true } });
+  if (!task || task.mode !== 'WORD') throw new Error('单词任务不存在');
+  if (opts.checkOwner && !opts.checkOwner(task)) throw new Error('无权操作该任务');
+  const sec = Number(intervalSec);
+  if (!Number.isFinite(sec) || ![3, 5, 8].includes(sec)) {
+    throw new Error('跳转间隔需为 3、5 或 8 秒');
+  }
+  const config = (task.config as any) || {};
+  config.intervalSec = sec;
+  await prisma.task.update({ where: { id: taskId }, data: { config } });
+  return { success: true, intervalSec: sec };
+}

@@ -164,6 +164,29 @@ export const TaskCenter = () => {
     }
   };
 
+  /** 修改单词任务跳转间隔（3/5/8s） */
+  const [intervalEditTask, setIntervalEditTask] = useState<string | null>(null);
+  const changeInterval = async (task: Task, sec: number) => {
+    try {
+      await request.patch(`/student/word-task/${task.id}/config`, { intervalSec: sec });
+      setIntervalEditTask(null);
+      void loadTasks();
+    } catch (e) {
+      window.alert(getErrorMessage(e, '修改跳转间隔失败'));
+    }
+  };
+
+  /** 终止任务（结束进行中会话 → 便于删除） */
+  const handleTerminateTask = async (task: Task) => {
+    if (!window.confirm(`终止任务「${task.title}」？将结束进行中的训练，之后可删除任务。`)) return;
+    try {
+      await request.post(`/student/special-tasks/${task.id}/terminate`);
+      void loadTasks();
+    } catch (e) {
+      window.alert(getErrorMessage(e, '终止任务失败'));
+    }
+  };
+
   /**
    * 渲染单个任务卡片（两个分区共用）
    */
@@ -205,9 +228,40 @@ export const TaskCenter = () => {
                 <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
                   <span className="material-symbols-outlined text-[18px]">record_voice_over</span>
                   <span>
-                    {task.config?.mode === 'DICTATION' ? '听写' : '默写'} · 阶段：{task.config?.stage ?? '-'} ·{' '}
-                    每组 {task.config?.groupSize ?? '-'} 词 · 间隔 {task.config?.intervalSec ?? '-'}s · 每轮{' '}
+                    {task.config?.mode === 'DICTATION' ? '听写' : task.config?.mode === 'CHOICE' ? '选择' : '默写'} · 阶段：
+                    {task.config?.stage === 'CET4' ? 'CET-4 词库' : `${task.config?.stage ?? '-'}词库`} · 共{' '}
                     {task.config?.roundSize ?? '-'} 词
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
+                  <span className="material-symbols-outlined text-[18px]">timer</span>
+                  <span className="flex items-center gap-1.5">
+                    跳转间隔：
+                    {intervalEditTask === task.id ? (
+                      <span className="flex gap-1">
+                        {[3, 5, 8].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => void changeInterval(task, n)}
+                            className={`px-1.5 py-0.5 rounded text-xs border ${
+                              (task.config?.intervalSec ?? 3) === n
+                                ? 'border-purple-500 text-purple-300 bg-purple-500/10'
+                                : 'border-[#324467] text-[#92a4c9]'
+                            }`}
+                          >
+                            {n}s
+                          </button>
+                        ))}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setIntervalEditTask(task.id)}
+                        className="px-1.5 py-0.5 rounded text-xs border border-[#324467] hover:border-purple-500/60"
+                        title="点击修改跳转间隔"
+                      >
+                        {task.config?.intervalSec ?? 3}s 改
+                      </button>
+                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-[#92a4c9]">
@@ -242,19 +296,37 @@ export const TaskCenter = () => {
                 <Button variant="outline" className="flex-1" onClick={() => void loadRecords(task)}>
                   历史记录
                 </Button>
-                <Button variant="outline" className="flex-1 !text-red-400 !border-red-500/40 hover:!bg-red-500/10" onClick={() => void handleDeleteTask(task)}>
+                {task.status === 'IN_PROGRESS' && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 !text-amber-400 !border-amber-500/40 hover:!bg-amber-500/10"
+                    onClick={() => void handleTerminateTask(task)}
+                  >
+                    终止
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="flex-1 !text-red-400 !border-red-500/40 hover:!bg-red-500/10"
+                  onClick={() => void handleDeleteTask(task)}
+                >
                   删除
                 </Button>
               </div>
             )}
             {task.status === 'COMPLETED' ? (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => handleStartTraining(task.id, task.mode)}
-              >
-                查看详情
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  onClick={() => handleStartTraining(task.id, task.mode)}
+                >
+                  再练一遍
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => void loadRecords(task)}>
+                  查看明细
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="primary"

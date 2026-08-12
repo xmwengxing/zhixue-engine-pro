@@ -472,3 +472,22 @@ router.get('/special-records', (req, res, next) =>
 router.delete('/special-tasks/:id', (req, res, next) =>
   studentTrainingController.deleteSpecialTask(req, res, next)
 );
+
+
+/**
+ * @route   POST /api/student/special-tasks/:id/terminate
+ * @desc    终止专项任务（结束进行中会话 → 任务 COMPLETED，便于删除）
+ * @access  Student
+ */
+router.post('/special-tasks/:id/terminate', (req, res, next) =>
+  studentTrainingController.terminateSpecialTask(req, res, next)
+);
+
+/**
+ * @route   PATCH /api/student/word-task/:taskId/config
+ * @desc    修改单词任务跳转间隔（3/5/8 秒）
+ * @access  Student
+ */
+router.patch('/word-task/:taskId/config', (req, res, next) =>
+  studentTrainingController.updateWordInterval(req, res, next)
+);

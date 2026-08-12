@@ -16,8 +16,7 @@ export const WordTaskCreateModal = ({
   const [stage, setStage] = useState('初中');
   const [stages, setStages] = useState<Array<{ stage: string; count: number; label?: string; dueToday?: number }>>([]);
   const [orderMode, setOrderMode] = useState<'SEQUENCE' | 'RANDOM'>('SEQUENCE');
-  const [groupSize, setGroupSize] = useState(2);
-  const [intervalSec, setIntervalSec] = useState(5);
+  const [intervalSec, setIntervalSec] = useState(3); // 单词跳转间隔（3/5/8 秒，默认 3）
   const [roundSize, setRoundSize] = useState(20);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +55,7 @@ export const WordTaskCreateModal = ({
           mode,
           stage,
           orderMode,
-          groupSize,
+          groupSize: 1, // 去掉分组机制：每词一组
           intervalSec,
           roundSize,
         },
@@ -165,57 +164,46 @@ export const WordTaskCreateModal = ({
               </div>
             </div>
 
-            {/* 每组单词数 */}
-            <div>
-              <label className={labelCls}>每组单词数</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setGroupSize(n)}
-                    className={`flex-1 py-2 rounded-lg border text-sm transition-colors ${
-                      groupSize === n
-                        ? 'border-purple-500 bg-purple-500/15 text-white'
-                        : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 组间隔 */}
-            <div>
-              <label className={labelCls}>每组间隔（秒）</label>
-              <input
-                type="number"
-                min={0}
-                max={120}
-                value={intervalSec}
-                onChange={(e) => setIntervalSec(Math.max(0, Math.min(120, parseInt(e.target.value) || 0)))}
-                className={inputCls}
-              />
-            </div>
-
-            {/* 每轮词数 */}
+            {/* 单词总数 */}
             <div>
               <label className={labelCls}>
-                每轮词数（完成后触发短语填空）：<span className="text-purple-300">{roundSize}</span>
+                单词总数：<span className="text-purple-300">{roundSize}</span> 个
               </label>
               <input
                 type="range"
-                min={1}
-                max={50}
+                min={10}
+                max={100}
+                step={5}
                 value={roundSize}
                 onChange={(e) => setRoundSize(parseInt(e.target.value))}
                 className="w-full accent-purple-500"
               />
               <div className="flex justify-between text-[10px] text-[#5b6b8c]">
-                <span>1</span>
-                <span>25</span>
+                <span>10</span>
                 <span>50</span>
+                <span>100</span>
+              </div>
+              <p className="text-xs text-[#5b6b8c] mt-1">完成全部单词后自动进入短语填空</p>
+            </div>
+
+            {/* 单词跳转间隔 */}
+            <div>
+              <label className={labelCls}>单词跳转间隔（提交答案后自动进入下一题的等待时间）</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[3, 5, 8].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setIntervalSec(n)}
+                    className={`py-2 rounded-lg border text-sm transition-colors ${
+                      intervalSec === n
+                        ? 'border-purple-500 bg-purple-500/15 text-white'
+                        : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
+                    }`}
+                  >
+                    {n} 秒
+                  </button>
+                ))}
               </div>
             </div>
 

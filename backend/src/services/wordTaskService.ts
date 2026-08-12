@@ -47,16 +47,15 @@ export function validateWordConfig(raw: any): WordTaskConfig {
   const stage = String(raw.stage || '');
   if (!stage) throw new Error('单词任务必须指定阶段（小学/初中/高中）');
   const orderMode = raw.orderMode === 'RANDOM' ? 'RANDOM' : 'SEQUENCE';
-  const groupSize = Number(raw.groupSize);
-  if (![1, 2, 3, 4, 5].includes(groupSize)) throw new Error('每组单词数必须为 1-5');
-  const intervalSec = Number(raw.intervalSec);
-  if (!Number.isFinite(intervalSec) || intervalSec < 0 || intervalSec > 120) {
-    throw new Error('每组间隔秒数需在 0-120 之间');
-  }
-  const roundSize = Number(raw.roundSize);
-  if (!Number.isFinite(roundSize) || roundSize < 1 || roundSize > 50) {
-    throw new Error('每轮词数需在 1-50 之间');
-  }
+  // 去掉分组机制：每词一组（听写/默写/选择逐词推进）
+  const groupSize = 1;
+  // 单词跳转间隔（秒）：前端 3/5/8，默认 3
+  const intervalSec = Number.isFinite(Number(raw.intervalSec))
+    ? Math.max(0, Math.min(120, Number(raw.intervalSec)))
+    : 3;
+  // 单词总数（10-100）：新参数 wordCount；兼容旧字段 roundSize
+  const rawCount = Number(raw.wordCount ?? raw.roundSize);
+  const roundSize = Number.isFinite(rawCount) ? Math.max(1, Math.min(100, Math.round(rawCount))) : 20;
   return { mode, stage, orderMode, groupSize, intervalSec, roundSize, aiTeacherId: raw.aiTeacherId ?? null };
 }
 
@@ -125,12 +124,15 @@ export async function pickWords(
   studentId: string,
   stage: string,
   orderMode: 'SEQUENCE' | 'RANDOM',
-  roundSize: number
+  roundSize: number,
+  excludeIds: string[] = []
 ): Promise<string[]> {
   const now = new Date();
   // 每日复习配额：当天（自然日 0 点起）已复习过的词不再重复抽取，防止到期堆积
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  // 1) 到期错词（nextReviewAt <= now；level=7 视为已掌握不再复习；今天已复习过的不抽）
+  const exclude = new Set(excludeIds);
+  // 1) 到期错词（nextReviewAt <= now；level=7 视为已掌握不再复习；今天已复习过的不抽；
+  //    其他任务已使用的词跳过）
   //    错词加权：按逾期程度优先，其次错误次数多的优先
   const dueMistakes = await prisma.wordMistake.findMany({
     where: {
@@ -143,15 +145,15 @@ export async function pickWords(
     orderBy: [{ nextReviewAt: 'asc' }, { wrongCount: 'desc' }],
     select: { wordId: true },
   });
-  const dueIds = dueMistakes.map((m) => m.wordId);
+  const dueIds = dueMistakes.map((m) => m.wordId).filter((id) => !exclude.has(id));
   const dueTake = Math.min(dueIds.length, Math.ceil(roundSize / 2));
   const duePart = dueIds.slice(0, dueTake);
 
-  // 2) 新词/低掌握词补足（level=0 优先，其次 level=1）
+  // 2) 新词/低掌握词补足（level=0 优先，其次 level=1）；排除其他任务已用词
   const need = roundSize - duePart.length;
   let freshIds: string[] = [];
   if (need > 0) {
-    const used = new Set(duePart);
+    const used = new Set([...duePart, ...exclude]);
     const freshRows = await prisma.word.findMany({
       where: { stage, id: { notIn: [...used] } },
       select: { id: true },
@@ -167,7 +169,12 @@ export async function pickWords(
     }
     freshIds = allFresh.slice(0, need);
   }
-  return [...duePart, ...freshIds];
+  const picked = [...duePart, ...freshIds];
+  // 排除其他任务已用词后数量不足 → 降级放行（词库标注不足时保证训练可用，warn 提示）
+  if (excludeIds.length > 0 && picked.length < roundSize) {
+    console.warn(`[word] pickWords 可用词不足（已排除 ${excludeIds.length} 个他任务词）：命中 ${picked.length}/${roundSize}`);
+  }
+  return picked;
 }
 
 /** 更新单词错题集 + 艾宾浩斯层级（答对升档；level=7 封顶且视为已掌握，不再安排复习） */
@@ -231,7 +238,25 @@ export async function startWordSession(
   studentId: string,
   taskConfig: WordTaskConfig
 ) {
-  const wordIds = await pickWords(studentId, taskConfig.stage, taskConfig.orderMode, taskConfig.roundSize);
+  // 任务间去重：其他任务（含进行中/已完成）已提取过的单词不再出现在本任务
+  // （任务删除时 WordSession 连带清理 → 词自动释放）
+  const otherSessions = await prisma.wordSession.findMany({
+    where: { studentId, taskId: { not: taskId } },
+    select: { wordIds: true },
+  });
+  const usedByOthers = new Set<string>();
+  for (const s of otherSessions) {
+    if (Array.isArray(s.wordIds)) {
+      for (const w of s.wordIds as string[]) usedByOthers.add(w);
+    }
+  }
+  const wordIds = await pickWords(
+    studentId,
+    taskConfig.stage,
+    taskConfig.orderMode,
+    taskConfig.roundSize,
+    [...usedByOthers]
+  );
   if (wordIds.length === 0) {
     throw new Error(`「${taskConfig.stage}」阶段暂无可用单词，请先导入词库`);
   }

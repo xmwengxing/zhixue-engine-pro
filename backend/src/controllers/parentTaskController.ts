@@ -488,6 +488,33 @@ class ParentTaskController {
   }
 
   /**
+   * 终止任务（结束进行中会话，便于删除）
+   * POST /api/parent/tasks/:id/terminate
+   */
+  async terminateTask(req: Request, res: Response, next: NextFunction) {
+    try {
+      const parentId = req.user?.userId;
+      if (!parentId) {
+        res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未认证' } });
+        return;
+      }
+      const taskId = String(req.params.id);
+      const result = await parentTaskService.terminateTask(taskId, parentId);
+      res.json({ success: true, data: result });
+    } catch (e: any) {
+      if (e.message === '任务不存在') {
+        res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+        return;
+      }
+      if (e.message === '无权操作该任务') {
+        res.status(403).json({ error: { code: 'FORBIDDEN', message: '无权操作该任务' } });
+        return;
+      }
+      next(e);
+    }
+  }
+
+  /**
    * 删除任务
    * DELETE /api/parent/tasks/:id
    */

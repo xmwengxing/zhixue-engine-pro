@@ -179,6 +179,65 @@ export const deleteSpecialTask = async (req: Request, res: Response, next: NextF
   }
 };
 
+/** 终止专项任务（结束进行中会话，便于删除）POST /api/student/special-tasks/:id/terminate */
+export const terminateSpecialTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未授权访问' } });
+      return;
+    }
+    const taskId = String(req.params.id);
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, category: true } });
+    await prisma.$disconnect();
+    if (!task) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      return;
+    }
+    if (task.category !== 'SPECIAL') {
+      res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: '仅专项任务可终止' } });
+      return;
+    }
+    const { terminateTaskWithSessions } = await import('../services/taskDeletionService');
+    const result = await terminateTaskWithSessions(taskId);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    next(e);
+  }
+};
+
+/** 修改单词任务跳转间隔（秒）PATCH /api/student/word-task/:taskId/config */
+export const updateWordInterval = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.user?.userId;
+    if (!studentId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: '未授权访问' } });
+      return;
+    }
+    const taskId = String(req.params.taskId);
+    const { intervalSec } = req.body ?? {};
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true } });
+    await prisma.$disconnect();
+    if (!task || task.studentId !== studentId) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: '任务不存在' } });
+      return;
+    }
+    const { updateWordIntervalSec } = await import('../services/taskDeletionService');
+    const result = await updateWordIntervalSec(taskId, Number(intervalSec));
+    res.json({ success: true, data: result });
+  } catch (e: any) {
+    if (typeof e.message === 'string' && e.message.includes('跳转间隔')) {
+      res.status(400).json({ error: { code: 'INVALID_PARAMETER', message: e.message } });
+      return;
+    }
+    next(e);
+  }
+};
+
 /**
  * 开始训练
  * POST /api/student/training/start/:taskId

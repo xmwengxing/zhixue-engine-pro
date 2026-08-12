@@ -1730,6 +1730,18 @@ export class ParentTaskService {
    * @param parentId 家长 ID（用于权限验证）
    * @returns 删除结果
    */
+  async terminateTask(taskId: string, parentId: string) {
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true, createdBy: true } });
+    if (!task) throw new Error('任务不存在');
+    // 验证权限：亲子关系 或 本人创建
+    const boundStudentIds = await this.getBoundStudentIds(parentId);
+    if (!boundStudentIds.includes(task.studentId) && task.createdBy !== parentId) {
+      throw new Error('无权操作该任务');
+    }
+    const { terminateTaskWithSessions } = await import('./taskDeletionService');
+    return terminateTaskWithSessions(taskId);
+  }
+
   async deleteTask(taskId: string, parentId: string) {
     try {
       const task = await prisma.task.findUnique({ where: { id: taskId }, select: { id: true, studentId: true, createdBy: true } });

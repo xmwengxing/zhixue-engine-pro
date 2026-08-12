@@ -575,8 +575,10 @@ export default function WordTraining() {
             ← 退出（保存进度）
           </button>
           <div className="text-sm text-[#92a4c9]">
-            {modeLabel} · 第 {groupIndex + 1}/{totalGroups || 1} 组 ·{' '}
-            {wordIndex + 1}/{group.length} 词
+            {modeLabel} ·{' '}
+            {group.length > 1
+              ? `第 ${groupIndex + 1}/${totalGroups || 1} 组 · ${wordIndex + 1}/${group.length} 词`
+              : `第 ${wordIndex + 1}/${totalGroups || 1} 词`}
           </div>
         </div>
 

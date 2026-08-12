@@ -380,6 +380,16 @@ router.post(
  * @access  Parent
  * @param   id - 任务 ID
  */
+
+/**
+ * @route   POST /api/parent/tasks/:id/terminate
+ * @desc    终止任务（结束进行中会话 → COMPLETED，便于删除）
+ * @access  Parent
+ */
+router.post('/tasks/:id/terminate', (req, res, next) =>
+  parentTaskController.terminateTask(req, res, next)
+);
+
 router.delete('/tasks/:id', taskOwnership, (req, res, next) =>
   parentTaskController.deleteTask(req, res, next)
 );

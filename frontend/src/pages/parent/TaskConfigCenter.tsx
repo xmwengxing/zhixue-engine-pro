@@ -145,8 +145,7 @@ export default function TaskConfigCenter() {
     wordMode: 'DICTATION' as 'DICTATION' | 'SPELLING' | 'CHOICE',
     wordStage: '初中',
     wordOrderMode: 'SEQUENCE' as 'SEQUENCE' | 'RANDOM',
-    wordGroupSize: 2,
-    wordIntervalSec: 5,
+    wordIntervalSec: 3, // 单词跳转间隔（3/5/8 秒，默认 3）
     wordRoundSize: 20,
   });
   const [specialTextbooks, setSpecialTextbooks] = useState<TextbookWithUnits[]>([]);
@@ -672,19 +671,12 @@ export default function TaskConfigCenter() {
             throw new Error('抽题数量必须在 1-50 之间');
           }
         } else if (specialForm.specialType === 'WORD') {
-          // 英语单词：校验配置（每组 1-5、间隔 0-120s、每轮 1-50）
-          if (![1, 2, 3, 4, 5].includes(specialForm.wordGroupSize)) {
-            throw new Error('每组单词数必须为 1-5');
+          // 英语单词：单词总数 10-100、跳转间隔 3/5/8
+          if (!Number.isFinite(specialForm.wordRoundSize) || specialForm.wordRoundSize < 10 || specialForm.wordRoundSize > 100) {
+            throw new Error('单词总数必须在 10-100 之间');
           }
-          if (
-            !Number.isFinite(specialForm.wordIntervalSec) ||
-            specialForm.wordIntervalSec < 0 ||
-            specialForm.wordIntervalSec > 120
-          ) {
-            throw new Error('每组间隔秒数需在 0-120 之间');
-          }
-          if (!Number.isFinite(specialForm.wordRoundSize) || specialForm.wordRoundSize < 1 || specialForm.wordRoundSize > 50) {
-            throw new Error('每轮词数需在 1-50 之间');
+          if (![3, 5, 8].includes(specialForm.wordIntervalSec)) {
+            throw new Error('单词跳转间隔需为 3、5 或 8 秒');
           }
         } else if (specialForm.questionCount < 1 || specialForm.questionCount > 50) {
           throw new Error('题量必须在 1-50 之间');
@@ -702,7 +694,7 @@ export default function TaskConfigCenter() {
             mode: specialForm.wordMode,
             stage: specialForm.wordStage,
             orderMode: specialForm.wordOrderMode,
-            groupSize: specialForm.wordGroupSize,
+            groupSize: 1, // 去掉分组机制：每词一组
             intervalSec: specialForm.wordIntervalSec,
             roundSize: specialForm.wordRoundSize,
           };
@@ -2202,54 +2194,16 @@ export default function TaskConfigCenter() {
                       </div>
                     </div>
 
-                    {/* 每组单词数 */}
-                    <div>
-                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">每组单词数</label>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setSpecialForm({ ...specialForm, wordGroupSize: n })}
-                            className={`flex-1 py-2 rounded-lg border text-sm transition-colors ${
-                              specialForm.wordGroupSize === n
-                                ? 'border-purple-500 bg-purple-500/15 text-white'
-                                : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
-                            }`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 组间隔 */}
-                    <div>
-                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">每组间隔（秒）</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={120}
-                        value={specialForm.wordIntervalSec}
-                        onChange={(e) =>
-                          setSpecialForm({
-                            ...specialForm,
-                            wordIntervalSec: Math.max(0, Math.min(120, parseInt(e.target.value) || 0)),
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-[#324467] rounded-lg bg-[#1a2332] text-white focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-
-                    {/* 每轮词数 */}
+                    {/* 单词总数 */}
                     <div>
                       <label className="block text-sm font-medium text-[#92a4c9] mb-2">
-                        每轮词数（完成后触发短语填空）：<span className="text-purple-300">{specialForm.wordRoundSize}</span>
+                        单词总数：<span className="text-purple-300">{specialForm.wordRoundSize}</span> 个
                       </label>
                       <input
                         type="range"
-                        min={1}
-                        max={50}
+                        min={10}
+                        max={100}
+                        step={5}
                         value={specialForm.wordRoundSize}
                         onChange={(e) =>
                           setSpecialForm({ ...specialForm, wordRoundSize: parseInt(e.target.value) })
@@ -2257,9 +2211,32 @@ export default function TaskConfigCenter() {
                         className="w-full accent-purple-500"
                       />
                       <div className="flex justify-between text-[10px] text-[#5b6b8c]">
-                        <span>1</span>
-                        <span>25</span>
+                        <span>10</span>
                         <span>50</span>
+                        <span>100</span>
+                      </div>
+                    </div>
+
+                    {/* 单词跳转间隔 */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                        单词跳转间隔（提交后自动进入下一题的等待时间）
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[3, 5, 8].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setSpecialForm({ ...specialForm, wordIntervalSec: n })}
+                            className={`py-2 rounded-lg border text-sm transition-colors ${
+                              specialForm.wordIntervalSec === n
+                                ? 'border-purple-500 bg-purple-500/15 text-white'
+                                : 'border-[#324467] bg-[#1a2332] text-[#92a4c9]'
+                            }`}
+                          >
+                            {n} 秒
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>

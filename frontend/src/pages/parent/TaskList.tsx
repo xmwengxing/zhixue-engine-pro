@@ -226,6 +226,17 @@ export default function TaskList() {
     setDeleteConfirmOpen(true);
   };
 
+  /** 终止任务（结束进行中会话，便于删除） */
+  const handleTerminateClick = async (task: Task) => {
+    if (!window.confirm(`终止任务「${task.title}」？将结束进行中的训练，之后可删除该任务。`)) return;
+    try {
+      await request.post(`/parent/tasks/${task.id}/terminate`);
+      await loadTasks();
+    } catch (e) {
+      setError(getErrorMessage(e, '终止任务失败'));
+    }
+  };
+
   const handleDeleteCancel = () => {
     setDeleteConfirmOpen(false);
     setTaskToDelete(null);
@@ -665,6 +676,18 @@ export default function TaskList() {
                                 title="查看本学期归档总结"
                               >
                                 学期总结
+                              </button>
+                            )}
+                            {task.status === 'IN_PROGRESS' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleTerminateClick(task);
+                                }}
+                                className="text-amber-400 hover:text-amber-300 cursor-pointer"
+                                title="终止任务：结束进行中的训练，之后可删除"
+                              >
+                                终止
                               </button>
                             )}
                             <button
