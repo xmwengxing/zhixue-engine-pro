@@ -218,31 +218,42 @@ export default function WordTraining() {
   };
 
   // ===== 发音（edge-tts 优先，Web Speech 兜底） =====
+  // 听写：每词念 repeat 遍（默认 3 遍，间隔 0.8s）；切词/提交时中断旧播放
   const speak = useCallback(
-    async (word: string) => {
+    async (word: string, repeat = 3) => {
       setPlaying(true);
+      // 中断上一词播放（提交跳下一词时上一词可能还在念）
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      speechSynthesis.cancel();
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const times = Math.max(1, repeat);
       try {
-        const res = await request.post(
-          '/student/word-task/tts',
-          { word },
-          { responseType: 'blob' }
-        );
+        const res = await request.post('/student/word-task/tts', { word }, { responseType: 'blob' });
         const blob = res as unknown as Blob;
         if (blob && blob.size > 0) {
           if (!audioRef.current) audioRef.current = new Audio();
-          audioRef.current.src = URL.createObjectURL(blob);
-          await audioRef.current.play();
+          for (let i = 0; i < times; i++) {
+            audioRef.current.src = URL.createObjectURL(blob);
+            await audioRef.current.play();
+            if (i < times - 1) await sleep(800); // 遍间间隔 0.8s
+          }
           setPlaying(false);
           return;
         }
         throw new Error('empty');
       } catch {
-        // Web Speech 兜底
+        // Web Speech 兜底（同样重复 3 遍）
         try {
-          const u = new SpeechSynthesisUtterance(word);
-          u.lang = 'en-US';
-          speechSynthesis.cancel();
-          speechSynthesis.speak(u);
+          for (let i = 0; i < times; i++) {
+            const u = new SpeechSynthesisUtterance(word);
+            u.lang = 'en-US';
+            speechSynthesis.cancel();
+            speechSynthesis.speak(u);
+            if (i < times - 1) await sleep(800);
+          }
         } catch {
           /* 忽略 */
         }
@@ -255,10 +266,10 @@ export default function WordTraining() {
   // 当前词
   const currentWord = group[wordIndex];
 
-  // 听写模式自动播放当前词（进入组或切换词时）
+  // 听写模式自动播放当前词（进入组或切换词时；每词念 3 遍，间隔 0.8s）
   useEffect(() => {
     if (config?.mode === 'DICTATION' && currentWord && phase === 'WORD' && countingDown === 0) {
-      void speak(currentWord.word);
+      void speak(currentWord.word, 3);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config?.mode, currentWord?.id, phase, countingDown]);
@@ -275,6 +286,10 @@ export default function WordTraining() {
       void fetchNextGroup();
     }
   };
+  // ⚠️ 闭包陷阱：setTimeout 回调必须用「最新渲染」的 goNextWord，
+  // 否则回调里的 feedback 是提交前快照（null），guard 会误拦导致不跳转
+  const goNextWordRef = useRef(goNextWord);
+  goNextWordRef.current = goNextWord;
 
   /** 请求下一组（词尾自动衔接）：每组完成 → 进入该组短语填空 */
   const fetchNextGroup = async () => {
@@ -325,7 +340,7 @@ export default function WordTraining() {
     // 跳转间隔后自动进入下一词（可点「下一个」提前跳转）；间隔读任务配置 3/5/8s
     if (wordTimerRef.current) clearTimeout(wordTimerRef.current);
     const sec = config ? (Number(config.intervalSec) > 0 ? Number(config.intervalSec) : 3) : 3;
-    wordTimerRef.current = setTimeout(goNextWord, sec * 1000);
+    wordTimerRef.current = setTimeout(() => goNextWordRef.current(), sec * 1000);
   };
 
   // ===== 短语填空 =====
@@ -340,6 +355,9 @@ export default function WordTraining() {
       void finishCloze();
     }
   };
+  // 同 goNextWord：定时器用最新引用，避免旧闭包 guard 误拦
+  const goNextClozeRef = useRef(goNextCloze);
+  goNextClozeRef.current = goNextCloze;
 
   const submitCloze = async () => {
     const q = cloze[clozeIdx];
@@ -355,7 +373,7 @@ export default function WordTraining() {
       setClozeStats((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
       // 8s 后自动进入下一题（可点「下一个」提前跳转）
       if (clozeTimerRef.current) clearTimeout(clozeTimerRef.current);
-      clozeTimerRef.current = setTimeout(goNextCloze, 8000);
+      clozeTimerRef.current = setTimeout(() => goNextClozeRef.current(), 8000);
     } catch (e) {
       setError(getErrorMessage(e, '判定失败'));
     }
