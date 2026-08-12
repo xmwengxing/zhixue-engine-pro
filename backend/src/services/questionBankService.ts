@@ -294,6 +294,7 @@ export async function createPaper(data: {
   term?: string;
   version?: string;
   unitIds?: string[];
+  categoryId?: string;
 }) {
   let { grade, term, version } = data;
   if (data.textbookId) {
@@ -303,6 +304,17 @@ export async function createPaper(data: {
       grade = grade ?? m.grade;
       term = term ?? m.term;
       version = version ?? m.version;
+    }
+  }
+  // 无目录 → 默认挂「通用与其他」系统目录（避免落单试卷在根目录）
+  let categoryId = data.categoryId ?? null;
+  if (!categoryId) {
+    try {
+      const paperCategoryService = await import('./paperCategoryService');
+      const general = await paperCategoryService.ensureGeneralCategory(data.subject);
+      categoryId = general.id;
+    } catch {
+      categoryId = null;
     }
   }
   return prisma.questionPaper.create({
@@ -317,6 +329,7 @@ export async function createPaper(data: {
       status: PaperStatus.DRAFT,
       paperType: (data.paperType ?? 'UNIT') as any,
       category: (data.category ?? 'EXERCISE') as any,
+      categoryId,
       unitIds: data.unitIds ?? [],
       textbookId: data.textbookId ?? null,
     },

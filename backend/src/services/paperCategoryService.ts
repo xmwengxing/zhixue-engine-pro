@@ -16,6 +16,20 @@ export async function ensureAssessmentCategory(subject: string): Promise<{ id: s
   });
 }
 
+/** 系统内置目录：通用与其他（无目录的导入/新建试卷默认挂载，禁止重命名/删除） */
+export const GENERAL_CATEGORY_NAME = '通用与其他';
+
+/** 惰性确保每学科存在「通用与其他」一级目录（system + immutable） */
+export async function ensureGeneralCategory(subject: string): Promise<{ id: string; name: string }> {
+  const exist = await prisma.paperCategory.findFirst({
+    where: { subject, name: GENERAL_CATEGORY_NAME, parentId: null },
+  });
+  if (exist) return { id: exist.id, name: exist.name };
+  return prisma.paperCategory.create({
+    data: { name: GENERAL_CATEGORY_NAME, subject, level: 1, system: true, immutable: true, sortOrder: 10 },
+  });
+}
+
 /** 目录树（含系统初测目录；papers 数统计到末级） */
 export async function getCategoryTree(subject?: string) {
   const where = subject ? { subject } : {};
@@ -27,6 +41,7 @@ export async function getCategoryTree(subject?: string) {
   // 若学科无初测目录则创建
   if (subject) {
     await ensureAssessmentCategory(subject);
+    await ensureGeneralCategory(subject);
     const nodes2 = await prisma.paperCategory.findMany({
       where,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -57,6 +72,9 @@ export async function createRootCategory(subject: string, name: string) {
   if (!trimmed) throw new Error('目录名称不能为空');
   if (trimmed === ASSESSMENT_CATEGORY_NAME) {
     throw new Error('「初测与水平评估」为系统目录，由系统维护');
+  }
+  if (trimmed === GENERAL_CATEGORY_NAME) {
+    throw new Error('「通用与其他」为系统目录，由系统维护');
   }
   const exist = await prisma.paperCategory.findFirst({ where: { subject, name: trimmed, parentId: null } });
   if (exist) throw new Error(`一级目录「${trimmed}」已存在`);
