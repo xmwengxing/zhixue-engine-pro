@@ -191,14 +191,7 @@ const REVIEW_LABELS: Record<string, { text: string; cls: string }> = {
 
 const PAGE_SIZE = 10;
 
-// 试卷类型（期中/期末/中考/高考等特殊归类，便于任务按类型调用）
-const PAPER_TYPE_OPTIONS = [
-  { value: 'UNIT', label: '单元练习' },
-  { value: 'MIDTERM', label: '期中' },
-  { value: 'FINAL', label: '期末' },
-  { value: 'ZHONGKAO', label: '中考' },
-  { value: 'GAOKAO', label: '高考' },
-];
+// 试卷类型标签（单元练习/期中/期末/中考/高考）
 const PAPER_TYPE_LABELS: Record<string, string> = {
   UNIT: '单元练习',
   MIDTERM: '期中',
@@ -243,8 +236,6 @@ const QuestionBankManagement = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [paperTotal, setPaperTotal] = useState(0);
   const [paperPage, setPaperPage] = useState(1);
-  // 试卷分类：习题与试卷 / 初测与水平评估
-  const [paperCategory, setPaperCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
   // 多级目录（V2）
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>('');
@@ -369,7 +360,6 @@ const QuestionBankManagement = () => {
         subject: activeSubject,
         page: String(paperPage),
         limit: String(PAGE_SIZE),
-        category: paperCategory,
       });
       // 目录过滤（V2）：选中目录时按目录（含子树）过滤；「初测与水平评估」目录 → category=ASSESSMENT
       if (activeCategoryId) params.set('categoryId', activeCategoryId);
@@ -381,7 +371,7 @@ const QuestionBankManagement = () => {
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [activeSubject, paperPage, paperCategory, activeCategoryId]);
+  }, [activeSubject, paperPage, activeCategoryId]);
 
   // 目录树 + 标签加载（V2）
   const loadCategories = useCallback(async () => {
@@ -468,7 +458,7 @@ const QuestionBankManagement = () => {
   useEffect(() => {
     setPaperPage(1);
     setQuestionPage(1);
-  }, [activeSubject, paperCategory]);
+  }, [activeSubject]);
 
   // ---------- 试卷操作 ----------
 
@@ -830,10 +820,9 @@ const QuestionBankManagement = () => {
                   <CategoryTree
                     nodes={categories}
                     activeId={activeCategoryId}
-                    onSelect={(id, isAssessment) => {
+                    onSelect={(id) => {
                       setActiveCategoryId(id);
                       setPaperPage(1);
-                      if (isAssessment) setPaperCategory('ASSESSMENT');
                     }}
                   />
                 </div>
@@ -848,38 +837,7 @@ const QuestionBankManagement = () => {
               {/* 右侧：试卷列表 */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col gap-3">
-                  {/* 试卷分类页签：习题与试卷 / 初测与水平评估 */}
-                  <div className="flex mb-1 rounded-lg bg-[#232f48] p-1 w-fit">
-                    <button
-                      onClick={() => {
-                        setPaperCategory('EXERCISE');
-                        setActiveCategoryId('');
-                        setPaperPage(1);
-                      }}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        paperCategory === 'EXERCISE' ? 'bg-primary text-white' : 'text-[#92a4c9]'
-                      }`}
-                    >
-                      习题与试卷
-                    </button>
-                    <button
-                      onClick={() => {
-                        setPaperCategory('ASSESSMENT');
-                        setActiveCategoryId('');
-                        setPaperPage(1);
-                      }}
-                      className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        paperCategory === 'ASSESSMENT' ? 'bg-primary text-white' : 'text-[#92a4c9]'
-                      }`}
-                    >
-                      初测与水平评估
-                    </button>
-                  </div>
-                  {paperCategory === 'ASSESSMENT' && (
-                    <p className="text-xs text-[#5b6b8c]">
-                      该分类不区分难度，专门用于任务初测或水平评估，训练舱初测可从此库整卷抽取或由 AI 组合。
-                    </p>
-                  )}
+                  {/* 试卷按左侧目录树过滤：「初测与水平评估」为目录树一级目录（系统目录） */}
                   {papers.length === 0 ? (
                     <EmptyState text="当前科目暂无试卷，可点击右上角「导入试卷」或「新建试卷」" />
                   ) : (
@@ -1781,36 +1739,97 @@ const TextbookUnitSelector = ({
   }, [textbookId]);
 
   const selectedTextbook = textbooks.find((t) => t.id === textbookId);
+  // 试卷范围：常规（选教材单元/期中/期末）/ 中考 / 高考 —— 中考高考时锁定下方选项
+  const isLockedType = paperType === 'ZHONGKAO' || paperType === 'GAOKAO';
+  const SPECIAL_SCOPE: Array<{ value: string; label: string }> = [
+    { value: 'MIDTERM', label: '期中' },
+    { value: 'FINAL', label: '期末' },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className={labelCls}>关联教材（可选）</label>
-        <select
-          value={textbookId}
-          onChange={(e) => {
-            const id = e.target.value;
-            onChange(id || null, [], textbooks.find((t) => t.id === id));
-          }}
-          className={inputCls}
-        >
-          <option value="">不关联教材</option>
-          {textbooks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.version} {gradeLabel(t.grade)}
-              {termLabel(t.term)} {t.subject}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {textbookId && (
+      {/* 试卷类型：常规 / 中考 / 高考（放标题下方） */}
+      {showPaperType && (
         <div>
-          <label className={labelCls}>关联单元（可多选）</label>
+          <label className={labelCls}>试卷类型 *</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'UNIT', label: '常规' },
+              { value: 'ZHONGKAO', label: '中考' },
+              { value: 'GAOKAO', label: '高考' },
+            ].map((o) => (
+              <button
+                type="button"
+                key={o.value}
+                onClick={() => {
+                  onPaperTypeChange?.(o.value);
+                  // 切到中考/高考时清空单元选择（全局卷，不关联单元）
+                  if (o.value !== 'UNIT') onChange(null, [], undefined);
+                }}
+                className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                  (paperType === o.value) ||
+                  (o.value === 'UNIT' && !['ZHONGKAO', 'GAOKAO', 'MIDTERM', 'FINAL'].includes(paperType || ''))
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-primary'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[#5b6b8c] text-[11px] mt-1">
+            常规：关联具体教材单元练习，或选「期中/期末」；中考/高考为整卷类型，不关联单元
+          </p>
+        </div>
+      )}
+
+      {/* 关联教材（仅常规类型可选；中考/高考锁定） */}
+      {!isLockedType && (
+        <div>
+          <label className={labelCls}>关联教材 *</label>
+          <select
+            value={textbookId}
+            onChange={(e) => {
+              const id = e.target.value;
+              onChange(id || null, [], textbooks.find((t) => t.id === id));
+            }}
+            className={inputCls}
+          >
+            <option value="">请选择教材</option>
+            {textbooks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.version} {gradeLabel(t.grade)}
+                {termLabel(t.term)} {t.subject}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {!isLockedType && textbookId && (
+        <div>
+          <label className={labelCls}>关联单元（单选）</label>
           {units.length === 0 ? (
             <p className="text-[#5b6b8c] text-xs">该教材暂无单元</p>
           ) : (
             <div className="flex flex-wrap gap-2">
+              {showPaperType && SPECIAL_SCOPE.map((s) => (
+                <button
+                  type="button"
+                  key={s.value}
+                  onClick={() => {
+                    onPaperTypeChange?.(s.value);
+                    onChange(textbookId, [], selectedTextbook);
+                  }}
+                  className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                    paperType === s.value
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-amber-500'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
               {units.map((u) => {
                 const checked = unitIds.includes(u.id);
                 return (
@@ -1818,10 +1837,9 @@ const TextbookUnitSelector = ({
                     type="button"
                     key={u.id}
                     onClick={() => {
-                      const next = checked
-                        ? unitIds.filter((x) => x !== u.id)
-                        : [...unitIds, u.id];
-                      onChange(textbookId, next, selectedTextbook);
+                      // 单选：选中即替换
+                      onPaperTypeChange?.('UNIT');
+                      onChange(textbookId, [u.id], selectedTextbook);
                     }}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       checked
@@ -1835,31 +1853,6 @@ const TextbookUnitSelector = ({
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {showPaperType && (
-        <div>
-          <label className={labelCls}>试卷类型</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {PAPER_TYPE_OPTIONS.map((o) => (
-              <button
-                type="button"
-                key={o.value}
-                onClick={() => onPaperTypeChange?.(o.value)}
-                className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
-                  paperType === o.value
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-primary'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[#5b6b8c] text-[11px] mt-1">
-            期中/期末/中考/高考为特殊归类，便于任务按类型调用；单元练习为常规单元测验
-          </p>
         </div>
       )}
     </div>
@@ -1887,13 +1880,18 @@ const CreatePaperModal = ({
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [tbSubject, setTbSubject] = useState<string | undefined>();
   const [paperType, setPaperType] = useState('UNIT');
-  const [category, setCategory] = useState<'EXERCISE' | 'ASSESSMENT'>('EXERCISE');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
     if (!form.title.trim()) {
       setErr('请填写试卷标题');
+      return;
+    }
+    // 必填校验：常规类型必须关联教材（中考/高考卷除外）
+    const isGlobal = paperType === 'ZHONGKAO' || paperType === 'GAOKAO';
+    if (!isGlobal && !tbId) {
+      setErr('常规试卷必须选择关联教材（中考/高考卷除外）');
       return;
     }
     setSubmitting(true);
@@ -1905,7 +1903,6 @@ const CreatePaperModal = ({
         title: form.title.trim(),
         textbookId: tbId || undefined,
         paperType,
-        category,
         unitIds,
       });
       onCreated();
@@ -1956,42 +1953,12 @@ const CreatePaperModal = ({
           paperType={paperType}
           onPaperTypeChange={setPaperType}
         />
-        <div>
-          <label className={labelCls}>试卷分类</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setCategory('EXERCISE')}
-              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
-                category === 'EXERCISE'
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-primary'
-              }`}
-            >
-              习题与试卷
-            </button>
-            <button
-              type="button"
-              onClick={() => setCategory('ASSESSMENT')}
-              className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
-                category === 'ASSESSMENT'
-                  ? 'bg-amber-500 text-white border-amber-500'
-                  : 'bg-[#111722] text-[#92a4c9] border-[#324467] hover:border-amber-500'
-              }`}
-            >
-              初测与水平评估
-            </button>
-          </div>
-          <p className="text-[#5b6b8c] text-[11px] mt-1">
-            「初测与水平评估」不区分难度，专门用于任务初测或水平评估，可被训练舱初测整卷抽取或由 AI 组合
-          </p>
-        </div>
         <button
           onClick={() => void submit()}
           disabled={submitting}
-          className="mt-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-50"
         >
-          {submitting ? '创建中...' : '创建试卷'}
+          {submitting ? '创建中…' : '创建试卷'}
         </button>
       </div>
     </Modal>
@@ -2245,6 +2212,75 @@ const ImportModal = ({
 };
 
 /** 试卷详情弹窗 */
+/** 试卷教材关联编辑弹窗（详情页「编辑教材」） */
+const EditPaperMetaModal = ({
+  paper,
+  onClose,
+  onSaved,
+}: {
+  paper: PaperDetail;
+  onClose: () => void;
+  onSaved: () => void;
+}) => {
+  const [tbId, setTbId] = useState(paper.textbookId || '');
+  const [unitIds, setUnitIds] = useState<string[]>(paper.unitIds || []);
+  const [tbSubject, setTbSubject] = useState<string | undefined>(paper.subject);
+  const [paperType, setPaperType] = useState<string>(paper.paperType || 'UNIT');
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    const isGlobal = paperType === 'ZHONGKAO' || paperType === 'GAOKAO';
+    if (!isGlobal && !tbId) {
+      setErr('常规试卷必须选择关联教材（中考/高考卷除外）');
+      return;
+    }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await request.patch<ApiResponse>('/admin/question-bank/papers/' + paper.id, {
+        textbookId: tbId || undefined,
+        paperType,
+        unitIds,
+        subject: tbSubject || paper.subject,
+      });
+      onSaved();
+    } catch (e) {
+      setErr(getErrorMessage(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal title={'编辑教材关联：' + paper.title} onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        {err && <p className="text-red-400 text-sm">{err}</p>}
+        <TextbookUnitSelector
+          subject={paper.subject}
+          textbookId={tbId}
+          unitIds={unitIds}
+          onChange={(id, uIds, tb) => {
+            setTbId(id ?? '');
+            setUnitIds(uIds);
+            setTbSubject(tb?.subject);
+          }}
+          showPaperType
+          paperType={paperType}
+          onPaperTypeChange={setPaperType}
+        />
+        <button
+          onClick={() => void submit()}
+          disabled={submitting}
+          className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-50"
+        >
+          {submitting ? '保存中…' : '保存'}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
 const PaperDetailModal = ({
   paperId,
   onClose,
@@ -2256,6 +2292,7 @@ const PaperDetailModal = ({
 }) => {
   const [paper, setPaper] = useState<PaperDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [showEditMeta, setShowEditMeta] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -2297,6 +2334,14 @@ const PaperDetailModal = ({
             {paper.grade ? ` · ${gradeLabel(paper.grade)}` : ''} · {paper.items.length} 题 · 状态：
             {STATUS_LABELS[paper.status]?.text || paper.status}
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowEditMeta(true)}
+              className="px-3 py-1.5 text-xs rounded-lg bg-primary/15 text-primary border border-primary/40 hover:bg-primary/25"
+            >
+              编辑教材关联
+            </button>
+          </div>
           {paper.items.length === 0 ? (
             <EmptyState text="试卷暂无题目，可在题目列表中编辑后加入，或通过导入识别自动生成" />
           ) : (
@@ -2332,6 +2377,16 @@ const PaperDetailModal = ({
             ))
           )}
         </div>
+      )}
+      {showEditMeta && paper && (
+        <EditPaperMetaModal
+          paper={paper}
+          onClose={() => setShowEditMeta(false)}
+          onSaved={() => {
+            setShowEditMeta(false);
+            void load();
+          }}
+        />
       )}
     </Modal>
   );
@@ -2369,6 +2424,17 @@ const QuestionFormModal = ({
     if (!form.stem.trim() || !form.answer.trim()) {
       setErr('请填写题干和答案');
       return;
+    }
+    // 新建试题必填：关联教材（版本/年级）与单元（避免题库体系混乱，训练舱可按单元索引）
+    if (!isEdit) {
+      if (!tbId) {
+        setErr('请选择关联教材（教材含版本与年级）');
+        return;
+      }
+      if (unitIds.length === 0) {
+        setErr('请选择关联单元（单选）');
+        return;
+      }
     }
     setSubmitting(true);
     setErr(null);

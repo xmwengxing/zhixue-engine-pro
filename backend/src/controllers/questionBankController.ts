@@ -199,8 +199,29 @@ export const addPaperItem = async (req: Request, res: Response) => {
 
 export const updatePaper = async (req: Request, res: Response) => {
   try {
-    const { category, categoryId, tagIds } = req.body;
+    const { category, categoryId, tagIds, textbookId, paperType, unitIds, grade, term, version, title } = req.body;
     const id = pid(req);
+    // 教材关联编辑（详情页「编辑教材」）：更新版本/年级/学期/教材/单元/类型
+    const metaEdited =
+      textbookId !== undefined || paperType !== undefined || unitIds !== undefined ||
+      grade !== undefined || term !== undefined || version !== undefined ||
+      (typeof title === 'string' && title.trim());
+    if (metaEdited) {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      const data: any = {};
+      if (textbookId !== undefined) data.textbookId = textbookId || null;
+      if (paperType !== undefined) data.paperType = paperType;
+      if (unitIds !== undefined) data.unitIds = Array.isArray(unitIds) ? unitIds : [];
+      if (grade !== undefined) data.grade = grade || null;
+      if (term !== undefined) data.term = term || null;
+      if (version !== undefined) data.version = version || null;
+      if (typeof title === 'string' && title.trim()) data.title = title.trim();
+      await prisma.questionPaper.update({ where: { id }, data });
+      await prisma.$disconnect();
+      const paper = await questionBankService.getPaper(id);
+      return res.json({ success: true, data: paper });
+    }
     // 目录移动（V2）：移动目录并同步 category 字段（初测目录 → ASSESSMENT）
     if (categoryId !== undefined) {
       if (categoryId && typeof categoryId !== 'string') {
