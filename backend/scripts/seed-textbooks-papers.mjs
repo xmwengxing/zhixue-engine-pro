@@ -131,6 +131,11 @@ async function main() {
   }
   console.log(`   合计 ${TEXTBOOKS.length} 套教材 / ${totalUnits} 个单元`);
 
+  // 为全部教材学科建 SUBJECT 节点（题库学科 tag 按教材体系对齐）
+  const allSubjects = [...new Set(TEXTBOOKS.map((t) => t.subject))];
+  for (const subj of allSubjects) await ensureSubjectNode(subj);
+  console.log(`   ✓ 学科节点：${allSubjects.join(' / ')}`);
+
   // ---- 题库题 unitIds 迁移（旧单元 id → 新单元 id，按名称匹配；匹配不到则剔除）----
   const newUnits = await prisma.materialNode.findMany({
     where: { type: 'UNIT' },

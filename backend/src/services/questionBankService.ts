@@ -19,8 +19,14 @@ const prisma = new PrismaClient();
  * 获取所有已配置的科目（来自管理员配置的科目教学指令）
  */
 export async function listSubjects(): Promise<string[]> {
-  const rows = await prisma.subjectInstruction.findMany({ select: { subject: true } });
-  return rows.map((r) => r.subject);
+  // 学科 tag 按教材体系对齐（MaterialNode SUBJECT 节点），排除占位「通用」；
+  // 不再从 subjectInstruction 取（那里混有「初中数学/词汇老师」等非学科名）
+  const rows = await prisma.materialNode.findMany({
+    where: { type: 'SUBJECT', name: { not: '通用' } },
+    select: { name: true },
+    orderBy: { order: 'asc' },
+  });
+  return rows.map((r) => r.name);
 }
 
 /**
