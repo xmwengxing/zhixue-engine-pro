@@ -1,16 +1,13 @@
-// 教材体系 + 题库 测试数据种子脚本
-// 1) 清理测试用教材数据（MaterialNode 整树）与冒烟测试产生的试卷/题目
-// 2) 生成 八年级(上/下) 人教版 数学/英语 共 4 套教材（真实单元名 + 简介）
-// 3) 生成 八年级下 数学 / 英语 各 1 套试卷（含若干题目，关联对应教材单元）
-//
-// 用法：在 backend 目录下用 node 运行（自动读取 .env 的 DATABASE_URL）
-//   node scripts/seed-textbooks-papers.mjs
+// 教材体系 初始数据种子脚本（全量：人教版 小学+初中 全年级全科目）
+// 1) 重建教材树（TEXTBOOK/UNIT；保留 SUBJECT 节点——题库题引用 SUBJECT，不清题库）
+// 2) 重建 八年级下 数学/英语 各 1 套试卷（冒烟回归依赖）
+// 用法：node scripts/seed-textbooks-papers.mjs
 
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { PEP_TEXTBOOKS } from './data/pep-textbooks.mjs';
 
-// ---- 读取 .env 的 DATABASE_URL ----
 const envPath = path.resolve(process.cwd(), '.env');
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -21,73 +18,12 @@ if (fs.existsSync(envPath)) {
 
 const prisma = new PrismaClient();
 
-const G = { 7: '七年级', 8: '八年级', 9: '九年级' };
+const G = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级', 7: '七年级', 8: '八年级', 9: '九年级' };
 const TL = { UP: '上', DOWN: '下' };
 const tbName = (version, grade, term, subject) =>
   `${version} ${G[grade]}${TL[term]} ${subject}`;
 
-// ============ 教材定义 ============
-const MATH_UP_UNITS = [
-  { seq: 1, name: '第十一章 三角形' },
-  { seq: 2, name: '第十二章 全等三角形' },
-  { seq: 3, name: '第十三章 轴对称' },
-  { seq: 4, name: '第十四章 整式乘法与因式分解' },
-  { seq: 5, name: '第十五章 分式' },
-];
-const MATH_DOWN_UNITS = [
-  { seq: 1, name: '第十六章 二次根式' },
-  { seq: 2, name: '第十七章 勾股定理' },
-  { seq: 3, name: '第十八章 平行四边形' },
-  { seq: 4, name: '第十九章 一次函数' },
-  { seq: 5, name: '第二十章 数据的分析' },
-];
-const ENG_UP_UNITS = [
-  'Where did you go on vacation?',
-  'How often do you exercise?',
-  "I'm more outgoing than my sister.",
-  'What’s the best movie theater?',
-  'Do you want to watch a game show?',
-  'I’m going to study computer science.',
-  'Will people have robots?',
-  'How do you make a banana milk shake?',
-  'Can you come to my party?',
-  'If you go to the party, we’ll have a great time!',
-].map((name, i) => ({ seq: i + 1, name: `Unit ${i + 1} ${name}` }));
-const ENG_DOWN_UNITS = [
-  "What’s the matter?",
-  "I’ll help to clean up the city parks.",
-  'Could you please clean your room?',
-  "Why don’t you talk to your parents?",
-  'What were you doing when the rainstorm came?',
-  'An old man tried to move the mountains.',
-  "What’s the highest mountain in the world?",
-  'Have you read Treasure Island yet?',
-  'Have you ever been to a museum?',
-  "I’ve had this bike for three years.",
-].map((name, i) => ({ seq: i + 1, name: `Unit ${i + 1} ${name}` }));
-
-const TEXTBOOKS = [
-  {
-    subject: '数学', version: '人教版', grade: '8', term: 'UP',
-    description: '人教版八年级上册数学，涵盖三角形、全等三角形、轴对称、整式乘法与因式分解、分式等内容，侧重几何推理与代数运算基础。',
-    units: MATH_UP_UNITS,
-  },
-  {
-    subject: '数学', version: '人教版', grade: '8', term: 'DOWN',
-    description: '人教版八年级下册数学，涵盖二次根式、勾股定理、平行四边形、一次函数、数据的分析，承接上册并引入函数与数据分析思想。',
-    units: MATH_DOWN_UNITS,
-  },
-  {
-    subject: '英语', version: '人教版', grade: '8', term: 'UP',
-    description: '人教版（Go for it!）八年级上册英语，围绕假期经历、频率表达、比较级、未来计划等话题，训练听说读写与比较级、将来时等语法。',
-    units: ENG_UP_UNITS,
-  },
-  {
-    subject: '英语', version: '人教版', grade: '8', term: 'DOWN',
-    description: '人教版（Go for it!）八年级下册英语，围绕健康建议、志愿服务、家务请求、故事阅读等话题，强化情态动词、现在完成时等语法。',
-    units: ENG_DOWN_UNITS,
-  },
-];
+const TEXTBOOKS = PEP_TEXTBOOKS;
 
 // ============ 工具 ============
 function unitIdsOf(tb, seqs) {
@@ -112,7 +48,7 @@ async function createTextbookNode(def) {
     },
   });
   const units = [];
-  for (const u of def.units) {
+  for (const u of def.units || []) {
     const un = await prisma.materialNode.create({
       data: {
         name: `${u.seq}. ${u.name}`,
@@ -135,7 +71,6 @@ async function createTextbookNode(def) {
 }
 
 // 题库题目的 materialNodeId 必须指向 SUBJECT 类型节点
-// （listQuestions/getBankSummary/pickRandomQuestions 均按 materialNode: { name, type:'SUBJECT' } 过滤）
 async function ensureSubjectNode(subject) {
   let node = await prisma.materialNode.findFirst({ where: { type: 'SUBJECT', name: subject } });
   if (!node) {
@@ -151,7 +86,7 @@ async function makeQuestion(paperId, materialNodeId, q) {
     data: {
       materialNodeId,
       type: q.type,
-      content: { stem: q.stem } ,
+      content: { stem: q.stem },
       answer: q.answer,
       difficulty: q.difficulty,
       knowledgePoints: q.kps,
@@ -164,30 +99,55 @@ async function makeQuestion(paperId, materialNodeId, q) {
     },
   });
   await prisma.questionPaperItem.create({
-    data: { paperId, questionId: question.id, order: q.order, score: q.score ?? 0 },
+    data: { paperId, questionId: question.id, order: q.order, score: q.score },
   });
   return question.id;
 }
 
 async function main() {
-  console.log('=== 1) 清理测试数据 ===');
+  console.log('=== 1) 重建教材树（保留 SUBJECT 节点与题库题）===');
   await prisma.questionPaperItem.deleteMany({});
-  try { await prisma.answer.deleteMany({}); } catch (e) { /* 可能无该表或无可删 */ }
-  try { await prisma.errorQuestion.deleteMany({}); } catch (e) { /* 可选 */ }
-  await prisma.question.deleteMany({});
   await prisma.questionPaper.deleteMany({});
-  await prisma.questionImportJob.deleteMany({});
-  // 清空整个教材树（TEXTBOOK + 其子 UNIT 均在此删除，因为子节点 parentId 指向 TEXTBOOK）
-  await prisma.materialNode.deleteMany({});
-  console.log('   已清理试卷/题目/教材树。');
+  // 记录旧 UNIT（id→name），重建后按名称迁移题库题 unitIds
+  const oldUnits = await prisma.materialNode.findMany({
+    where: { type: 'UNIT' },
+    select: { id: true, name: true },
+  });
+  // 先删 UNIT（子节点），再删 TEXTBOOK；保留 SUBJECT（题库题 materialNodeId 引用）
+  await prisma.materialNode.deleteMany({ where: { type: 'UNIT' } });
+  await prisma.materialNode.deleteMany({ where: { type: 'TEXTBOOK' } });
+  console.log('   已清理旧 TEXTBOOK/UNIT（SUBJECT 与题库保留）。');
 
-  console.log('=== 2) 生成 4 套教材 ===');
+  console.log(`=== 2) 生成 ${TEXTBOOKS.length} 套教材 ===`);
   const created = {};
+  let totalUnits = 0;
   for (const def of TEXTBOOKS) {
     const tb = await createTextbookNode(def);
     created[`${def.subject}_${def.grade}_${def.term}`] = tb;
+    totalUnits += tb.units.length;
     console.log(`   ✓ ${tb.name}（${tb.units.length} 个单元）`);
   }
+  console.log(`   合计 ${TEXTBOOKS.length} 套教材 / ${totalUnits} 个单元`);
+
+  // ---- 题库题 unitIds 迁移（旧单元 id → 新单元 id，按名称匹配；匹配不到则剔除）----
+  const newUnits = await prisma.materialNode.findMany({
+    where: { type: 'UNIT' },
+    select: { id: true, name: true },
+  });
+  const nameToNewId = new Map(newUnits.map((nu) => [nu.name, nu.id]));
+  const oldToNew = new Map(
+    oldUnits.filter((ou) => nameToNewId.has(ou.name)).map((ou) => [ou.id, nameToNewId.get(ou.name)])
+  );
+  const questions = await prisma.question.findMany({ where: { unitIds: { isEmpty: false } }, select: { id: true, unitIds: true } });
+  let migrated = 0;
+  for (const q of questions) {
+    const next = q.unitIds.map((id) => oldToNew.get(id)).filter((id) => !!id);
+    if (next.join() !== q.unitIds.join()) {
+      await prisma.question.update({ where: { id: q.id }, data: { unitIds: next } });
+      migrated++;
+    }
+  }
+  if (migrated > 0) console.log(`   ↻ 题库题 unitIds 迁移：${migrated} 题已按单元名映射到新教材树`);
 
   console.log('=== 3) 生成 八年级下 数学 / 英语 试卷 ===');
 
@@ -208,7 +168,7 @@ async function main() {
       createdBy: 'seed',
     },
   });
-  const mathSubjectNodeId = await ensureSubjectNode('数学'); // 题目 materialNodeId 必须指向 SUBJECT 节点
+  const mathSubjectNodeId = await ensureSubjectNode('数学');
   const mathQuestions = [
     {
       order: 1, type: 'CHOICE', difficulty: 2,
@@ -225,114 +185,90 @@ async function main() {
       grade: '8', term: 'DOWN', version: '人教版', unitIds: mUnitIds,
     },
     {
-      order: 3, type: 'FORMULA', difficulty: 3,
-      stem: '已知直角三角形两直角边分别为 3 和 4，则斜边 c = ______。',
-      answer: '5',
-      kps: ['勾股定理'], score: 6,
+      order: 3, type: 'CHOICE', difficulty: 3,
+      stem: '在△ABC 中，∠C=90°，AC=3，BC=4，则 AB 的长为（ ）\nA. 5  B. 6  C. 7  D. √7',
+      answer: 'A',
+      kps: ['勾股定理'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: mUnitIds,
     },
     {
-      order: 4, type: 'JUDGE', difficulty: 1,
-      stem: '一次函数 y = kx + b 中，比例系数 k 必须不为 0。',
-      answer: 'true',
-      kps: ['一次函数', '函数定义'], score: 4,
+      order: 4, type: 'FILL', difficulty: 3,
+      stem: '一次函数 y = 2x − 1 的图象经过点 (0, ______)。',
+      answer: '-1',
+      kps: ['一次函数', '一次函数图象与性质'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: mUnitIds,
     },
     {
-      order: 5, type: 'ESSAY', difficulty: 4,
-      stem: '用勾股定理证明：直角三角形斜边上的中线等于斜边的一半。（写出主要步骤）',
-      answer: '设直角三角形 ABC，∠C=90°，斜边 AB。取 AB 中点 M，连接 CM。由直角三角形斜边中线定理（或坐标法可证）得 CM = AB/2。',
-      kps: ['勾股定理', '直角三角形性质'], score: 10,
+      order: 5, type: 'CHOICE', difficulty: 4,
+      stem: '下列四边形中，既是轴对称图形又是中心对称图形的是（ ）\nA. 等腰梯形  B. 平行四边形  C. 矩形  D. 等边三角形',
+      answer: 'C',
+      kps: ['平行四边形', '中心对称图形'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: mUnitIds,
     },
     {
-      order: 6, type: 'CHOICE', difficulty: 3,
-      stem: '一次函数 y = 2x − 1 的图象不经过（ ）\nA. 第一象限  B. 第二象限  C. 第三象限  D. 第四象限',
-      answer: 'B',
-      kps: ['一次函数', '函数图象'], score: 5,
+      order: 6, type: 'FILL', difficulty: 3,
+      stem: '数据 1、2、3、4、5 的方差是 ______。',
+      answer: '2',
+      kps: ['数据的分析', '方差'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: mUnitIds,
     },
   ];
-  for (const q of mathQuestions) {
-    await makeQuestion(mathPaper.id, mathSubjectNodeId, q);
-  }
-  console.log(`   ✓ 八下数学卷「${mathPaper.title}」（${mathQuestions.length} 题，期末）`);
+  for (const q of mathQuestions) await makeQuestion(mathPaper.id, mathSubjectNodeId, q);
+  console.log(`   ✓ ${mathPaper.title}（${mathQuestions.length} 题）`);
 
-  // ---- 八下 英语：单元练习卷 ----
+  // ---- 八下 英语：期末模拟卷 ----
   const engDown = created['英语_8_DOWN'];
-  const eUnitIds = unitIdsOf(engDown, [1, 3, 10]); // What's the matter / clean your room / had this bike
+  const eUnitIds = unitIdsOf(engDown, [1, 5, 8]);
   const engPaper = await prisma.questionPaper.create({
     data: {
       subject: '英语',
-      title: '八年级下册英语 Unit 1/3/10 单元练习',
+      title: '八年级下册英语期末模拟卷',
       grade: '8',
       term: 'DOWN',
       version: '人教版',
       textbookId: engDown.id,
-      paperType: 'UNIT',
+      paperType: 'FINAL',
       unitIds: eUnitIds,
       status: 'PUBLISHED',
       createdBy: 'seed',
     },
   });
-  const engSubjectNodeId = await ensureSubjectNode('英语'); // 题目 materialNodeId 必须指向 SUBJECT 节点
+  const engSubjectNodeId = await ensureSubjectNode('英语');
   const engQuestions = [
     {
       order: 1, type: 'CHOICE', difficulty: 2,
-      stem: '— What’s the matter?\n— I have a _____.\nA. toothache  B. happy  C. book  D. apple',
-      answer: 'A',
-      kps: ['健康表达', '看病用语'], score: 5,
+      stem: '— What\'s the ______ with you?\n— I have a headache.',
+      answer: 'matter',
+      kps: ['Unit 1 健康建议', 'What\'s the matter'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
     },
     {
       order: 2, type: 'FILL', difficulty: 2,
-      stem: "I’ve _____ (have) this bike for three years.",
-      answer: 'had',
-      kps: ['现在完成时', '延续性动词'], score: 5,
+      stem: 'I ______ (visit) the Great Wall last summer.',
+      answer: 'visited',
+      kps: ['Unit 5 一般过去时'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
     },
     {
-      order: 3, type: 'JUDGE', difficulty: 1,
-      stem: '“Could you please clean your room?” 的恰当回答可以是 “Sure, I can.”',
-      answer: 'true',
-      kps: ['礼貌请求', '情态动词'], score: 4,
-      grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
-    },
-    {
-      order: 4, type: 'ESSAY', difficulty: 3,
-      stem: 'Write a short passage (about 60 words) about your favorite volunteer activity.',
-      answer: 'I like volunteering at the animal hospital. Every weekend I help feed the cats and clean their rooms. It makes me happy to see them healthy. I think helping others is meaningful.',
-      kps: ['写作', '志愿服务'], score: 10,
-      grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
-    },
-    {
-      order: 5, type: 'CHOICE', difficulty: 3,
-      stem: '— Why don’t you talk to your parents?\n— _____.\nA. Because they are busy  B. Good idea  C. I’m fine  D. Thank you',
+      order: 3, type: 'CHOICE', difficulty: 3,
+      stem: 'Have you ever ______ to a museum?\nA. been  B. gone  C. went  D. goes',
       answer: 'A',
-      kps: ['建议表达', '情境交际'], score: 5,
+      kps: ['Unit 8 现在完成时', 'have been to'], score: 5,
+      grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
+    },
+    {
+      order: 4, type: 'FILL', difficulty: 3,
+      stem: 'I\'ve had this bike ______ three years.',
+      answer: 'for',
+      kps: ['Unit 10 现在完成时', 'for + 时间段'], score: 5,
       grade: '8', term: 'DOWN', version: '人教版', unitIds: eUnitIds,
     },
   ];
-  for (const q of engQuestions) {
-    await makeQuestion(engPaper.id, engSubjectNodeId, q);
-  }
-  console.log(`   ✓ 八下英语卷「${engPaper.title}」（${engQuestions.length} 题，单元练习）`);
+  for (const q of engQuestions) await makeQuestion(engPaper.id, engSubjectNodeId, q);
+  console.log(`   ✓ ${engPaper.title}（${engQuestions.length} 题）`);
 
-  console.log('\n=== 完成 ===');
-  const counts = {
-    textbooks: await prisma.materialNode.count({ where: { type: 'TEXTBOOK' } }),
-    units: await prisma.materialNode.count({ where: { type: 'UNIT' } }),
-    papers: await prisma.questionPaper.count(),
-    questions: await prisma.question.count(),
-  };
-  console.log('统计：', JSON.stringify(counts));
+  console.log('=== 完成 ===');
+  await prisma.$disconnect();
 }
 
-main()
-  .catch((e) => {
-    console.error('种子失败：', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch(async (e) => { console.error('💥', e.message); await prisma.$disconnect(); process.exit(1); });

@@ -83,7 +83,10 @@ async function main() {
     throw new Error('无教材数据，无法继续 CUSTOM 链路测试');
   }
   ok('管理端教材列表', `共 ${textbooks.length} 本`);
-  const tb = textbooks[0];
+  // 优先选数学八年级下（题库题覆盖该册单元，保证训练/组卷链路有题可出）
+  const tb =
+    textbooks.find((t) => t.subject === '数学' && String(t.grade) === '8' && t.term === 'DOWN') ||
+    textbooks[0];
   const SUBJECT = tb.subject || '数学';
   console.log(`     选用教材: ${tb.name} (subject=${SUBJECT}, id=${tb.id})`);
 
@@ -197,7 +200,11 @@ async function main() {
   if (ptb.status === 200 && ptbList.length > 0) ok('家长端教材列表', `共 ${ptbList.length} 本`);
   else bad('家长端教材列表', ptb);
 
-  const pickTb = ptbList.find((t) => t.subject === SUBJECT) || ptbList[0];
+  // 优先选有题库题的八年级下册教材（教材树扩展后列表第一本可能无题）
+  const pickTb =
+    ptbList.find((t) => t.subject === SUBJECT && String(t.grade) === '8' && t.term === 'DOWN') ||
+    ptbList.find((t) => t.subject === SUBJECT) ||
+    ptbList[0];
   const unitsRes = await api(parent, 'GET', `/parent/question-bank/textbooks/${pickTb.id}/units`);
   const units = unitsRes.body.data?.items || unitsRes.body.data || [];
   if (unitsRes.status === 200 && units.length > 0) ok('教材单元列表', `${pickTb.name} → ${units.length} 单元`);
@@ -697,7 +704,9 @@ async function main() {
       }
 
       // 单元专项（题库已补全单元标注：02-06/02-07 试卷已导入第十一章/十二章等）
-      const tb = stb.body.data.find((t) => t.subject === subj);
+      const tb =
+        stb.body.data.find((t) => t.subject === subj && String(t.grade) === '8' && t.term === 'DOWN') ||
+        stb.body.data.find((t) => t.subject === subj);
       if (tb && Array.isArray(tb.units) && tb.units.length > 0) {
         const sUnit = await api(stuAuth2.token, 'POST', '/student/tasks/special', {
           subject: subj,
