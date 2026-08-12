@@ -145,6 +145,7 @@ export default function TaskConfigCenter() {
     wordMode: 'DICTATION' as 'DICTATION' | 'SPELLING' | 'CHOICE',
     wordStage: '初中',
     wordOrderMode: 'SEQUENCE' as 'SEQUENCE' | 'RANDOM',
+    wordGroupSize: 10, // 词组数量：每组词数，学完进短语练习
     wordIntervalSec: 3, // 单词跳转间隔（3/5/8 秒，默认 3）
     wordRoundSize: 20,
   });
@@ -694,7 +695,7 @@ export default function TaskConfigCenter() {
             mode: specialForm.wordMode,
             stage: specialForm.wordStage,
             orderMode: specialForm.wordOrderMode,
-            groupSize: 1, // 去掉分组机制：每词一组
+            groupSize: specialForm.wordGroupSize || 10,
             intervalSec: specialForm.wordIntervalSec,
             roundSize: specialForm.wordRoundSize,
           };
@@ -2205,9 +2206,14 @@ export default function TaskConfigCenter() {
                         max={100}
                         step={5}
                         value={specialForm.wordRoundSize}
-                        onChange={(e) =>
-                          setSpecialForm({ ...specialForm, wordRoundSize: parseInt(e.target.value) })
-                        }
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value);
+                          setSpecialForm({
+                            ...specialForm,
+                            wordRoundSize: v,
+                            wordGroupSize: specialForm.wordGroupSize > v ? Math.max(5, Math.min(v, 50)) : specialForm.wordGroupSize,
+                          });
+                        }}
                         className="w-full accent-purple-500"
                       />
                       <div className="flex justify-between text-[10px] text-[#5b6b8c]">
@@ -2215,6 +2221,30 @@ export default function TaskConfigCenter() {
                         <span>50</span>
                         <span>100</span>
                       </div>
+                    </div>
+
+                    {/* 词组数量（每组词数，学完该组自动进入短语练习） */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#92a4c9] mb-2">
+                        词组数量（学完该组自动进入短语练习）：<span className="text-purple-300">{specialForm.wordGroupSize}</span> 词/组
+                      </label>
+                      <input
+                        type="range"
+                        min={5}
+                        max={Math.max(5, Math.min(50, specialForm.wordRoundSize))}
+                        step={5}
+                        value={specialForm.wordGroupSize}
+                        onChange={(e) =>
+                          setSpecialForm({ ...specialForm, wordGroupSize: parseInt(e.target.value) })
+                        }
+                        className="w-full accent-purple-500"
+                      />
+                      <div className="flex justify-between text-[10px] text-[#5b6b8c]">
+                        <span>5</span>
+                        <span>{Math.max(5, Math.min(50, specialForm.wordRoundSize)) / 2}</span>
+                        <span>{Math.max(5, Math.min(50, specialForm.wordRoundSize))}</span>
+                      </div>
+                      <p className="text-xs text-[#5b6b8c] mt-1">全部词组完成即完成本任务</p>
                     </div>
 
                     {/* 单词跳转间隔 */}

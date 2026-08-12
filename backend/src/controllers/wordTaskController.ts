@@ -133,38 +133,28 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     const groups = wordTaskService.buildGroups(session, config.groupSize);
     const nextIdx = (groupIndex ?? 0) + 1;
     const done = nextIdx >= groups.length;
-    if (done) {
-      // 单词训练完成 → 强制进入短语填空
-      const learned = (await loadWords(groups.flat())).map((w) => ({ word: w.word, meaning: w.meaning }));
-      const cloze = await wordTaskService.generateCloze(learned);
-      await prisma.wordSession.update({
-        where: { id: session.id },
-        data: { clozeJson: cloze as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
-      });
-      // 积分：整轮完成 +5（轮内答对已按词计分）
-      try {
-        const { pointsEngineService } = await import('../services/pointsEngineService');
-        const roundSize = Number(config?.roundSize) || 0;
-        if (roundSize >= 10) {
-          await pointsEngineService.reward(studentId, 'WORD_ROUND_DONE', 5, session.taskId, '完成一整轮单词训练');
-        }
-      } catch (pointsError) {
-        // 非致命
+    // 每组完成后强制进入短语填空（填空基于「本组」词，加深记忆）；最后一组 done=true
+    const completedGroup = groups[groupIndex ?? 0] || [];
+    const learned = (await loadWords(completedGroup)).map((w) => ({ word: w.word, meaning: w.meaning }));
+    const cloze = await wordTaskService.generateCloze(learned);
+    await prisma.wordSession.update({
+      where: { id: session.id },
+      data: { clozeJson: cloze as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
+    });
+    // 积分：每组完成 +5（组内答对已按词计分）
+    try {
+      const { pointsEngineService } = await import('../services/pointsEngineService');
+      const roundSize = Number(config?.roundSize) || 0;
+      if (roundSize >= 10) {
+        await pointsEngineService.reward(studentId, 'WORD_ROUND_DONE', 5, session.taskId, '完成一组单词训练');
       }
-      res.json({
-        success: true,
-        data: { done: true, phase: 'CLOZE', cloze },
-      });
-      return;
+    } catch (pointsError) {
+      // 非致命
     }
-    // 进入新组：清空组内进度
-    await prisma.wordSession.update({ where: { id: session.id }, data: { doneInGroup: [] as any } });
-    let group = await loadWords(groups[nextIdx] || []);
-    // CHOICE 选择模式：为每个词附带 4 选 1 中文释义选项
-    if (config?.mode === 'CHOICE' && group.length > 0) {
-      group = await wordTaskService.attachChoiceOptions(group as any, config.stage);
-    }
-    res.json({ success: true, data: { done: false, groupIndex: nextIdx, group } });
+    res.json({
+      success: true,
+      data: { done, phase: 'CLOZE', cloze, groupIndex: nextIdx, groups: groups.length },
+    });
   } catch (e) {
     next(e);
   }
@@ -258,13 +248,35 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
     const sessionId = String(req.params.sessionId);
-    const { clozeDone } = req.body ?? {};
+    const { clozeDone, groupIndex } = req.body ?? {};
     const session = await prisma.wordSession.findFirst({ where: { id: sessionId, studentId } });
     if (!session) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
       return;
     }
     const completed = clozeDone === true || session.clozeDone;
+    // 多组模式：本组填空完成但还有剩余组 → 返回下一组继续（不完成任务）
+    if (completed && Number.isFinite(Number(groupIndex))) {
+      const task = await prisma.task.findUnique({ where: { id: session.taskId }, select: { config: true } });
+      const config = (task?.config as any as WordTaskConfig) || {};
+      const groups = wordTaskService.buildGroups(session, config.groupSize || 1);
+      const nextIdx = Number(groupIndex) + 1;
+      if (nextIdx < groups.length) {
+        await prisma.wordSession.update({
+          where: { id: session.id },
+          data: { clozeDone: false, doneInGroup: [] as any, status: 'IN_PROGRESS' },
+        });
+        let group = await loadWords(groups[nextIdx] || []);
+        if (config.mode === 'CHOICE' && group.length > 0) {
+          group = await wordTaskService.attachChoiceOptions(group as any, config.stage);
+        }
+        res.json({
+          success: true,
+          data: { continueNext: true, groupIndex: nextIdx, group, groups: groups.length, completed: false },
+        });
+        return;
+      }
+    }
     await prisma.wordSession.update({
       where: { id: session.id },
       data: {

@@ -96,6 +96,7 @@ export default function WordTraining() {
   const clozeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cloze, setCloze] = useState<ClozeItem[]>([]);
   const [clozeIdx, setClozeIdx] = useState(0);
+  const [lastGroupIdx, setLastGroupIdx] = useState(0); // 当前填空对应的组索引（多组循环用）
   const [clozeInput, setClozeInput] = useState('');
   const [clozeFeedback, setClozeFeedback] = useState<{ correct: boolean; answer: string; translation?: string } | null>(null);
   const [clozeStats, setClozeStats] = useState({ correct: 0, total: 0 });
@@ -274,20 +275,22 @@ export default function WordTraining() {
     }
   };
 
-  /** 请求下一组（词尾自动衔接；无间隔等待） */
+  /** 请求下一组（词尾自动衔接）：每组完成 → 进入该组短语填空 */
   const fetchNextGroup = async () => {
     try {
       const res = await request.post(`/student/word-task/group/${sessionId}`, {
         groupIndex,
       });
       const d = res.data;
-      if (d.done) {
-        // 进入短语填空
+      if (d.phase === 'CLOZE' || d.done) {
+        // 本组学完 → 强制进入该组短语填空（填空基于本组词）
+        setLastGroupIdx(groupIndex);
         setCloze(d.cloze || []);
         setClozeIdx(0);
         setPhase('CLOZE');
         return;
       }
+      // 兜底：进入下一组单词
       setGroup(d.group);
       setGroupIndex(d.groupIndex);
       setWordIndex(0);
@@ -358,7 +361,21 @@ export default function WordTraining() {
 
   const finishCloze = async () => {
     try {
-      await request.post(`/student/word-task/finish/${sessionId}`, { clozeDone: true });
+      // 多组模式：本组填空完成 → 还有组则返回下一组继续，否则任务完成
+      const res = await request.post(`/student/word-task/finish/${sessionId}`, {
+        clozeDone: true,
+        groupIndex: lastGroupIdx,
+      });
+      const d = res.data;
+      if (d?.continueNext) {
+        // 进入下一组单词
+        setGroup(d.group);
+        setGroupIndex(d.groupIndex);
+        setWordIndex(0);
+        setInput('');
+        setPhase('WORD');
+        return;
+      }
       setPhase('DONE');
     } catch {
       setPhase('DONE');

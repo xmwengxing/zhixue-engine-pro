@@ -35,7 +35,7 @@ async function main() {
   });
   const taskId = task.body.data.id;
   const cfg = task.body.data.config;
-  if (taskId && cfg.roundSize === 30 && cfg.intervalSec === 5 && cfg.groupSize === 1) ok('V3 配置生效', `wordCount=${cfg.roundSize} interval=${cfg.intervalSec} groupSize=${cfg.groupSize}`);
+  if (taskId && cfg.roundSize === 30 && cfg.intervalSec === 5 && cfg.groupSize >= 1) ok('V3 配置生效', `wordCount=${cfg.roundSize} interval=${cfg.intervalSec} groupSize=${cfg.groupSize}`);
   else bad('V3 配置', JSON.stringify(cfg).slice(0, 120));
 
   // 2) 跳转间隔修改接口

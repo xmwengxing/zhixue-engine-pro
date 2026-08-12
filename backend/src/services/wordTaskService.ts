@@ -47,16 +47,20 @@ export function validateWordConfig(raw: any): WordTaskConfig {
   const stage = String(raw.stage || '');
   if (!stage) throw new Error('单词任务必须指定阶段（小学/初中/高中）');
   const orderMode = raw.orderMode === 'RANDOM' ? 'RANDOM' : 'SEQUENCE';
-  // 去掉分组机制：每词一组（听写/默写/选择逐词推进）
-  const groupSize = 1;
+  // 词组数量：每组词数（完成该组后进入短语填空）；恢复分组机制，默认 10
+  const groupSize = Number.isFinite(Number(raw.groupSize))
+    ? Math.max(1, Math.min(50, Math.round(Number(raw.groupSize))))
+    : 10;
   // 单词跳转间隔（秒）：前端 3/5/8，默认 3
   const intervalSec = Number.isFinite(Number(raw.intervalSec))
     ? Math.max(0, Math.min(120, Number(raw.intervalSec)))
     : 3;
-  // 单词总数（10-100）：新参数 wordCount；兼容旧字段 roundSize
+  // 单词总数（10-100）：wordCount；兼容旧字段 roundSize
   const rawCount = Number(raw.wordCount ?? raw.roundSize);
-  const roundSize = Number.isFinite(rawCount) ? Math.max(1, Math.min(100, Math.round(rawCount))) : 20;
-  return { mode, stage, orderMode, groupSize, intervalSec, roundSize, aiTeacherId: raw.aiTeacherId ?? null };
+  const wordCount = Number.isFinite(rawCount) ? Math.max(10, Math.min(100, Math.round(rawCount))) : 20;
+  // 词组数量不能超过单词总数（超则截断为单词总数）
+  const gs = Math.min(groupSize, wordCount);
+  return { mode, stage, orderMode, groupSize: gs, intervalSec, roundSize: wordCount, aiTeacherId: raw.aiTeacherId ?? null };
 }
 
 /** 确保 AI 词汇老师指令存在（幂等），返回指令记录 */

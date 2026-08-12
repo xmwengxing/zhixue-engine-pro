@@ -16,6 +16,7 @@ export const WordTaskCreateModal = ({
   const [stage, setStage] = useState('初中');
   const [stages, setStages] = useState<Array<{ stage: string; count: number; label?: string; dueToday?: number }>>([]);
   const [orderMode, setOrderMode] = useState<'SEQUENCE' | 'RANDOM'>('SEQUENCE');
+  const [groupSize, setGroupSize] = useState(10); // 词组数量：每组词数，学完进短语练习
   const [intervalSec, setIntervalSec] = useState(3); // 单词跳转间隔（3/5/8 秒，默认 3）
   const [roundSize, setRoundSize] = useState(20);
   const [saving, setSaving] = useState(false);
@@ -55,7 +56,7 @@ export const WordTaskCreateModal = ({
           mode,
           stage,
           orderMode,
-          groupSize: 1, // 去掉分组机制：每词一组
+          groupSize,
           intervalSec,
           roundSize,
         },
@@ -175,7 +176,11 @@ export const WordTaskCreateModal = ({
                 max={100}
                 step={5}
                 value={roundSize}
-                onChange={(e) => setRoundSize(parseInt(e.target.value))}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  setRoundSize(v);
+                  if (groupSize > v) setGroupSize(Math.max(5, Math.min(v, 50)));
+                }}
                 className="w-full accent-purple-500"
               />
               <div className="flex justify-between text-[10px] text-[#5b6b8c]">
@@ -183,7 +188,28 @@ export const WordTaskCreateModal = ({
                 <span>50</span>
                 <span>100</span>
               </div>
-              <p className="text-xs text-[#5b6b8c] mt-1">完成全部单词后自动进入短语填空</p>
+            </div>
+
+            {/* 词组数量（每组词数，学完该组自动进入短语练习） */}
+            <div>
+              <label className={labelCls}>
+                词组数量（学完该组自动进入短语练习）：<span className="text-purple-300">{groupSize}</span> 词/组
+              </label>
+              <input
+                type="range"
+                min={5}
+                max={Math.max(5, Math.min(50, roundSize))}
+                step={5}
+                value={groupSize}
+                onChange={(e) => setGroupSize(parseInt(e.target.value))}
+                className="w-full accent-purple-500"
+              />
+              <div className="flex justify-between text-[10px] text-[#5b6b8c]">
+                <span>5</span>
+                <span>{Math.max(5, Math.min(50, roundSize)) / 2}</span>
+                <span>{Math.max(5, Math.min(50, roundSize))}</span>
+              </div>
+              <p className="text-xs text-[#5b6b8c] mt-1">全部词组完成即完成本任务</p>
             </div>
 
             {/* 单词跳转间隔 */}
