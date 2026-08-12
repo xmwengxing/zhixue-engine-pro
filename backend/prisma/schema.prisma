@@ -863,6 +863,7 @@ model WordSession {
   clozeJson Json?    @map("cloze_json") // 已生成的短语填空（未完成可恢复）
   clozeDone Boolean  @default(false) @map("cloze_done")
   stats      Json?    @map("stats") // 本次会话统计 { wordsCorrect, wordsWrong, clozeCorrect, clozeTotal }（供历史记录）
+  historyGroups Json?   @map("history_groups") // 已完成组历史明细（单词+短语题，退出/续训持久化）
   doneInGroup Json?  @map("done_in_group") // 当前组内已答 wordId（逐词落库，组中途退出可恢复）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

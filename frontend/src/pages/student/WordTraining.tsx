@@ -100,8 +100,9 @@ export default function WordTraining() {
   const [lastGroupIdx, setLastGroupIdx] = useState(0); // 当前填空对应的组索引（多组循环用）
   // ===== 右侧历史明细栏（每组短语完成后展示该组词+填空情况）=====
   const [groupHistory, setGroupHistory] = useState<
-    Array<{ groupIndex: number; words: Array<{ word: string; correct: boolean }>; clozeCorrect: number; clozeTotal: number }>
+    Array<{ groupIndex: number; words: Array<{ word: string; correct: boolean }>; clozeCorrect: number; clozeTotal: number; clozeItems?: Array<{ sentence: string; translation: string; correct: boolean }> }>
   >([]);
+  const groupHistoryRef = useRef(groupHistory); // 同步 ref（退出保存/组完成时上报最新值）
   const curGroupWordsRef = useRef<Array<{ word: string; correct: boolean }>>([]); // 当前组已答词（同步 ref）
   const clozeStatsRef = useRef({ correct: 0, total: 0 }); // 填空累计（同步 ref）
   const groupClozeStartRef = useRef({ correct: 0, total: 0 }); // 本组填空开始时的累计（差值=本组）
@@ -216,6 +217,11 @@ export default function WordTraining() {
     setSessionId(d.sessionId);
     setConfig(d.config);
     setPhase(d.phase || 'WORD');
+    // 恢复已持久化的历史明细（退出保存后再进入不丢失）
+    if (Array.isArray(d.historyGroups)) {
+      groupHistoryRef.current = d.historyGroups;
+      setGroupHistory(d.historyGroups);
+    }
     if (d.phase === 'CLOZE' || d.done) {
       setCloze(d.cloze || []);
       setClozeIdx(0);
@@ -416,15 +422,17 @@ export default function WordTraining() {
       const clozeCorrect = clozeStatsRef.current.correct - groupClozeStartRef.current.correct;
       const clozeItems = curClozeItemsRef.current;
       if (words.length > 0 || clozeTotal > 0) {
-        setGroupHistory((prev) => [
-          ...prev,
-          { groupIndex: lastGroupIdx, words, clozeCorrect, clozeTotal, clozeItems },
-        ]);
+        setGroupHistory((prev) => {
+          const next = [...prev, { groupIndex: lastGroupIdx, words, clozeCorrect, clozeTotal, clozeItems }];
+          groupHistoryRef.current = next;
+          return next;
+        });
       }
       curGroupWordsRef.current = [];
       curClozeItemsRef.current = [];
       // 多组模式：本组填空完成 → 还有组则返回下一组继续，否则任务完成
       const res = await request.post(`/student/word-task/finish/${sessionId}`, {
+        historyGroups: groupHistoryRef.current,
         clozeDone: true,
         groupIndex: lastGroupIdx,
       });
@@ -444,10 +452,13 @@ export default function WordTraining() {
     }
   };
 
-  /** 退出（保存进度，未完成填空下次可恢复） */
+  /** 退出（保存进度，未完成填空下次可恢复；历史明细持久化） */
   const exitSave = async () => {
     try {
-      await request.post(`/student/word-task/finish/${sessionId}`, { clozeDone: false });
+      await request.post(`/student/word-task/finish/${sessionId}`, {
+        clozeDone: false,
+        historyGroups: groupHistoryRef.current,
+      });
     } catch {
       /* 忽略 */
     }

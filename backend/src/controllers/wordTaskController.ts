@@ -196,6 +196,7 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       index: session.index,
       total: session.total,
       config,
+      historyGroups: session.historyGroups || [], // 已完成组历史明细（退出/续训持久化）
     };
     if (done) {
       // clozeJson 兼容：预生成结构 {group, cloze} → 取 cloze 数组；旧结构直接数组
@@ -203,6 +204,7 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       data.cloze = pre && Array.isArray(pre.cloze) ? pre.cloze : pre;
       data.clozeGroup = pre && typeof pre.group === 'number' ? pre.group : 0;
       data.clozeDone = session.clozeDone;
+      data.historyGroups = session.historyGroups || [];
       if (!data.cloze) {
         const learned = (await loadWords(groups.flat())).map((w) => ({ word: w.word, meaning: w.meaning }));
         const cloze = await wordTaskService.generateCloze(learned);
@@ -258,7 +260,7 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
     const sessionId = String(req.params.sessionId);
-    const { clozeDone, groupIndex } = req.body ?? {};
+    const { clozeDone, groupIndex, historyGroups } = req.body ?? {};
     const session = await prisma.wordSession.findFirst({ where: { id: sessionId, studentId } });
     if (!session) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
@@ -300,11 +302,14 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
         return;
       }
     }
+    // 历史明细持久化（前端全量上报，整体覆盖；退出/组完成/任务完成都同步）
+    const persistHistory = Array.isArray(historyGroups) ? (historyGroups as any) : session.historyGroups;
     await prisma.wordSession.update({
       where: { id: session.id },
       data: {
         clozeDone: completed,
         status: completed ? 'COMPLETED' : 'IN_PROGRESS',
+        ...(persistHistory ? { historyGroups: persistHistory } : {}),
       },
     });
     // 任务状态同步：填空完成 → 任务 COMPLETED；仅保存进度 → 保持 IN_PROGRESS
