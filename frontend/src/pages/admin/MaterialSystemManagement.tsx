@@ -45,7 +45,9 @@ const NODE_TYPE_COLORS: Record<MaterialNodeType, string> = {
 function gradeLabel(grade?: string | null): string {
   if (!grade) return '';
   const map: Record<string, string> = {
+    '1': '一年级', '2': '二年级', '3': '三年级', '4': '四年级', '5': '五年级', '6': '六年级',
     '7': '七年级', '8': '八年级', '9': '九年级',
+    '10': '高一', '11': '高二', '12': '高三',
   };
   return map[grade] || `${grade}年级`;
 }
@@ -74,11 +76,20 @@ interface Textbook {
   units: TextbookUnit[];
 }
 
-// 年级 / 学期 选项（教材总览筛选与表单用）
+// 年级 / 学期 选项（教材总览筛选与表单用；统一汉字）
 const GRADE_OPTIONS = [
+  { value: '1', label: '一年级' },
+  { value: '2', label: '二年级' },
+  { value: '3', label: '三年级' },
+  { value: '4', label: '四年级' },
+  { value: '5', label: '五年级' },
+  { value: '6', label: '六年级' },
   { value: '7', label: '七年级' },
   { value: '8', label: '八年级' },
   { value: '9', label: '九年级' },
+  { value: '10', label: '高一' },
+  { value: '11', label: '高二' },
+  { value: '12', label: '高三' },
 ];
 const TERM_OPTIONS = [
   { value: 'UP', label: '上' },

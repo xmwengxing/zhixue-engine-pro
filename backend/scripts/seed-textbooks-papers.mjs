@@ -18,10 +18,12 @@ if (fs.existsSync(envPath)) {
 
 const prisma = new PrismaClient();
 
-const G = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级', 7: '七年级', 8: '八年级', 9: '九年级' };
+const G = { 1: '一年级', 2: '二年级', 3: '三年级', 4: '四年级', 5: '五年级', 6: '六年级', 7: '七年级', 8: '八年级', 9: '九年级', 10: '高一', 11: '高二', 12: '高三' };
 const TL = { UP: '上', DOWN: '下' };
-const tbName = (version, grade, term, subject) =>
-  `${version} ${G[grade]}${TL[term]} ${subject}`;
+const tbName = (version, grade, term, subject, title) =>
+  grade && ['10','11','12'].includes(String(grade)) && title
+    ? `${version} 高中${G[grade]} ${subject}·${title}`
+    : `${version} ${G[grade]}${TL[term]} ${subject}`;
 
 const TEXTBOOKS = PEP_TEXTBOOKS;
 
@@ -33,7 +35,7 @@ function unitIdsOf(tb, seqs) {
 async function createTextbookNode(def) {
   const node = await prisma.materialNode.create({
     data: {
-      name: tbName(def.version, def.grade, def.term, def.subject),
+      name: tbName(def.version, def.grade, def.term, def.subject, def.title),
       type: 'TEXTBOOK',
       order: 0,
       metadata: {

@@ -281,3 +281,118 @@ for (const g of GRADES_JUNIOR) {
     }
   }
 }
+
+// ================= 高中（必修 + 选择性必修，2019 课标） =================
+// grade 约定：10=高一 11=高二 12=高三；term 按册序 UP/DOWN 近似映射（教材名精确）
+
+// 语文（统编）
+const H_CHINESE = [
+  { name: '语文', grade: '10', term: 'UP', title: '必修上册', units: ['第一单元', '第二单元', '第三单元', '第四单元', '第五单元', '第六单元', '第七单元', '第八单元'] },
+  { name: '语文', grade: '10', term: 'DOWN', title: '必修下册', units: ['第一单元', '第二单元', '第三单元', '第四单元', '第五单元', '第六单元', '第七单元', '第八单元'] },
+  { name: '语文', grade: '11', term: 'UP', title: '选择性必修上册', units: ['第一单元', '第二单元', '第三单元', '第四单元'] },
+  { name: '语文', grade: '11', term: 'DOWN', title: '选择性必修中册', units: ['第一单元', '第二单元', '第三单元', '第四单元'] },
+  { name: '语文', grade: '12', term: 'UP', title: '选择性必修下册', units: ['第一单元', '第二单元', '第三单元', '第四单元'] },
+];
+
+// 数学（A版）
+const H_MATH = [
+  { name: '数学', grade: '10', term: 'UP', title: '必修第一册', units: ['第一章 集合与常用逻辑用语', '第二章 一元二次函数、方程和不等式', '第三章 函数的概念与性质', '第四章 指数函数与对数函数', '第五章 三角函数'] },
+  { name: '数学', grade: '10', term: 'DOWN', title: '必修第二册', units: ['第六章 平面向量及其应用', '第七章 复数', '第八章 立体几何初步', '第九章 统计', '第十章 概率'] },
+  { name: '数学', grade: '11', term: 'UP', title: '选择性必修第一册', units: ['第一章 空间向量与立体几何', '第二章 直线和圆的方程', '第三章 圆锥曲线的方程'] },
+  { name: '数学', grade: '11', term: 'DOWN', title: '选择性必修第二册', units: ['第四章 数列', '第五章 一元函数的导数及其应用'] },
+  { name: '数学', grade: '12', term: 'UP', title: '选择性必修第三册', units: ['第六章 计数原理', '第七章 随机变量及其分布', '第八章 成对数据的统计分析'] },
+];
+
+// 英语（2019 新教材）
+const H_ENGLISH = [
+  { name: '英语', grade: '10', term: 'UP', title: '必修第一册', units: ['Unit 1 Teenage Life', 'Unit 2 Travelling Around', 'Unit 3 Sports and Fitness', 'Unit 4 Natural Disasters', 'Unit 5 Languages Around the World'] },
+  { name: '英语', grade: '10', term: 'DOWN', title: '必修第二册', units: ['Unit 1 Cultural Heritage', 'Unit 2 Wildlife Protection', 'Unit 3 The Internet', 'Unit 4 History and Traditions', 'Unit 5 Music'] },
+  { name: '英语', grade: '11', term: 'UP', title: '必修第三册', units: ['Unit 1 Festivals and Celebrations', 'Unit 2 Morals and Virtues', 'Unit 3 Diverse Cultures', 'Unit 4 Space Exploration', 'Unit 5 The Value of Money'] },
+  { name: '英语', grade: '11', term: 'DOWN', title: '选择性必修第一册', units: ['Unit 1 People of Achievement', 'Unit 2 Looking into the Future', 'Unit 3 Fascinating Parks', 'Unit 4 Body Language', 'Unit 5 Working the Land'] },
+  { name: '英语', grade: '12', term: 'UP', title: '选择性必修第二册', units: ['Unit 1 Science and Scientists', 'Unit 2 Bridging Cultures', 'Unit 3 Food and Culture', 'Unit 4 Journey Across a Vast Land', 'Unit 5 First Aid'] },
+  { name: '英语', grade: '12', term: 'DOWN', title: '选择性必修第三册', units: ['Unit 1 Art', 'Unit 2 Healthy Lifestyle', 'Unit 3 Environmental Protection', 'Unit 4 Adversity and Courage', 'Unit 5 Poems'] },
+  { name: '英语', grade: '12', term: 'UP', title: '选择性必修第四册', units: ['Unit 1 Science Fiction', 'Unit 2 Iconic Attractions', 'Unit 3 Sea Exploration', 'Unit 4 Sharing', 'Unit 5 Launching Your Career'] },
+];
+
+// 物理（2019）
+const H_PHYSICS = [
+  { name: '物理', grade: '10', term: 'UP', title: '必修第一册', units: ['第一章 运动的描述', '第二章 匀变速直线运动的研究', '第三章 相互作用——力', '第四章 运动和力的关系'] },
+  { name: '物理', grade: '10', term: 'DOWN', title: '必修第二册', units: ['第五章 抛体运动', '第六章 圆周运动', '第七章 万有引力与宇宙航行', '第八章 机械能守恒定律'] },
+  { name: '物理', grade: '11', term: 'UP', title: '必修第三册', units: ['第九章 静电场及其应用', '第十章 静电场中的能量', '第十一章 电路及其应用', '第十二章 电能 能量守恒定律', '第十三章 电磁感应与电磁波初步'] },
+  { name: '物理', grade: '11', term: 'DOWN', title: '选择性必修第一册', units: ['第一章 动量守恒定律', '第二章 机械振动', '第三章 机械波', '第四章 光'] },
+  { name: '物理', grade: '12', term: 'UP', title: '选择性必修第二册', units: ['第一章 安培力与洛伦兹力', '第二章 电磁感应', '第三章 交变电流', '第四章 电磁振荡与电磁波', '第五章 传感器'] },
+  { name: '物理', grade: '12', term: 'DOWN', title: '选择性必修第三册', units: ['第一章 分子动理论', '第二章 气体、固体和液体', '第三章 热力学定律', '第四章 原子结构和波粒二象性', '第五章 原子核'] },
+];
+
+// 化学（2019）
+const H_CHEMISTRY = [
+  { name: '化学', grade: '10', term: 'UP', title: '必修第一册', units: ['第一章 物质及其变化', '第二章 海水中的重要元素——钠和氯', '第三章 铁 金属材料', '第四章 物质的量'] },
+  { name: '化学', grade: '10', term: 'DOWN', title: '必修第二册', units: ['第五章 化工生产中的重要非金属元素', '第六章 化学反应与能量', '第七章 有机化合物', '第八章 化学与可持续发展'] },
+  { name: '化学', grade: '11', term: 'UP', title: '选择性必修1 化学反应原理', units: ['第一章 化学反应的热效应', '第二章 化学反应速率与化学平衡', '第三章 水溶液中的离子反应与平衡', '第四章 化学反应与电能'] },
+  { name: '化学', grade: '11', term: 'DOWN', title: '选择性必修2 物质结构与性质', units: ['第一章 原子结构与性质', '第二章 分子结构与性质', '第三章 晶体结构与性质'] },
+  { name: '化学', grade: '12', term: 'UP', title: '选择性必修3 有机化学基础', units: ['第一章 有机化合物的结构特点与研究方法', '第二章 烃', '第三章 烃的衍生物', '第四章 生物大分子', '第五章 合成高分子'] },
+];
+
+// 生物（2019）
+const H_BIOLOGY = [
+  { name: '生物', grade: '10', term: 'UP', title: '必修1 分子与细胞', units: ['第1章 走近细胞', '第2章 组成细胞的分子', '第3章 细胞的基本结构', '第4章 细胞的物质输入和输出', '第5章 细胞的能量供应和利用', '第6章 细胞的生命历程'] },
+  { name: '生物', grade: '10', term: 'DOWN', title: '必修2 遗传与进化', units: ['第1章 遗传因子的发现', '第2章 基因和染色体的关系', '第3章 基因的本质', '第4章 基因的表达', '第5章 基因突变及其他变异', '第6章 生物的进化'] },
+  { name: '生物', grade: '11', term: 'UP', title: '选择性必修1 稳态与调节', units: ['第1章 人体的内环境与稳态', '第2章 神经调节', '第3章 体液调节', '第4章 免疫调节', '第5章 植物生命活动的调节'] },
+  { name: '生物', grade: '11', term: 'DOWN', title: '选择性必修2 生物与环境', units: ['第1章 种群及其动态', '第2章 群落及其演替', '第3章 生态系统及其稳定性', '第4章 人与环境'] },
+  { name: '生物', grade: '12', term: 'UP', title: '选择性必修3 生物技术与工程', units: ['第1章 发酵工程', '第2章 细胞工程', '第3章 基因工程', '第4章 生物技术的安全性与伦理问题'] },
+];
+
+// 政治（统编）
+const H_POLITICS = [
+  { name: '政治', grade: '10', term: 'UP', title: '必修1 中国特色社会主义', units: ['第一课 社会主义从空想到科学、从理论到实践的发展', '第二课 只有社会主义才能救中国', '第三课 只有中国特色社会主义才能发展中国', '第四课 只有坚持和发展中国特色社会主义才能实现中华民族伟大复兴'] },
+  { name: '政治', grade: '10', term: 'DOWN', title: '必修2 经济与社会', units: ['第一课 我国的生产资料所有制', '第二课 我国的社会主义市场经济体制', '第三课 我国的经济发展', '第四课 我国的个人收入分配与社会保障'] },
+  { name: '政治', grade: '11', term: 'UP', title: '必修3 政治与法治', units: ['第一单元 中国共产党的领导', '第二单元 人民当家作主', '第三单元 全面依法治国'] },
+  { name: '政治', grade: '11', term: 'DOWN', title: '必修4 哲学与文化', units: ['第一单元 探索世界与把握规律', '第二单元 认识社会与价值选择', '第三单元 文化传承与文化创新'] },
+  { name: '政治', grade: '12', term: 'UP', title: '选择性必修1 当代国际政治与经济', units: ['第一单元 各具特色的国家与国际组织', '第二单元 世界多极化', '第三单元 经济全球化', '第四单元 国际组织'] },
+  { name: '政治', grade: '12', term: 'DOWN', title: '选择性必修2 法律与生活', units: ['第一单元 民事权利与义务', '第二单元 家庭与婚姻', '第三单元 就业与创业', '第四单元 社会争议解决'] },
+  { name: '政治', grade: '12', term: 'UP', title: '选择性必修3 逻辑与思维', units: ['第一单元 把握逻辑要义', '第二单元 遵循逻辑思维规则', '第三单元 运用辩证思维方法', '第四单元 提高创新思维能力'] },
+];
+
+// 历史（统编）
+const H_HISTORY = [
+  { name: '历史', grade: '10', term: 'UP', title: '必修上册（中外历史纲要·上）', units: ['第一单元 从中华文明起源到秦汉统一多民族封建国家的建立与巩固', '第二单元 三国两晋南北朝的民族交融与隋唐统一多民族封建国家的发展', '第三单元 辽宋夏金多民族政权的并立与元朝的统一', '第四单元 明清中国版图的奠定与面临的挑战', '第五单元 晚清时期的内忧外患与救亡图存', '第六单元 辛亥革命与中华民国的建立', '第七单元 中国共产党成立与新民主主义革命兴起', '第八单元 中华民族的抗日战争和人民解放战争', '第九单元 中华人民共和国成立和社会主义革命与建设', '第十单元 改革开放与社会主义现代化建设新时期'] },
+  { name: '历史', grade: '10', term: 'DOWN', title: '必修下册（中外历史纲要·下）', units: ['第一单元 古代文明的产生与发展', '第二单元 中古时期的世界', '第三单元 走向整体的世界', '第四单元 资本主义制度的确立', '第五单元 工业革命与马克思主义的诞生', '第六单元 世界殖民体系与亚非拉民族独立运动', '第七单元 两次世界大战、十月革命与国际秩序的演变', '第八单元 20世纪下半叶世界的新变化', '第九单元 当代世界发展的特点与主要趋势'] },
+  { name: '历史', grade: '11', term: 'UP', title: '选择性必修1 国家制度与社会治理', units: ['第一单元 政治制度', '第二单元 官员的选拔与管理', '第三单元 法律与教化', '第四单元 民族关系与国家关系', '第五单元 货币与税收', '第六单元 基层治理与社会保障'] },
+  { name: '历史', grade: '11', term: 'DOWN', title: '选择性必修2 经济与社会生活', units: ['第一单元 食物生产与社会生活', '第二单元 生产工具与劳作方式', '第三单元 商业贸易与日常生活', '第四单元 村落、城镇与居住环境', '第五单元 交通与社会变迁', '第六单元 医疗与公共卫生'] },
+  { name: '历史', grade: '12', term: 'UP', title: '选择性必修3 文化交流与传播', units: ['第一单元 源远流长的中华文化', '第二单元 丰富多样的世界文化', '第三单元 人口迁徙、文化交融与认同', '第四单元 商路、贸易与文化交流', '第五单元 战争与文化交锋', '第六单元 文化的传承与保护'] },
+];
+
+// 地理（2019）
+const H_GEOGRAPHY = [
+  { name: '地理', grade: '10', term: 'UP', title: '必修第一册', units: ['第一章 宇宙中的地球', '第二章 地球上的大气', '第三章 地球上的水', '第四章 地貌', '第五章 植被与土壤', '第六章 自然灾害'] },
+  { name: '地理', grade: '10', term: 'DOWN', title: '必修第二册', units: ['第一章 人口', '第二章 乡村和城镇', '第三章 产业区位因素', '第四章 交通运输布局与区域发展', '第五章 环境与发展'] },
+  { name: '地理', grade: '11', term: 'UP', title: '选择性必修1 自然地理基础', units: ['第一章 地球的运动', '第二章 地表形态的塑造', '第三章 大气的运动', '第四章 水的运动', '第五章 自然环境的整体性与差异性'] },
+  { name: '地理', grade: '11', term: 'DOWN', title: '选择性必修2 区域发展', units: ['第一章 区域与区域发展', '第二章 资源、环境与区域发展', '第三章 城市、产业与区域发展', '第四章 区际联系与区域协调发展'] },
+  { name: '地理', grade: '12', term: 'UP', title: '选择性必修3 资源、环境与国家安全', units: ['第一章 自然环境与人类社会', '第二章 资源安全与国家安全', '第三章 环境安全与国家安全', '第四章 保障国家安全的资源、环境战略与行动'] },
+];
+
+// 高中音体美（教材壳）
+const H_SHELL = [
+  { name: '音乐', grade: '10', term: 'UP', title: '必修·音乐鉴赏' },
+  { name: '音乐', grade: '11', term: 'UP', title: '选择性必修·歌唱' },
+  { name: '美术', grade: '10', term: 'UP', title: '必修·美术鉴赏' },
+  { name: '体育与健康', grade: '10', term: 'UP', title: '必修全一册' },
+];
+
+const HIGH_SCHOOL_GROUPS = [H_CHINESE, H_MATH, H_ENGLISH, H_PHYSICS, H_CHEMISTRY, H_BIOLOGY, H_POLITICS, H_HISTORY, H_GEOGRAPHY];
+for (const group of HIGH_SCHOOL_GROUPS) {
+  for (const bk of group) {
+    PEP_TEXTBOOKS.push({
+      subject: bk.name, version: '人教版', grade: bk.grade, term: bk.term,
+      description: `人教版高中${bk.name} ${bk.title}（2019 年版课程标准，人民教育出版社出版）。`,
+      units: units(bk.units),
+    });
+  }
+}
+for (const bk of H_SHELL) {
+  PEP_TEXTBOOKS.push({
+    subject: bk.name, version: '人教版', grade: bk.grade, term: bk.term,
+    description: `人教版高中${bk.name} ${bk.title}（2019 年版课程标准）。`,
+    units: [],
+  });
+}
