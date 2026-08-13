@@ -223,6 +223,7 @@ export default function WordTraining() {
     setSessionId(d.sessionId);
     setConfig(d.config);
     setPhase(d.phase || 'WORD');
+    if (Number(d.groups) > 0) setTotalGroups(Number(d.groups)); // 组总数（防「第 x/1 组」错乱）
     // 恢复已持久化的历史明细（退出保存后再进入不丢失）
     if (Array.isArray(d.historyGroups)) {
       groupHistoryRef.current = d.historyGroups;
@@ -235,7 +236,10 @@ export default function WordTraining() {
     } else {
       setGroup(d.group || []);
       setGroupIndex(d.groupIndex || 0);
-      setPhase('MEMORIZE'); // 恢复会话也先进背词（重背当前组，再从头/断点训练）
+      // phase=WORD：已开始答题 → 直接回训练断点（不做背词）；MEMORIZE：组未动 → 先背词
+      if (d.phase !== 'WORD') {
+        setPhase('MEMORIZE');
+      }
     }
   };
 

@@ -162,7 +162,8 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     }
     await prisma.wordSession.update({
       where: { id: session.id },
-      data: { clozeJson: null as any, doneInGroup: [] as any, status: 'IN_PROGRESS' },
+      // 进填空：保留 clozeJson（填空恢复不再 AI 重新生成）+ 标记填空进行中
+      data: { clozeActive: true, doneInGroup: [] as any, status: 'IN_PROGRESS' },
     });
     // 积分：每组完成 +5（组内答对已按词计分）
     try {
@@ -204,17 +205,20 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
     }
     const config = (await prisma.task.findUnique({ where: { id: session.taskId } }))?.config as any as WordTaskConfig;
     const groups = wordTaskService.buildGroups(session, config?.groupSize ?? 1);
-    const done = session.index >= session.total;
+    // 填空进行中 → 从填空继续（clozeJson 保留，不再 AI 重新生成）
+    const clozeActive = session.clozeActive === true && !session.clozeDone;
+    const done = session.status === 'COMPLETED' || session.index >= session.total;
     const data: any = {
       sessionId: session.id,
-      phase: done ? 'CLOZE' : 'WORD',
+      phase: clozeActive ? 'CLOZE' : done ? 'CLOZE' : 'WORD',
       done,
       index: session.index,
       total: session.total,
+      groups: groups.length, // 组总数（前端分组信息显示，防「第 2/1 组」错乱）
       config,
       historyGroups: session.historyGroups || [], // 已完成组历史明细（退出/续训持久化）
     };
-    if (done) {
+    if (clozeActive || done) {
       // clozeJson 兼容：预生成结构 {group, cloze} → 取 cloze 数组；旧结构直接数组
       const pre = session.clozeJson as any;
       data.cloze = pre && Array.isArray(pre.cloze) ? pre.cloze : pre;
@@ -234,6 +238,8 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       const all = await loadWords(groups[currentGroupIdx] || []);
       data.groupIndex = currentGroupIdx;
       data.group = all.filter((w) => !doneInGroup.includes(w.id));
+      // 已开始答题（有已答词）→ 直接回训练断点（不做背词）；组未动 → 先进背词
+      data.phase = doneInGroup.length > 0 ? 'WORD' : 'MEMORIZE';
       // 选择模式：恢复的词组必须带选项（否则训练阶段 4 选 1 无选项可点）
       if (config?.mode === 'CHOICE') {
         data.group = await wordTaskService.attachChoiceOptions(data.group as any, config.stage);
@@ -328,6 +334,8 @@ export const finishWord = async (req: Request, res: Response, next: NextFunction
       where: { id: session.id },
       data: {
         clozeDone: completed,
+        // 任务完成 → 退出填空态并清短语；仅保存进度 → 填空进行中标记保留（下次从填空继续）
+        ...(completed ? { clozeActive: false, clozeJson: null as any } : {}),
         status: completed ? 'COMPLETED' : 'IN_PROGRESS',
         ...(persistHistory ? { historyGroups: persistHistory } : {}),
       },

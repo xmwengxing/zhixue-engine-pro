@@ -860,8 +860,9 @@ model WordSession {
   index     Int      @default(0) // 当前已完成词数（含填空前）
   total     Int      @default(20) // 本轮词数
   status    String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
-  clozeJson Json?    @map("cloze_json") // 已生成的短语填空（未完成可恢复）
+  clozeJson Json?    @map("cloze_json") // 已生成的短语填空（填空进行中保留，可恢复，不再 AI 重新生成）
   clozeDone Boolean  @default(false) @map("cloze_done")
+  clozeActive Boolean @default(false) @map("cloze_active") // 填空进行中标记（组答完进填空置 true，填空完成/任务完成置 false）
   stats      Json?    @map("stats") // 本次会话统计 { wordsCorrect, wordsWrong, clozeCorrect, clozeTotal }（供历史记录）
   historyGroups Json?   @map("history_groups") // 已完成组历史明细（单词+短语题，退出/续训持久化）
   doneInGroup Json?  @map("done_in_group") // 当前组内已答 wordId（逐词落库，组中途退出可恢复）
