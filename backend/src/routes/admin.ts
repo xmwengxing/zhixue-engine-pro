@@ -9,6 +9,7 @@ import * as adminOcrController from '../controllers/adminOcrController';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 import * as questionBankController from '../controllers/questionBankController';
 import * as adminAgentController from '../controllers/adminAgentController';
+import { adminWordController } from '../controllers/adminWordController';
 
 const router = Router();
 
@@ -978,3 +979,17 @@ router.get('/platform-settings', (req, res, next) => adminAgentController.listPl
 router.put('/platform-settings/:key', (req, res, next) => adminAgentController.updatePlatformSetting(req, res, next));
 
 export default router;
+
+// ============ 词库管理（Word） ============
+/** GET /api/admin/word-bank/stages — 词库列表 */
+router.get('/word-bank/stages', (req, res) => adminWordController.stages(req, res));
+/** GET /api/admin/word-bank/words — 单词列表/搜索 */
+router.get('/word-bank/words', (req, res) => adminWordController.listWords(req, res));
+/** POST /api/admin/word-bank/words — 新增单词 */
+router.post('/word-bank/words', (req, res) => adminWordController.createWord(req, res));
+/** PUT /api/admin/word-bank/words/:id — 修改释义/音标/词性 */
+router.put('/word-bank/words/:id', (req, res) => adminWordController.updateWord(req, res));
+/** DELETE /api/admin/word-bank/words/:id — 删除单词 */
+router.delete('/word-bank/words/:id', (req, res) => adminWordController.deleteWord(req, res));
+/** POST /api/admin/word-bank/import — 导入词库（新增/追加） */
+router.post('/word-bank/import', (req, res) => adminWordController.importWords(req, res));

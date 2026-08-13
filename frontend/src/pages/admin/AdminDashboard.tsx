@@ -7,6 +7,7 @@ import StudentIDManagement from './StudentIDManagement';
 import AuthCodeManagement from './AuthCodeManagement';
 import ParentChildRelationManagement from './ParentChildRelationManagement';
 import MaterialSystemManagement from './MaterialSystemManagement';
+import WordBankManagement from './WordBankManagement';
 import AIServiceConfig from './AIServiceConfig';
 import OcrProviderConfig from './OcrProviderConfig';
 import SubjectInstructionConfig from './SubjectInstructionConfig';
@@ -133,6 +134,18 @@ export const AdminDashboard = () => {
               >
                 <span className="material-symbols-outlined text-[24px]">quiz</span>
                 <span className="text-sm font-medium leading-normal">题库</span>
+              </Link>
+
+              <Link
+                to="/admin/word-bank"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors ${
+                  isActive('/admin/word-bank')
+                    ? 'bg-primary text-white'
+                    : 'text-[#92a4c9] hover:bg-[#232f48] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[24px]">abc</span>
+                <span className="text-sm font-medium leading-normal">词库管理</span>
               </Link>
 
               <div className="my-2 h-px bg-[#324467]"></div>
@@ -461,6 +474,7 @@ export const AdminDashboard = () => {
           <Route path="/relations" element={<ParentChildRelationManagement />} />
           <Route path="/auth-codes" element={<AuthCodeManagement />} />
           <Route path="/materials" element={<MaterialSystemManagement />} />
+          <Route path="/word-bank" element={<WordBankManagement />} />
           <Route path="/question-bank" element={<QuestionBankManagement />} />
           <Route path="/ai-services" element={<AIServiceConfig />} />
           <Route path="/ocr-providers" element={<OcrProviderConfig />} />
