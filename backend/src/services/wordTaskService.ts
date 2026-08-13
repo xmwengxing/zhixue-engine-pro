@@ -472,6 +472,34 @@ const TTS_SERVICE_URL = process.env.WORD_TTS_URL || 'http://localhost:8010';
 const TTS_DATA_DIR = process.env.TTS_DATA_DIR || path.resolve(process.cwd(), 'tts_data');
 const localAudioFile = (word: string, voice: string) =>
   path.join(TTS_DATA_DIR, voice, `${word.toLowerCase()}.mp3`);
+// 本地文件查找索引：`${voice}:${word}` → 文件路径（'' = 已确认缺失）；支持平铺 + stage 子目录两种布局
+const ttsFileIndex = new Map<string, string>();
+function findLocalAudio(word: string, voice: string): string | null {
+  const key = `${voice}:${word.toLowerCase()}`;
+  const cached = ttsFileIndex.get(key);
+  if (cached !== undefined) return cached || null;
+  // 1) 平铺布局 tts_data/{voice}/{word}.mp3
+  const flat = localAudioFile(word, voice);
+  if (fs.existsSync(flat)) {
+    ttsFileIndex.set(key, flat);
+    return flat;
+  }
+  // 2) stage 子目录布局 tts_data/{voice}/{初中|CET4|...}/{word}.mp3
+  const voiceDir = path.join(TTS_DATA_DIR, voice);
+  try {
+    for (const sub of fs.readdirSync(voiceDir)) {
+      const f = path.join(voiceDir, sub, `${word.toLowerCase()}.mp3`);
+      if (fs.existsSync(f) && fs.statSync(f).isFile()) {
+        ttsFileIndex.set(key, f);
+        return f;
+      }
+    }
+  } catch {
+    /* 目录不存在 */
+  }
+  ttsFileIndex.set(key, '');
+  return null;
+}
 // 词音频内存缓存（LRU 上限）：同词二次请求零生成，跨学员/跨会话复用
 const ttsCache = new Map<string, Buffer>();
 const TTS_CACHE_MAX = 3000;
@@ -492,8 +520,8 @@ export async function ttsWord(word: string, voice?: string): Promise<Buffer | nu
   const isSingleWord = /^[a-zA-Z'-]+$/.test((word || '').trim());
   if (isSingleWord) {
     try {
-      const file = localAudioFile(word.trim(), v);
-      if (fs.existsSync(file)) {
+      const file = findLocalAudio(word.trim(), v);
+      if (file) {
         const b = fs.readFileSync(file);
         if (b.length > 0) {
           ttsCache.set(key, b);

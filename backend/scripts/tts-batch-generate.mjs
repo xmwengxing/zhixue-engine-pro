@@ -30,13 +30,14 @@ const getArg = (key, def) => {
   return eq ? eq.split('=')[1] : def;
 };
 const voice = getArg('--voice', 'en-US-AriaNeural');
+const stage = getArg('--stage', ''); // 指定词库阶段（初中/CET4）；空=全部（按词所属 stage 分目录）
 const limit = Number(getArg('--limit', '0')) || 0;
 const batchSize = Number(getArg('--batch', '20')) || 20;
 const workers = Number(getArg('--workers', '3')) || 3;
 
 const TTS_SERVICE_URL = process.env.WORD_TTS_URL || 'http://localhost:8010';
 const OUT_DIR = path.resolve(process.cwd(), 'tts_data', voice);
-const OUT_SUB = (w) => path.join(OUT_DIR, `${w.toLowerCase()}.mp3`);
+const OUT_SUB = (w) => path.join(OUT_DIR, `${w.toLowerCase()}.mp3`); // 兼容：平铺路径（迁移用）
 
 const prisma = new PrismaClient();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -57,12 +58,24 @@ async function batchTts(texts) {
 }
 
 async function main() {
-  const words = await prisma.word.findMany({ select: { word: true } });
+  const words = await prisma.word.findMany({ select: { word: true, stage: true } });
   const unique = [...new Set(words.map((w) => w.word.trim()))];
-  // 断点续跑：跳过已生成 + 仅纯单词
-  const todo = unique.filter((w) => /^[a-zA-Z'-]+$/.test(w) && !fs.existsSync(OUT_SUB(w)));
+  // 词 → 所属 stage（一个词可属多个词库）
+  const wordStages = new Map();
+  for (const w of words) {
+    const k = w.word.trim().toLowerCase();
+    if (!wordStages.has(k)) wordStages.set(k, new Set());
+    wordStages.get(k).add(w.stage);
+  }
+  // 输出路径按 stage 子目录（一个词多 stage → 复制到多个目录）
+  const OUT_FOR = (w) => {
+    const sts = stage ? [stage] : [...(wordStages.get(w.toLowerCase()) || [])];
+    return sts.map((st) => path.join(OUT_DIR, st, `${w.toLowerCase()}.mp3`));
+  };
+  // 断点续跑：目标目录已存在则跳过 + 仅纯单词
+  const todo = unique.filter((w) => /^[a-zA-Z'-]+$/.test(w) && OUT_FOR(w).some((f) => !fs.existsSync(f)));
   const target = limit > 0 ? todo.slice(0, limit) : todo;
-  console.log(`词库 ${unique.length} 词 | 待生成 ${target.length} 词（已存在 ${unique.length - todo.length} 跳过）| voice=${voice} workers=${workers}`);
+  console.log(`词库 ${unique.length} 词 | 待生成 ${target.length} 词（已存在跳过）| voice=${voice} stage=${stage || '全部'} workers=${workers}`);
   if (target.length === 0) { console.log('全部已生成，无需处理'); await prisma.$disconnect(); return; }
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -77,7 +90,11 @@ async function main() {
         for (const w of batch) {
           const b64 = data.data[w];
           if (b64) {
-            fs.writeFileSync(OUT_SUB(w), Buffer.from(b64, 'base64'));
+            const buf = Buffer.from(b64, 'base64');
+            for (const f of OUT_FOR(w)) {
+              fs.mkdirSync(path.dirname(f), { recursive: true });
+              fs.writeFileSync(f, buf);
+            }
           }
         }
       } else {
@@ -90,7 +107,13 @@ async function main() {
               body: JSON.stringify({ text: w, voice }),
               signal: AbortSignal.timeout(30000),
             });
-            if (res.ok) fs.writeFileSync(OUT_SUB(w), Buffer.from(await res.arrayBuffer()));
+            if (res.ok) {
+              const buf = Buffer.from(await res.arrayBuffer());
+              for (const f of OUT_FOR(w)) {
+                fs.mkdirSync(path.dirname(f), { recursive: true });
+                fs.writeFileSync(f, buf);
+              }
+            }
           } catch { /* 跳过 */ }
           await sleep(50);
         }
