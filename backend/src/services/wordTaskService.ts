@@ -466,8 +466,19 @@ export function checkClozeAnswer(input: string, answer: string): boolean {
 // ============ TTS 代理（edge-tts 微服务） ============
 
 const TTS_SERVICE_URL = process.env.WORD_TTS_URL || 'http://localhost:8010';
+// 词音频内存缓存（LRU 上限）：同词二次请求零生成，跨学员/跨会话复用
+const ttsCache = new Map<string, Buffer>();
+const TTS_CACHE_MAX = 3000;
 
 export async function ttsWord(word: string, voice?: string): Promise<Buffer | null> {
+  const key = `${voice || 'en-US-AriaNeural'}:${(word || '').toLowerCase().trim()}`;
+  const hit = ttsCache.get(key);
+  if (hit) {
+    // 命中 → 移到末尾（LRU）
+    ttsCache.delete(key);
+    ttsCache.set(key, hit);
+    return hit;
+  }
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15000);
@@ -479,7 +490,15 @@ export async function ttsWord(word: string, voice?: string): Promise<Buffer | nu
     });
     clearTimeout(timer);
     if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    const audio = Buffer.from(await res.arrayBuffer());
+    if (audio.length > 0) {
+      ttsCache.set(key, audio);
+      if (ttsCache.size > TTS_CACHE_MAX) {
+        const oldest = ttsCache.keys().next().value;
+        if (oldest) ttsCache.delete(oldest);
+      }
+    }
+    return audio;
   } catch (e: any) {
     logger.warn('[word] tts 微服务不可用，前端将走 Web Speech 兜底:', e.message);
     return null;

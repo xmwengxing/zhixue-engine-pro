@@ -240,6 +240,8 @@ export default function WordTraining() {
 
   // ===== 发音（edge-tts 优先，Web Speech 兜底） =====
   // 听写：每词念 repeat 遍（默认 3 遍，间隔 0.8s）；切词/提交时中断旧播放
+  // 优化：词音频前端缓存（Map<word, blobURL>）——重听/重背/重复词零请求零延迟
+  const audioCacheRef = useRef(new Map<string, string>());
   const speak = useCallback(
     async (word: string, repeat = 3) => {
       setPlaying(true);
@@ -258,23 +260,32 @@ export default function WordTraining() {
           void el.play().catch(() => resolve());
         });
       const times = Math.max(1, repeat);
-      try {
-        const res = await request.post('/student/word-task/tts', { word }, { responseType: 'blob' });
-        const blob = res as unknown as Blob;
-        if (blob && blob.size > 0) {
-          if (!audioRef.current) audioRef.current = new Audio();
-          for (let i = 0; i < times; i++) {
-            audioRef.current.src = URL.createObjectURL(blob);
-            await playToEnd(audioRef.current);
-            if (i < times - 1) await sleep(800); // 遍间间隔 0.8s
-          }
-          setPlaying(false);
-          return;
-        }
-        throw new Error('empty');
-      } catch {
-        // Web Speech 兜底（同样重复 3 遍，等每句自然播完再播下一句）
+      // 前端缓存命中 → 直接播，零请求零延迟
+      let url = audioCacheRef.current.get(word.toLowerCase());
+      if (!url) {
         try {
+          const res = await request.post('/student/word-task/tts', { word }, { responseType: 'blob' });
+          const blob = res as unknown as Blob;
+          if (blob && blob.size > 0) {
+            url = URL.createObjectURL(blob);
+            audioCacheRef.current.set(word.toLowerCase(), url);
+          }
+        } catch {
+          url = undefined;
+        }
+      }
+      if (url) {
+        if (!audioRef.current) audioRef.current = new Audio();
+        for (let i = 0; i < times; i++) {
+          audioRef.current.src = url;
+          await playToEnd(audioRef.current);
+          if (i < times - 1) await sleep(800); // 遍间间隔 0.8s
+        }
+        setPlaying(false);
+        return;
+      }
+      // Web Speech 兜底（同样重复，等每句自然播完再播下一句）
+      try {
           for (let i = 0; i < times; i++) {
             await new Promise<void>((resolve) => {
               const u = new SpeechSynthesisUtterance(word);
@@ -289,7 +300,6 @@ export default function WordTraining() {
           /* 忽略 */
         }
         setPlaying(false);
-      }
     },
     []
   );
@@ -391,6 +401,26 @@ export default function WordTraining() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, memIdx, letterCount, memFull.length, memDone, group.length]);
+  // 背词模式：后台预取整组词音频（打字机展示期间备好，到词时零等待）
+  useEffect(() => {
+    if (phase !== 'MEMORIZE' || group.length === 0) return;
+    for (const w of group) {
+      if (audioCacheRef.current.has(w.word.toLowerCase())) continue;
+      void request
+        .post('/student/word-task/tts', { word: w.word }, { responseType: 'blob' })
+        .then((res: any) => {
+          const blob = res as unknown as Blob;
+          if (blob && blob.size > 0 && !audioCacheRef.current.has(w.word.toLowerCase())) {
+            audioCacheRef.current.set(w.word.toLowerCase(), URL.createObjectURL(blob));
+          }
+        })
+        .catch(() => {
+          /* 预取失败，进词时实时获取/Web Speech 兜底 */
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, groupIndex, group.length]);
+
   // 背词阶段加载本组短语（提前生成；填空复用同一批）
   useEffect(() => {
     if (phase !== 'MEMORIZE' || !sessionId) return;
