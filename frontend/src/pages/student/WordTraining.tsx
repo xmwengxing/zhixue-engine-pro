@@ -355,7 +355,7 @@ export default function WordTraining() {
   // ===== 背词模式逻辑（打字机逐字母 + 发音 + 播完 5s 自动下一词 + 短语加载）=====
   const memWord = group[memIdx];
   const memFull = memWord?.word || '';
-  // 打字机：词变化时重置，逐字母出现（每 130ms 一个）
+  // 打字机：词变化时重置，逐字母出现（每 320ms 一个，慢节奏便于记忆）
   useEffect(() => {
     if (phase !== 'MEMORIZE' || !memFull) return;
     setLetterCount(0);
@@ -367,7 +367,7 @@ export default function WordTraining() {
         }
         return c + 1;
       });
-    }, 130);
+    }, 320);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, memIdx, memWord?.id, memFull]);
@@ -387,7 +387,7 @@ export default function WordTraining() {
       } else {
         setMemDone(true);
       }
-    }, 5000);
+    }, 12000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, memIdx, letterCount, memFull.length, memDone, group.length]);
@@ -644,7 +644,7 @@ export default function WordTraining() {
           ) : (
             <div className="bg-[#232f48] rounded-2xl p-8 text-center">
               {/* 打字机效果：单词逐字母跳动出现 */}
-              <p className="text-5xl font-bold text-white min-h-[3.5rem] tracking-widest break-all">
+              <p className="text-5xl font-black min-h-[3.5rem] tracking-widest break-all text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-amber-300 to-purple-400 drop-shadow-[0_0_18px_rgba(96,165,250,0.35)]">
                 {typed}
                 <span className={`inline-block w-[3px] h-10 align-middle bg-primary ml-1 ${typingDone ? 'opacity-0' : 'animate-pulse'}`} />
               </p>
