@@ -123,7 +123,7 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     const studentId = req.user?.userId;
     if (!studentId) { unauthorized(res); return; }
     const sessionId = String(req.params.sessionId);
-    const { groupIndex } = req.body ?? {};
+    const { groupIndex, preview } = req.body ?? {};
     const session = await prisma.wordSession.findFirst({ where: { id: sessionId, studentId } });
     if (!session) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: '训练会话不存在' } });
@@ -131,10 +131,26 @@ export const nextGroup = async (req: Request, res: Response, next: NextFunction)
     }
     const config = (await prisma.task.findUnique({ where: { id: session.taskId } }))?.config as any as WordTaskConfig;
     const groups = wordTaskService.buildGroups(session, config.groupSize);
+    const completedGroup = groups[groupIndex ?? 0] || [];
+    // 背词模式预取短语：只读/仅落库短语，不消费 clozeJson、不动 doneInGroup（保留答题进度）
+    if (preview === true) {
+      const preP = session.clozeJson as any;
+      let clozeP: any[] = preP && preP.group === (groupIndex ?? 0) && Array.isArray(preP.cloze) ? preP.cloze : [];
+      if (!clozeP.length) {
+        const learned = (await loadWords(completedGroup)).map((w) => ({ word: w.word, meaning: w.meaning }));
+        clozeP = await wordTaskService.generateCloze(learned);
+        // 落库供真实进填空时零等待复用（不动 doneInGroup）
+        await prisma.wordSession.update({
+          where: { id: session.id },
+          data: { clozeJson: { group: groupIndex ?? 0, cloze: clozeP } as any },
+        });
+      }
+      res.json({ success: true, data: { cloze: clozeP } });
+      return;
+    }
     const nextIdx = (groupIndex ?? 0) + 1;
     const done = nextIdx >= groups.length;
     // 每组完成后强制进入短语填空（填空基于「本组」词）；优先复用预生成填空（零等待）
-    const completedGroup = groups[groupIndex ?? 0] || [];
     let cloze: any = null;
     const pre = session.clozeJson as any;
     if (pre && pre.group === (groupIndex ?? 0) && Array.isArray(pre.cloze)) {

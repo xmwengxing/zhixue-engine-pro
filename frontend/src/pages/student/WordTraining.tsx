@@ -69,7 +69,7 @@ interface WordConfig {
   roundSize: number;
 }
 
-type Phase = 'WORD' | 'CLOZE' | 'DONE';
+type Phase = 'MEMORIZE' | 'WORD' | 'CLOZE' | 'DONE';
 
 const inputCls =
   'w-full px-4 py-3 border border-[#324467] rounded-lg bg-[#1a2332] text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/60';
@@ -87,6 +87,11 @@ export default function WordTraining() {
   const [groupIndex, setGroupIndex] = useState(0);
   const [totalGroups, setTotalGroups] = useState(0);
   const [wordIndex, setWordIndex] = useState(0); // 组内第几个词
+  // ===== 背词模式（先背后练）：每组先逐个展示单词/音标/释义/发音/短语 =====
+  const [memIdx, setMemIdx] = useState(0); // 背词当前词
+  const [letterCount, setLetterCount] = useState(0); // 打字机已展示字母数
+  const [memDone, setMemDone] = useState(false); // 组内全部展示完 → 显示 重背/开始训练
+  const [memCloze, setMemCloze] = useState<Array<{ sentence: string; translation?: string }>>([]); // 本组短语（背词展示完整句，填空复用）
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
@@ -169,7 +174,7 @@ export default function WordTraining() {
       setGroup(d.group);
       setGroupIndex(0);
       setTotalGroups(d.groups);
-      setPhase('WORD');
+      setPhase('MEMORIZE'); // 先背后练：新任务先进背词模式
     } catch (e) {
       setError(getErrorMessage(e, '加载单词训练失败，请重试（进度已保存，不会丢失）'));
     } finally {
@@ -229,6 +234,7 @@ export default function WordTraining() {
     } else {
       setGroup(d.group || []);
       setGroupIndex(d.groupIndex || 0);
+      setPhase('MEMORIZE'); // 恢复会话也先进背词（重背当前组，再从头/断点训练）
     }
   };
 
@@ -332,15 +338,80 @@ export default function WordTraining() {
         setPhase('CLOZE');
         return;
       }
-      // 兜底：进入下一组单词
+      // 兜底：进入下一组单词（先进背词模式）
       setGroup(d.group);
       setGroupIndex(d.groupIndex);
       setWordIndex(0);
       setInput('');
+      setMemIdx(0);
+      setMemDone(false);
+      setMemCloze(d.cloze || []);
+      setPhase('MEMORIZE');
     } catch (e) {
       setError(getErrorMessage(e, '获取下一组失败'));
     }
   };
+
+  // ===== 背词模式逻辑（打字机逐字母 + 发音 + 播完 5s 自动下一词 + 短语加载）=====
+  const memWord = group[memIdx];
+  const memFull = memWord?.word || '';
+  // 打字机：词变化时重置，逐字母出现（每 130ms 一个）
+  useEffect(() => {
+    if (phase !== 'MEMORIZE' || !memFull) return;
+    setLetterCount(0);
+    const iv = setInterval(() => {
+      setLetterCount((c) => {
+        if (c >= memFull.length) {
+          clearInterval(iv);
+          return c;
+        }
+        return c + 1;
+      });
+    }, 130);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, memIdx, memWord?.id, memFull]);
+  // 发音：进入背词词时自动朗读 1 遍
+  useEffect(() => {
+    if (phase === 'MEMORIZE' && memWord && !memDone) {
+      void speak(memWord.word, 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, memIdx, memWord?.id, memDone]);
+  // 播完 5 秒后自动进入下一词；组尾 → 显示「重背一遍 / 开始训练」
+  useEffect(() => {
+    if (phase !== 'MEMORIZE' || !memFull || letterCount < memFull.length || memDone) return;
+    const t = setTimeout(() => {
+      if (memIdx + 1 < group.length) {
+        setMemIdx(memIdx + 1);
+      } else {
+        setMemDone(true);
+      }
+    }, 5000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, memIdx, letterCount, memFull.length, memDone, group.length]);
+  // 背词阶段加载本组短语（提前生成；填空复用同一批）
+  useEffect(() => {
+    if (phase !== 'MEMORIZE' || !sessionId) return;
+    let alive = true;
+    request
+      .post(`/student/word-task/group/${sessionId}`, { groupIndex, preview: true })
+      .then((res: any) => {
+        if (!alive) return;
+        const d = res.data || {};
+        if (Array.isArray(d.cloze) && d.cloze.length) {
+          setMemCloze(d.cloze.map((c: any) => ({ sentence: c.sentence, translation: c.translation || '' })));
+        }
+      })
+      .catch(() => {
+        /* 短语加载失败不阻塞背词 */
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, groupIndex, sessionId]);
 
   const submitWord = (choiceText?: string) => {
     // CHOICE 模式：choiceText 为选中释义；其余模式读输入框
@@ -542,6 +613,102 @@ export default function WordTraining() {
         </div>
         <HistorySidebar groupHistory={groupHistory} />
       </div>
+      </div>
+    );
+  }
+
+  // ===== 背词模式（先背后练）：每组先逐个展示单词/音标/释义/发音/短语 =====
+  if (phase === 'MEMORIZE') {
+    const memWord = group[memIdx];
+    const full = memWord?.word || '';
+    const typed = full.slice(0, letterCount); // 打字机已显示部分
+    const typingDone = letterCount >= full.length;
+    const memPhrase = memCloze.find((c) => c.sentence)?.sentence || '';
+    const memTranslation = memCloze.find((c) => c.sentence)?.translation || '';
+
+    return (
+      <div className="min-h-screen bg-[#111722] py-6">
+        <style>{FEEDBACK_CSS}</style>
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={exitSave} className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]">
+              ← 退出（保存进度）
+            </button>
+            <div className="text-sm text-[#92a4c9]">
+              背词模式 · 第 {groupIndex + 1}/{totalGroups || 1} 组 · {memIdx + 1}/{group.length} 词
+            </div>
+          </div>
+
+          {!memWord ? (
+            <div className="text-center py-16 text-[#92a4c9]">加载中…</div>
+          ) : (
+            <div className="bg-[#232f48] rounded-2xl p-8 text-center">
+              {/* 打字机效果：单词逐字母跳动出现 */}
+              <p className="text-5xl font-bold text-white min-h-[3.5rem] tracking-widest break-all">
+                {typed}
+                <span className={`inline-block w-[3px] h-10 align-middle bg-primary ml-1 ${typingDone ? 'opacity-0' : 'animate-pulse'}`} />
+              </p>
+              {memWord.phonetic && (
+                <p className="mt-2 text-[#92a4c9] text-base">/ {memWord.phonetic} /</p>
+              )}
+              <p className="mt-3 text-2xl text-blue-300 font-medium">{memWord.meaning}</p>
+
+              {/* 短语（提前生成，展示完整句 + 中文释义） */}
+              {memPhrase && (
+                <div className="mt-6 rounded-xl bg-[#1a2332] border border-[#324467] px-5 py-4">
+                  <p className="text-lg text-white leading-relaxed">
+                    {memPhrase.split('____').map((part, i, arr) => (
+                      <span key={i}>
+                        {part}
+                        {i < arr.length - 1 && (
+                          <span className="px-1 rounded bg-primary/20 text-primary font-bold">{full}</span>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                  {memTranslation && <p className="mt-1.5 text-sm text-[#92a4c9]">{memTranslation}</p>}
+                </div>
+              )}
+
+              <button
+                onClick={() => void speak(memWord.word, 1)}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-300 text-sm hover:bg-blue-600/30"
+              >
+                <span className="material-symbols-outlined text-lg">{playing ? 'volume_up' : 'volume_up'}</span>
+                重听发音
+              </button>
+
+              {/* 组内展示完 → 重背一遍 / 开始训练 */}
+              {memDone && (
+                <div className="mt-8 flex gap-3 justify-center">
+                  <button
+                    onClick={() => {
+                      setMemIdx(0);
+                      setMemDone(false);
+                      setLetterCount(0);
+                    }}
+                    className="px-6 py-2.5 rounded-lg border border-[#324467] text-[#92a4c9] hover:text-white"
+                  >
+                    重背一遍
+                  </button>
+                  <button
+                    onClick={() => {
+                      setWordIndex(0);
+                      setInput('');
+                      setPhase('WORD');
+                    }}
+                    className="px-8 py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-blue-500"
+                  >
+                    开始训练
+                  </button>
+                </div>
+              )}
+              {!memDone && (
+                <p className="mt-6 text-xs text-[#5b6b8c]">单词播完 5 秒后自动进入下一个</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
