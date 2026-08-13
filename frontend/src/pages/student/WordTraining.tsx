@@ -381,13 +381,20 @@ export default function WordTraining() {
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, memIdx, memWord?.id, memFull]);
-  // 发音：进入背词词时自动朗读 1 遍
+  // 发音：进入背词词时自动朗读 1 遍，念完单词接着念完整短语（若有）
   useEffect(() => {
     if (phase === 'MEMORIZE' && memWord && !memDone) {
-      void speak(memWord.word, 1);
+      void (async () => {
+        await speak(memWord.word, 1);
+        const item = memCloze.find((c) => c.answer === memWord.word);
+        if (item?.sentence) {
+          const full = item.sentence.replace('____', memWord.word);
+          if (full.trim() !== memWord.word.trim()) await speak(full, 1);
+        }
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, memIdx, memWord?.id, memDone]);
+  }, [phase, memIdx, memWord?.id, memDone, memCloze.length]);
   // 播完 5 秒后自动进入下一词；组尾 → 显示「重背一遍 / 开始训练」
   useEffect(() => {
     if (phase !== 'MEMORIZE' || !memFull || letterCount < memFull.length || memDone) return;
