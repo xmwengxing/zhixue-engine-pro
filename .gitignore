@@ -70,3 +70,4 @@ backend/scripts/dump-paper-text.mjs
 backend/scripts/configure-extraction-provider.ts
 backend/scripts/import-real-papers.mjs
 
+backend/tts_data/

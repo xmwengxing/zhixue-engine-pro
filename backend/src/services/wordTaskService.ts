@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import { aiServiceManager } from './aiServiceManager';
 import { logger } from '../middlewares/logger';
@@ -463,9 +465,13 @@ export function checkClozeAnswer(input: string, answer: string): boolean {
   return (input || '').trim().toLowerCase() === (answer || '').trim().toLowerCase();
 }
 
-// ============ TTS 代理（edge-tts 微服务） ============
+// ============ TTS 代理（edge-tts 微服务 + 离线数据包） ============
 
 const TTS_SERVICE_URL = process.env.WORD_TTS_URL || 'http://localhost:8010';
+// 离线 TTS 数据包目录（生产解压后生效；本地文件优先读取，零生成零延迟）
+const TTS_DATA_DIR = process.env.TTS_DATA_DIR || path.resolve(process.cwd(), 'tts_data');
+const localAudioFile = (word: string, voice: string) =>
+  path.join(TTS_DATA_DIR, voice, `${word.toLowerCase()}.mp3`);
 // 词音频内存缓存（LRU 上限）：同词二次请求零生成，跨学员/跨会话复用
 const ttsCache = new Map<string, Buffer>();
 const TTS_CACHE_MAX = 3000;
@@ -473,16 +479,34 @@ const TTS_CACHE_MAX = 3000;
 const ttsInflight = new Map<string, Promise<Buffer | null>>();
 
 export async function ttsWord(word: string, voice?: string): Promise<Buffer | null> {
-  const key = `${voice || 'en-US-AriaNeural'}:${(word || '').toLowerCase().trim()}`;
+  const v = voice || 'en-US-AriaNeural';
+  const key = `${v}:${(word || '').toLowerCase().trim()}`;
+  // 1) 内存缓存（命中移到末尾，LRU）
   const hit = ttsCache.get(key);
   if (hit) {
-    // 命中 → 移到末尾（LRU）
     ttsCache.delete(key);
     ttsCache.set(key, hit);
     return hit;
   }
+  // 2) 离线数据包本地文件（仅纯单词；短语含空格/标点不入本地文件）
+  const isSingleWord = /^[a-zA-Z'-]+$/.test((word || '').trim());
+  if (isSingleWord) {
+    try {
+      const file = localAudioFile(word.trim(), v);
+      if (fs.existsSync(file)) {
+        const b = fs.readFileSync(file);
+        if (b.length > 0) {
+          ttsCache.set(key, b);
+          return b;
+        }
+      }
+    } catch {
+      /* 读取失败走微服务 */
+    }
+  }
+  // 3) 并发去重 + 微服务生成（成功后写回本地文件，增量补全数据包）
   const inflight = ttsInflight.get(key);
-  if (inflight) return inflight; // 已有生成任务进行中 → 直接复用
+  if (inflight) return inflight;
   const task = (async () => {
     try {
       const ctrl = new AbortController();
@@ -490,7 +514,7 @@ export async function ttsWord(word: string, voice?: string): Promise<Buffer | nu
       const res = await fetch(`${TTS_SERVICE_URL}/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: word, voice: voice || 'en-US-AriaNeural' }),
+        body: JSON.stringify({ text: word, voice: v }),
         signal: ctrl.signal,
       });
       clearTimeout(timer);
@@ -501,6 +525,15 @@ export async function ttsWord(word: string, voice?: string): Promise<Buffer | nu
         if (ttsCache.size > TTS_CACHE_MAX) {
           const oldest = ttsCache.keys().next().value;
           if (oldest) ttsCache.delete(oldest);
+        }
+        // 写回本地（离线数据包增量补全）
+        if (isSingleWord) {
+          try {
+            fs.mkdirSync(path.dirname(localAudioFile(word.trim(), v)), { recursive: true });
+            fs.writeFileSync(localAudioFile(word.trim(), v), audio);
+          } catch {
+            /* 写文件失败不影响响应 */
+          }
         }
       }
       return audio;
