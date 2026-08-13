@@ -91,7 +91,7 @@ export default function WordTraining() {
   const [memIdx, setMemIdx] = useState(0); // 背词当前词
   const [letterCount, setLetterCount] = useState(0); // 打字机已展示字母数
   const [memDone, setMemDone] = useState(false); // 组内全部展示完 → 显示 重背/开始训练
-  const [memCloze, setMemCloze] = useState<Array<{ sentence: string; translation?: string }>>([]); // 本组短语（背词展示完整句，填空复用）
+  const [memCloze, setMemCloze] = useState<Array<{ sentence: string; translation?: string; answer?: string }>>([]); // 本组短语（背词按 answer 匹配当前词展示完整句，填空复用）
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
@@ -401,7 +401,7 @@ export default function WordTraining() {
         if (!alive) return;
         const d = res.data || {};
         if (Array.isArray(d.cloze) && d.cloze.length) {
-          setMemCloze(d.cloze.map((c: any) => ({ sentence: c.sentence, translation: c.translation || '' })));
+          setMemCloze(d.cloze.map((c: any) => ({ sentence: c.sentence, translation: c.translation || '', answer: c.answer })));
         }
       })
       .catch(() => {
@@ -623,8 +623,9 @@ export default function WordTraining() {
     const full = memWord?.word || '';
     const typed = full.slice(0, letterCount); // 打字机已显示部分
     const typingDone = letterCount >= full.length;
-    const memPhrase = memCloze.find((c) => c.sentence)?.sentence || '';
-    const memTranslation = memCloze.find((c) => c.sentence)?.translation || '';
+    const memPhraseItem = memCloze.find((c) => c.answer === memWord?.word) || memCloze[0];
+    const memPhrase = memPhraseItem?.sentence || '';
+    const memTranslation = memPhraseItem?.translation || '';
 
     return (
       <div className="min-h-screen bg-[#111722] py-6">
