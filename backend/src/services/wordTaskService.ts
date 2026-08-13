@@ -469,6 +469,8 @@ const TTS_SERVICE_URL = process.env.WORD_TTS_URL || 'http://localhost:8010';
 // 词音频内存缓存（LRU 上限）：同词二次请求零生成，跨学员/跨会话复用
 const ttsCache = new Map<string, Buffer>();
 const TTS_CACHE_MAX = 3000;
+// 并发去重：同一词并发请求只生成一次（预取与 speak 同时触发时防重复生成/乱序）
+const ttsInflight = new Map<string, Promise<Buffer | null>>();
 
 export async function ttsWord(word: string, voice?: string): Promise<Buffer | null> {
   const key = `${voice || 'en-US-AriaNeural'}:${(word || '').toLowerCase().trim()}`;
@@ -479,29 +481,39 @@ export async function ttsWord(word: string, voice?: string): Promise<Buffer | nu
     ttsCache.set(key, hit);
     return hit;
   }
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    const res = await fetch(`${TTS_SERVICE_URL}/tts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: word, voice: voice || 'en-US-AriaNeural' }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    const audio = Buffer.from(await res.arrayBuffer());
-    if (audio.length > 0) {
-      ttsCache.set(key, audio);
-      if (ttsCache.size > TTS_CACHE_MAX) {
-        const oldest = ttsCache.keys().next().value;
-        if (oldest) ttsCache.delete(oldest);
+  const inflight = ttsInflight.get(key);
+  if (inflight) return inflight; // 已有生成任务进行中 → 直接复用
+  const task = (async () => {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(`${TTS_SERVICE_URL}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: word, voice: voice || 'en-US-AriaNeural' }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      const audio = Buffer.from(await res.arrayBuffer());
+      if (audio.length > 0) {
+        ttsCache.set(key, audio);
+        if (ttsCache.size > TTS_CACHE_MAX) {
+          const oldest = ttsCache.keys().next().value;
+          if (oldest) ttsCache.delete(oldest);
+        }
       }
+      return audio;
+    } catch (e: any) {
+      logger.warn('[word] tts 微服务不可用，前端将走 Web Speech 兜底:', e.message);
+      return null;
     }
-    return audio;
-  } catch (e: any) {
-    logger.warn('[word] tts 微服务不可用，前端将走 Web Speech 兜底:', e.message);
-    return null;
+  })();
+  ttsInflight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    ttsInflight.delete(key);
   }
 }
 

@@ -234,6 +234,10 @@ export const resumeWord = async (req: Request, res: Response, next: NextFunction
       const all = await loadWords(groups[currentGroupIdx] || []);
       data.groupIndex = currentGroupIdx;
       data.group = all.filter((w) => !doneInGroup.includes(w.id));
+      // 选择模式：恢复的词组必须带选项（否则训练阶段 4 选 1 无选项可点）
+      if (config?.mode === 'CHOICE') {
+        data.group = await wordTaskService.attachChoiceOptions(data.group as any, config.stage);
+      }
       data.groupWordIndex = 0;
     }
     res.json({ success: true, data });

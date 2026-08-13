@@ -92,6 +92,7 @@ export default function WordTraining() {
   const [letterCount, setLetterCount] = useState(0); // 打字机已展示字母数
   const [memDone, setMemDone] = useState(false); // 组内全部展示完 → 显示 重背/开始训练
   const [memCloze, setMemCloze] = useState<Array<{ sentence: string; translation?: string; answer?: string }>>([]); // 本组短语（背词按 answer 匹配当前词展示完整句，填空复用）
+  const [memReady, setMemReady] = useState(false); // 背词资源预载完成（短语就绪才显示背词卡，避免等 AI 生成时空白）
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState<{ word: string; correct: boolean; answer: string } | null>(null);
   const [results, setResults] = useState<Array<{ word: string; correct: boolean; input: string }>>([]);
@@ -348,14 +349,15 @@ export default function WordTraining() {
         setPhase('CLOZE');
         return;
       }
-      // 兜底：进入下一组单词（先进背词模式）
+      // 兜底：进入下一组单词（先进背词模式；重置背词状态，重新预载短语）
       setGroup(d.group);
       setGroupIndex(d.groupIndex);
       setWordIndex(0);
       setInput('');
       setMemIdx(0);
       setMemDone(false);
-      setMemCloze(d.cloze || []);
+      setMemCloze([]);
+      setMemReady(false);
       setPhase('MEMORIZE');
     } catch (e) {
       setError(getErrorMessage(e, '获取下一组失败'));
@@ -428,21 +430,28 @@ export default function WordTraining() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, groupIndex, group.length]);
 
-  // 背词阶段加载本组短语（提前生成；填空复用同一批）
+  // 背词阶段加载本组短语（提前生成；填空复用同一批）；预载完成后放行显示背词卡
   useEffect(() => {
     if (phase !== 'MEMORIZE' || !sessionId) return;
     let alive = true;
-    request
-      .post(`/student/word-task/group/${sessionId}`, { groupIndex, preview: true })
+    // 30s 超时兜底：AI 生成慢/失败时也放行（无短语继续，避免卡加载页）
+    const timeout = new Promise((r) => setTimeout(() => r(null), 30000));
+    Promise.race([
+      request.post(`/student/word-task/group/${sessionId}`, { groupIndex, preview: true }),
+      timeout,
+    ])
       .then((res: any) => {
         if (!alive) return;
-        const d = res.data || {};
+        const d = res?.data || {};
         if (Array.isArray(d.cloze) && d.cloze.length) {
           setMemCloze(d.cloze.map((c: any) => ({ sentence: c.sentence, translation: c.translation || '', answer: c.answer })));
         }
       })
       .catch(() => {
         /* 短语加载失败不阻塞背词 */
+      })
+      .finally(() => {
+        if (alive) setMemReady(true);
       });
     return () => {
       alive = false;
@@ -656,6 +665,29 @@ export default function WordTraining() {
 
   // ===== 背词模式（先背后练）：每组先逐个展示单词/音标/释义/发音/短语 =====
   if (phase === 'MEMORIZE') {
+    // 预载完成前显示加载态（短语 AI 生成 + 音频预取在后台进行）
+    if (!memReady) {
+      return (
+        <div className="min-h-screen bg-[#111722] py-6">
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={exitSave} className="text-sm text-[#5b6b8c] hover:text-[#c3cfe6]">
+                ← 退出（保存进度）
+              </button>
+            </div>
+            <div className="rounded-2xl bg-[#232f48] border border-[#324467] px-8 py-16 text-center">
+              <span className="material-symbols-outlined text-5xl text-primary animate-spin inline-block mb-4">
+                progress_activity
+              </span>
+              <p className="text-white text-base font-medium">正在预载背词资源（短语与发音）…</p>
+              <p className="text-[#5b6b8c] text-sm mt-2">
+                首次进入需 AI 生成短语，约需数秒至 1 分钟；预载完成后即可流畅背词
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
     const memWord = group[memIdx];
     const full = memWord?.word || '';
     const typed = full.slice(0, letterCount); // 打字机已显示部分
