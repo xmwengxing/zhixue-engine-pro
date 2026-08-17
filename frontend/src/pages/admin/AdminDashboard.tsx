@@ -34,9 +34,9 @@ export const AdminDashboard = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-row overflow-hidden">
-      {/* 侧边栏 */}
-      <aside className="hidden w-72 flex-col border-r border-[#324467] bg-[#111722] lg:flex">
+    <div className="relative flex h-screen w-full flex-row overflow-hidden">
+      {/* 侧边栏：独立滚动，不随主内容滚动 */}
+      <aside className="hidden w-72 flex-col overflow-y-auto border-r border-[#324467] bg-[#111722] lg:flex">
         <div className="flex h-full flex-col justify-between p-4">
           <div className="flex flex-col gap-8">
             {/* Logo */}
@@ -239,8 +239,8 @@ export const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* 主内容区 */}
-      <main className="flex flex-1 flex-col h-full min-h-screen relative overflow-y-auto">
+      {/* 主内容区：独立滚动 */}
+      <main className="flex flex-1 flex-col h-full relative overflow-y-auto">
         {/* 移动端顶部栏 */}
         <div className="flex lg:hidden items-center justify-between p-4 border-b border-[#324467] bg-[#111722]">
           <span className="text-white font-bold text-lg">EduSmart</span>

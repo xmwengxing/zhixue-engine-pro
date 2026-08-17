@@ -884,7 +884,7 @@ export default function TaskConfigCenter() {
       }
 
       alert(`任务创建成功！任务 ID: ${response.data.id}`);
-      navigate('/parent/dashboard');
+      navigate('/parent/tasks');
     } catch (err: unknown) {
       setError(getErrorMessage(err, '创建任务失败'));
     } finally {
@@ -2597,7 +2597,7 @@ export default function TaskConfigCenter() {
             <div className="flex justify-end space-x-4 pt-6 border-t border-[#324467]">
               <button
                 type="button"
-                onClick={() => navigate('/parent/dashboard')}
+                onClick={() => navigate('/parent/tasks')}
                 className="px-6 py-2 border border-[#324467] rounded-lg text-[#92a4c9] hover:bg-[#1a2332] transition-colors"
               >
                 取消
