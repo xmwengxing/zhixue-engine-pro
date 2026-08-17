@@ -127,7 +127,6 @@ const REQUIRED_ENV_VARS = [
  */
 const PRODUCTION_REQUIRED_ENV_VARS = [
   'SESSION_SECRET',
-  'SENTRY_DSN',
   'REDIS_PASSWORD', // BullMQ 队列/Worker 在生产环境必须使用带密码的 Redis
 ];
 
