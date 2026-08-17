@@ -308,7 +308,7 @@ const TrainingCabin: React.FC = () => {
       {/* 顶部导航栏 */}
       <header className="bg-[#232f48] border-b border-[#324467] px-4 lg:px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 lg:space-x-4">
+          <div className="flex items-center space-x-3 lg:space-x-4 min-w-0 flex-1">
             {/* 返回按钮 */}
             <button
               onClick={() => {
@@ -316,7 +316,7 @@ const TrainingCabin: React.FC = () => {
                   navigate('/student/tasks');
                 }
               }}
-              className="text-[#92a4c9] hover:text-white transition-colors"
+              className="text-[#92a4c9] hover:text-white transition-colors flex-shrink-0"
               aria-label="返回"
             >
               <svg
@@ -333,12 +333,12 @@ const TrainingCabin: React.FC = () => {
                 />
               </svg>
             </button>
-            <h1 className="text-lg lg:text-xl font-semibold text-white">
+            <h1 className="text-lg lg:text-xl font-semibold text-white truncate min-w-0">
               {session.task?.title || '智能训练舱'}
             </h1>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-xs lg:text-sm text-[#92a4c9] font-medium px-3 py-1 rounded-full bg-[#1a2332] border border-[#324467]">
+          <div className="flex items-center space-x-4 flex-shrink-0">
+            <span className="hidden sm:inline-flex text-xs lg:text-sm text-[#92a4c9] font-medium px-3 py-1 rounded-full bg-[#1a2332] border border-[#324467]">
               {session.phase === 'DIAGNOSTIC_TEST' && '诊断测试'}
               {session.phase === 'PLANNING' && '生成训练计划'}
               {session.phase === 'GUIDED_TRAINING' && '引导式训练'}
@@ -401,8 +401,8 @@ const TrainingCabin: React.FC = () => {
           )}
         </div>
 
-        {/* 移动端底部导航 */}
-        <nav className="bg-[#232f48] border-t border-[#324467] px-4 py-2 flex justify-around">
+        {/* 移动端底部导航（含 iPhone 底部安全区适配） */}
+        <nav className="bg-[#232f48] border-t border-[#324467] px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex justify-around">
           {([
             { key: 'question', label: '题目', d: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
             { key: 'progress', label: '进度', d: 'M13 10V3L4 14h7v7l9-11h-7z' },
@@ -411,7 +411,7 @@ const TrainingCabin: React.FC = () => {
             <button
               key={t.key}
               onClick={() => setMobileTab(t.key)}
-              className={`flex flex-col items-center py-2 transition-colors ${
+              className={`flex flex-col items-center py-2.5 px-3 min-w-[64px] rounded-lg transition-colors active:bg-[#1a2332] ${
                 mobileTab === t.key ? 'text-[#3b82f6]' : 'text-[#92a4c9] hover:text-white'
               }`}
             >
