@@ -78,6 +78,9 @@ services:
       SENTRY_ENVIRONMENT: production
     # 不暴露端口到主机（通过 Nginx 访问）
     ports: []
+    # TTS 离线音频数据包（可选：解压 backend/tts_data 后挂载，发音本地优先零延迟）
+    volumes:
+      - ./backend/tts_data:/app/tts_data:ro
     # 资源限制
     deploy:
       resources:
