@@ -18,7 +18,7 @@ echo "▶ [3/5] 等待服务就绪..."
 sleep 10
 
 echo "▶ [4/5] 服务状态："
-docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
 echo "▶ [5/5] 健康检查："
 if curl -s -m 5 http://localhost/health | grep -q '"status"'; then
