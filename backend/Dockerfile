@@ -7,6 +7,9 @@
 # ==========================================
 FROM node:18-alpine AS builder
 
+# Prisma 引擎需要 openssl 1.1 兼容库（alpine 默认只有 3.x）
+RUN apk add --no-cache openssl1.1-compat || apk add --no-cache openssl
+
 # 设置工作目录
 WORKDIR /app
 
@@ -30,6 +33,9 @@ RUN npm run build
 # 阶段 2: 生产阶段
 # ==========================================
 FROM node:18-alpine AS production
+
+# Prisma 引擎需要 openssl 1.1 兼容库
+RUN apk add --no-cache openssl1.1-compat || apk add --no-cache openssl
 
 # 安装 dumb-init（用于正确处理信号）
 RUN apk add --no-cache dumb-init
