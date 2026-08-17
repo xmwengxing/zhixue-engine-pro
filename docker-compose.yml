@@ -106,7 +106,7 @@ services:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
-      start_period: 40s
+      start_period: 180s // 首次部署含 db push + 种子（词库/教材），需更长启动期
       retries: 3
     networks:
       - training-platform-network
@@ -127,7 +127,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       start_period: 10s

@@ -33,7 +33,6 @@ p.word.count().then(n => { console.log(n); return p.\$disconnect(); }).catch(() 
 if [ "${WORD_COUNT:-0}" -lt 100 ]; then
   echo "[init] 首次部署：导入单词词库（初中 + CET4）..."
   node scripts/import-words.mjs seed-data/words-stage-初中.json 初中 2>/dev/null || true
-  node scripts/import-cet4-words.mjs --json-only >/dev/null 2>&1 || true
   node scripts/import-words.mjs seed-data/words-stage-CET4.json CET4 2>/dev/null || true
   echo "[init] 词库导入完成"
 else

@@ -12,7 +12,7 @@ services:
   postgres:
     environment:
       # 生产环境应使用强密码
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 设置 POSTGRES_PASSWORD}
     # 不暴露端口到主机（仅容器间访问）
     ports: []
     # 资源限制
@@ -36,9 +36,9 @@ services:
   # ==========================================
   redis:
     # 启用密码保护
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?请在 .env 设置 REDIS_PASSWORD}
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?请在 .env 设置 REDIS_PASSWORD}
     # 不暴露端口到主机
     ports: []
     # 资源限制

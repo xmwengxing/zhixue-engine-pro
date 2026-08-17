@@ -13,6 +13,11 @@ set -e
 
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
+if [ ! -f .env ]; then
+  echo "✗ 缺少 .env 文件：cp .env.example .env 并设置 POSTGRES_PASSWORD/REDIS_PASSWORD 等强密码"
+  exit 1
+fi
+
 case "${1:-help}" in
   start)
     echo "▶ 构建并启动（首次会自动完成数据库初始化与种子导入）..."
