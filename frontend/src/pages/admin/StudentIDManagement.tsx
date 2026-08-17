@@ -60,7 +60,7 @@ export default function StudentIDManagement() {
       if (statusFilter) params.append('status', statusFilter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -82,7 +82,7 @@ export default function StudentIDManagement() {
   // 获取学号统计
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids/stats`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -114,7 +114,7 @@ export default function StudentIDManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids/assign`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids/assign`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -150,7 +150,7 @@ export default function StudentIDManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids/${selectedStudentId.id}/unbind`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids/${selectedStudentId.id}/unbind`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -180,7 +180,7 @@ export default function StudentIDManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids/${selectedStudentId.id}/lock`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids/${selectedStudentId.id}/lock`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -210,7 +210,7 @@ export default function StudentIDManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/student-ids/${selectedStudentId.id}/unlock`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/student-ids/${selectedStudentId.id}/unlock`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

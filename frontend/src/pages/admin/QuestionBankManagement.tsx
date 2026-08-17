@@ -2643,7 +2643,7 @@ const ExportBankModal = ({
     setErr(null);
     try {
       const token = useAuthStore.getState().token;
-      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const base = import.meta.env.VITE_API_BASE_URL || '/api';
       const res = await fetch(`${base}/admin/question-bank/export?${buildQuery()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });

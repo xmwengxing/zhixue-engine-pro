@@ -54,7 +54,7 @@ export default function AuthCodeManagement() {
       if (statusFilter) params.append('status', statusFilter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/auth-codes?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/auth-codes?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -76,7 +76,7 @@ export default function AuthCodeManagement() {
   // 获取授权码统计
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/auth-codes/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/auth-codes/stats`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -119,7 +119,7 @@ export default function AuthCodeManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/auth-codes/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/auth-codes/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -156,7 +156,7 @@ export default function AuthCodeManagement() {
       const params = new URLSearchParams();
       if (statusFilter) params.append('status', statusFilter);
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/auth-codes/export?${params}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/auth-codes/export?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -188,7 +188,7 @@ export default function AuthCodeManagement() {
 
     try {
       setActionLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/admin/auth-codes/${selectedAuthCode.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/admin/auth-codes/${selectedAuthCode.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
