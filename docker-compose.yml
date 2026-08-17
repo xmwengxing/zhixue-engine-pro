@@ -120,7 +120,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:3000/api}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
     container_name: training-platform-frontend
     restart: unless-stopped
     # 不暴露端口：生产入口是 nginx（反代 frontend_app 内部端口）

@@ -109,7 +109,8 @@ services:
   frontend:
     build:
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+        # 生产恒为相对路径（经 Nginx 反代），不依赖环境变量/本机端口
+        - VITE_API_BASE_URL=/api
         - VITE_APP_ENV=production
         - VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
     # 不直接暴露端口（通过 Nginx 访问）

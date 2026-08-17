@@ -20,8 +20,9 @@ interface CustomAxiosInstance {
 /**
  * API 基础 URL
  * 开发环境使用本地后端，生产环境使用环境变量
+ * 默认相对路径 /api：开发走 vite 代理、生产走 Nginx 反代，不依赖本机端口
  */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * 创建 Axios 实例
