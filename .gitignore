@@ -78,3 +78,4 @@ backend/tts_data/
 # 服务器私人运维脚本（不上仓库）
 update.sh
 sync-server.sh
+sync-server.py
