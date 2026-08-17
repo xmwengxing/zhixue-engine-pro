@@ -50,7 +50,10 @@ export default defineConfig({
   
   // 开发服务器配置
   server: {
-    port: 5173,
+    // 端口说明：Windows 上 5173 常被 Hyper-V/WSL 动态保留（listen EACCES），
+    // 故固定到非保留段；如本机 5173 可用可改回，或用管理员执行
+    // netsh int ipv4 add excludedportrange protocol=tcp startport=5173 numberofports=100 释放
+    port: 5373,
     host: true,
     
     // 代理配置（如果需要）
