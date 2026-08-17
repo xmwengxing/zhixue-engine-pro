@@ -9,17 +9,17 @@ CREATE TYPE "PaperStatus" AS ENUM ('DRAFT', 'NORMALIZED', 'PUBLISHED');
 -- the enum.
 
 
-ALTER TYPE "QuestionType" ADD VALUE 'JUDGE';
-ALTER TYPE "QuestionType" ADD VALUE 'MULTIPLE_CHOICE';
-ALTER TYPE "QuestionType" ADD VALUE 'FORMULA';
-ALTER TYPE "QuestionType" ADD VALUE 'GEOMETRY';
-ALTER TYPE "QuestionType" ADD VALUE 'GRAPHING';
-ALTER TYPE "QuestionType" ADD VALUE 'PROOF';
-ALTER TYPE "QuestionType" ADD VALUE 'SORTING';
-ALTER TYPE "QuestionType" ADD VALUE 'MATCHING';
+-- [enum-ensure] 值 JUDGE 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'JUDGE';）
+-- [enum-ensure] 值 MULTIPLE_CHOICE 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'MULTIPLE_CHOICE';）
+-- [enum-ensure] 值 FORMULA 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'FORMULA';）
+-- [enum-ensure] 值 GEOMETRY 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'GEOMETRY';）
+-- [enum-ensure] 值 GRAPHING 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'GRAPHING';）
+-- [enum-ensure] 值 PROOF 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'PROOF';）
+-- [enum-ensure] 值 SORTING 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'SORTING';）
+-- [enum-ensure] 值 MATCHING 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "QuestionType" ADD VALUE 'MATCHING';）
 
 -- AlterEnum
-ALTER TYPE "TaskMode" ADD VALUE 'EXAM_PAPER';
+-- [enum-ensure] 值 EXAM_PAPER 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TaskMode" ADD VALUE 'EXAM_PAPER';）
 
 -- AlterTable
 ALTER TABLE "answers" ADD COLUMN     "answer_data" JSONB,

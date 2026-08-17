@@ -45,6 +45,11 @@ COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
+# 种子数据 + 初始化入口（教材体系 / 单词词库 / db push 同步）
+COPY --from=builder --chown=nodejs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nodejs:nodejs /app/seed-data ./seed-data
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # 创建日志和上传目录
 RUN mkdir -p logs uploads && \
@@ -60,8 +65,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# 使用 dumb-init 启动应用
-ENTRYPOINT ["dumb-init", "--"]
+# 使用 dumb-init 启动应用；先执行初始化入口（db push + 首次种子），再启动服务
+ENTRYPOINT ["dumb-init", "--", "docker-entrypoint.sh"]
 
 # 启动命令
 CMD ["node", "dist/index.js"]

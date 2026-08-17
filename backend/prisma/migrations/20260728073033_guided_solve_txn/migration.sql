@@ -1,2 +1,2 @@
 -- AlterEnum
-ALTER TYPE "TransactionType" ADD VALUE 'GUIDED_SOLVE';
+-- [enum-ensure] 值 GUIDED_SOLVE 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TransactionType" ADD VALUE 'GUIDED_SOLVE';）

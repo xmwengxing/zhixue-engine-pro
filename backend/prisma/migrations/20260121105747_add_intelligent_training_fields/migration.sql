@@ -9,10 +9,10 @@ CREATE TYPE "WishType" AS ENUM ('CASH', 'CUSTOM');
 -- the enum.
 
 
-ALTER TYPE "TrainingPhase" ADD VALUE 'DIAGNOSTIC_TEST';
-ALTER TYPE "TrainingPhase" ADD VALUE 'PLANNING';
-ALTER TYPE "TrainingPhase" ADD VALUE 'GUIDED_TRAINING';
-ALTER TYPE "TrainingPhase" ADD VALUE 'COMPLETED';
+-- [enum-ensure] 值 DIAGNOSTIC_TEST 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TrainingPhase" ADD VALUE 'DIAGNOSTIC_TEST';）
+-- [enum-ensure] 值 PLANNING 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TrainingPhase" ADD VALUE 'PLANNING';）
+-- [enum-ensure] 值 GUIDED_TRAINING 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TrainingPhase" ADD VALUE 'GUIDED_TRAINING';）
+-- [enum-ensure] 值 COMPLETED 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TrainingPhase" ADD VALUE 'COMPLETED';）
 
 -- AlterTable
 ALTER TABLE "training_sessions" ADD COLUMN     "diagnostic_test_data" JSONB,

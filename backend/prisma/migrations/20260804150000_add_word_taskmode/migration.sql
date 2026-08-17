@@ -1,2 +1,2 @@
 -- AlterEnum
-ALTER TYPE "TaskMode" ADD VALUE 'WORD';
+-- [enum-ensure] 值 WORD 已由 20260110000000_ensure_core_enums 提供（原: ALTER TYPE "TaskMode" ADD VALUE 'WORD';）
