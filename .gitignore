@@ -71,3 +71,6 @@ backend/scripts/configure-extraction-provider.ts
 backend/scripts/import-real-papers.mjs
 
 backend/tts_data/
+
+# 开发文档不进仓库
+开发文档/
