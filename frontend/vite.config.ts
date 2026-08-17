@@ -57,9 +57,11 @@ export default defineConfig({
     host: true,
     
     // 代理配置（如果需要）
+    // 后端地址可配置：VITE_DEV_PROXY=http://localhost:3200 npm run dev
+    // （本机 3000 若被系统保留、后端跑在 3200 时使用；默认 3000）
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_DEV_PROXY || 'http://localhost:3000',
         changeOrigin: true,
       },
     },
