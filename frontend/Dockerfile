@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖（用 npm install：package-lock.json 与 package.json 存在不同步
-# 场景（如手工登记新依赖），npm ci 严格校验会直接失败）
+# 场景（如手工登记新依赖），npm ci --legacy-peer-deps 严格校验会直接失败）
 RUN npm install --no-audit --no-fund
 
 # 复制源代码

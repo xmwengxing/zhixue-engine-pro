@@ -14,7 +14,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖（包括开发依赖，用于构建）
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # 复制源代码
 COPY . .
