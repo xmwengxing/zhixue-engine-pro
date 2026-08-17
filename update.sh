@@ -21,7 +21,7 @@ echo "▶ [4/5] 服务状态："
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
 echo "▶ [5/5] 健康检查："
-if curl -s -m 5 http://localhost/health | grep -q '"status"'; then
+if curl -sf -m 5 http://localhost/health | grep -q "healthy"; then
   echo "  ✔ 后端健康（http://localhost/health）"
 else
   echo "  ⚠ 后端未就绪，稍后重试: curl http://localhost/health"
