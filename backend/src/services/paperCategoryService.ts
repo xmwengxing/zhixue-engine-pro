@@ -19,6 +19,9 @@ export async function ensureAssessmentCategory(subject: string): Promise<{ id: s
 /** 系统内置目录：通用与其他（无目录的导入/新建试卷默认挂载，禁止重命名/删除） */
 export const GENERAL_CATEGORY_NAME = '通用与其他';
 
+/** 系统级考试分类目录（期中/期末/专项/单元，禁止重命名/删除；已存在则修正为 system+immutable） */
+export const EXAM_CATEGORY_NAMES = ['期中', '期末', '专项', '单元'] as const;
+
 /** 惰性确保每学科存在「通用与其他」一级目录（system + immutable） */
 export async function ensureGeneralCategory(subject: string): Promise<{ id: string; name: string }> {
   const exist = await prisma.paperCategory.findFirst({
@@ -28,6 +31,30 @@ export async function ensureGeneralCategory(subject: string): Promise<{ id: stri
   return prisma.paperCategory.create({
     data: { name: GENERAL_CATEGORY_NAME, subject, level: 1, system: true, immutable: true, sortOrder: 10 },
   });
+}
+
+/** 惰性确保每学科存在 期中/期末/专项/单元 四个系统级一级目录 */
+export async function ensureExamCategories(subject: string) {
+  const orderBase = 20; // 初测 0 / 通用 10 之后依次：期中 20、期末 30、专项 40、单元 50
+  for (let i = 0; i < EXAM_CATEGORY_NAMES.length; i++) {
+    const name = EXAM_CATEGORY_NAMES[i];
+    const exist = await prisma.paperCategory.findFirst({
+      where: { subject, name, parentId: null },
+    });
+    if (exist) {
+      // 已存在（如早期手动创建）→ 修正为系统目录属性
+      if (!exist.system || !exist.immutable || exist.sortOrder !== orderBase + i * 10) {
+        await prisma.paperCategory.update({
+          where: { id: exist.id },
+          data: { system: true, immutable: true, sortOrder: orderBase + i * 10 },
+        });
+      }
+      continue;
+    }
+    await prisma.paperCategory.create({
+      data: { name, subject, level: 1, system: true, immutable: true, sortOrder: orderBase + i * 10 },
+    });
+  }
 }
 
 /** 目录树（含系统初测目录；papers 数统计到末级） */
@@ -42,6 +69,7 @@ export async function getCategoryTree(subject?: string) {
   if (subject) {
     await ensureAssessmentCategory(subject);
     await ensureGeneralCategory(subject);
+    await ensureExamCategories(subject);
     const nodes2 = await prisma.paperCategory.findMany({
       where,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -182,6 +210,8 @@ export async function setPaperTags(paperId: string, tagIds: string[]) {
 export const paperCategoryService = {
   ASSESSMENT_CATEGORY_NAME,
   ensureAssessmentCategory,
+  ensureGeneralCategory,
+  ensureExamCategories,
   getCategoryTree,
   createRootCategory,
   ensurePathCategories,
