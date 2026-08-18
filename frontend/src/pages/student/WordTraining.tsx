@@ -372,8 +372,9 @@ export default function WordTraining() {
   const memWord = group[memIdx];
   const memFull = memWord?.word || '';
   // 打字机：词变化时重置，逐字母出现（每 320ms 一个，慢节奏便于记忆）
+  // ⚠️ 预载完成（memReady）后才开始打字，确保预载完显示的是第一个词的完整状态
   useEffect(() => {
-    if (phase !== 'MEMORIZE' || !memFull) return;
+    if (phase !== 'MEMORIZE' || !memReady || !memFull) return;
     setLetterCount(0);
     const iv = setInterval(() => {
       setLetterCount((c) => {
@@ -386,10 +387,11 @@ export default function WordTraining() {
     }, 320);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, memIdx, memWord?.id, memFull]);
+  }, [phase, memReady, memIdx, memWord?.id, memFull]);
   // 发音：进入背词词时自动朗读 1 遍，念完单词接着念完整短语（若有）
+  // ⚠️ 预载完成（memReady）后才开始：否则预载期间就发音/计时，预载完显示的不是第一个词
   useEffect(() => {
-    if (phase === 'MEMORIZE' && memWord && !memDone) {
+    if (phase === 'MEMORIZE' && memReady && memWord && !memDone) {
       void (async () => {
         await speak(memWord.word, 1);
         const item = memCloze.find((c) => c.answer === memWord.word);
@@ -400,10 +402,11 @@ export default function WordTraining() {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, memIdx, memWord?.id, memDone, memCloze.length]);
-  // 播完 5 秒后自动进入下一词；组尾 → 显示「重背一遍 / 开始训练」
+  }, [phase, memReady, memIdx, memWord?.id, memDone, memCloze.length]);
+  // 播完 12 秒后自动进入下一词；组尾 → 显示「重背一遍 / 开始训练」
+  // ⚠️ 预载完成（memReady）后才开始计时（与上方发音同步，避免预载期间计时）
   useEffect(() => {
-    if (phase !== 'MEMORIZE' || !memFull || letterCount < memFull.length || memDone) return;
+    if (phase !== 'MEMORIZE' || !memReady || !memFull || letterCount < memFull.length || memDone) return;
     const t = setTimeout(() => {
       if (memIdx + 1 < group.length) {
         setMemIdx(memIdx + 1);
@@ -413,7 +416,7 @@ export default function WordTraining() {
     }, 12000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, memIdx, letterCount, memFull.length, memDone, group.length]);
+  }, [phase, memReady, memIdx, letterCount, memFull.length, memDone, group.length]);
   // 背词模式：后台预取整组词音频（打字机展示期间备好，到词时零等待）
   useEffect(() => {
     if (phase !== 'MEMORIZE' || group.length === 0) return;
