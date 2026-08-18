@@ -79,3 +79,4 @@ backend/tts_data/
 update.sh
 sync-server.sh
 sync-server.py
+sync-server.py
