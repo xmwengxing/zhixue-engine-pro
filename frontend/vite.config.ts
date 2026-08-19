@@ -57,11 +57,12 @@ export default defineConfig({
     host: true,
     
     // 代理配置（如果需要）
-    // 后端地址可配置：VITE_DEV_PROXY=http://localhost:3200 npm run dev
-    // （本机 3000 若被系统保留、后端跑在 3200 时使用；默认 3000）
+    // 后端地址可配置：VITE_DEV_PROXY=http://localhost:6200 npm run dev
+    // ⚠️ 默认 target 必须与 backend/.env 的 PORT 一致（当前固定 6200，因 Windows
+    //    Hyper-V 保留段会吞 3000/3200；改后端端口时须同步此处）
     proxy: {
       '/api': {
-        target: process.env.VITE_DEV_PROXY || 'http://localhost:3000',
+        target: process.env.VITE_DEV_PROXY || 'http://localhost:6200',
         changeOrigin: true,
       },
     },
