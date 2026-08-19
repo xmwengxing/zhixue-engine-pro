@@ -2,7 +2,7 @@
  * 试卷入库脚本（含 答案/解析配对合并 + 题级图片关联）
  * 用法：node scripts/import-papers-to-db.mjs --subjects 历史,语文 --dry
  * 流程：
- *   1. 读 progress-full-<学科>.json（ok 记录含题目）
+ *   1. 读 progress-full2-<学科>.json（ok 记录含题目）
  *   2. 卷组配对：原卷版 ↔ 答案版 ↔ 解析版（文件名去「版」字样匹配）
  *   3. 解析版 → parseAnswerFile → {题号: {answer, analysis}} 回填
  *   4. 图：uploads/questions/<卷ID>/map.json → {题号: image} 关联
@@ -96,7 +96,8 @@ function toPaperType(cat) {
   return 'UNIT';
 }
 function stripVersion(name) {
-  return String(name).replace(/[（(]\s*(原卷版|答案版|解析版)\s*[)）]/g, '').trim();
+  // 去「版」字样 + 折叠并去除全部空格（用户整理时的空格差异：`概念（分层作业）` vs `概念 （分层作业）`）
+  return String(name).replace(/[（(]\s*(原卷版|答案版|解析版)\s*[)）]/g, '').replace(/\s+/g, '').trim();
 }
 function volId(subject, rel) { return `${subject}-${Math.abs(hashStr(rel)) % 1000000}`; }
 function hashStr(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return h; }
@@ -117,6 +118,51 @@ async function getAdminId() {
 async function main() {
   const adminId = await getAdminId();
   const doneMap = fs.existsSync(IMPORT_PROGRESS) ? JSON.parse(fs.readFileSync(IMPORT_PROGRESS, 'utf8')) : {};
+
+  // ---- 离线数据包导入模式：--package <包目录>（读 papers/**/*.json 写库，图片路径已在包内）----
+  if (args.includes('--package')) {
+    const pkgDir = getArg('--package', '');
+    const papersRoot = path.join(pkgDir, 'papers');
+    if (!fs.existsSync(papersRoot)) { console.error('包目录无 papers/:', pkgDir); process.exit(1); }
+    const files = [];
+    const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith('.json')) files.push(p); } };
+    walk(papersRoot);
+    let qTotal = 0, pTotal = 0;
+    for (const fp of files) {
+      const paper = JSON.parse(fs.readFileSync(fp, 'utf8'));
+      const subject = paper.subject;
+      if (!subject || !paper.questions?.length) continue;
+      const node = await ensureSubjectNode(subject);
+      const existPaper = await prisma.questionPaper.findFirst({ where: { sourceFile: paper.sourceFile || paper.name } });
+      if (existPaper) { pTotal++; qTotal += paper.questions.length; continue; }
+      const cat = paper.category === '其他' ? '通用与其他' : paper.category;
+      const catNode = await prisma.paperCategory.findFirst({ where: { subject, name: cat, parentId: null } });
+      const createdPaper = await prisma.questionPaper.create({
+        data: { subject, title: paper.name, sourceFile: paper.sourceFile || paper.name, status: 'PUBLISHED',
+          createdBy: adminId, paperType: paper.paperType || 'UNIT', categoryId: catNode?.id || null },
+      });
+      let qn = 0;
+      for (const q of paper.questions) {
+        const hasOpts = Array.isArray(q.options) && q.options.length > 0;
+        const qtype = toQType(q, hasOpts);
+        const content = { stem: q.question || '', image: q.image || '', options: hasOpts ? q.options : [], correctAnswer: q.answer || '', explanation: q.analysis || '' };
+        const created = await prisma.question.create({
+          data: { materialNodeId: node.id, type: qtype, content, answer: content.correctAnswer,
+            analysis: content.explanation || null, difficulty: toDiff(q.difficulty), knowledgePoints: [],
+            answerType: qtype === 'CHOICE' ? 'single_choice' : qtype === 'FILL' ? 'fill_blank' : 'short_answer',
+            answerConfig: content.correctAnswer ? { correctAnswer: content.correctAnswer } : {} },
+        });
+        await prisma.questionPaperItem.create({ data: { paperId: createdPaper.id, questionId: created.id, order: qn++ } });
+      }
+      qTotal += paper.questions.length; pTotal++;
+      if (!DRY) fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
+      console.log(`  [包导入] ${subject}/${paper.name.slice(0, 40)} -> ${paper.questions.length} 题`);
+    }
+    console.log(`\n=== 数据包导入完成：${pTotal} 卷 / ${qTotal} 题${DRY ? '（DRY）' : ''} ===`);
+    await prisma.$disconnect();
+    return;
+  }
+
   // 图索引：遍历 uploads/questions/*/map.json → {sourceFile: {题号: 图路径}}（ID 无关）
   const imgIndex = new Map();
   if (fs.existsSync(IMG_DIR)) {
@@ -137,7 +183,7 @@ async function main() {
     if (!fs.existsSync(progPath)) { console.log(`[跳过] 无进度: ${subject}`); continue; }
     const prog = JSON.parse(fs.readFileSync(progPath, 'utf8'));
 
-    // 卷组配对：按「去版后缀」名分组（组内取 ok 卷为主卷）
+    // 卷组配对：按「目录 + 去版后缀名」分组（同名不同目录各自成组——不丢卷）
     const groups = new Map();
     for (const [rel, rec] of Object.entries(prog)) {
       if (rec.parseStatus !== 'ok') continue;
@@ -146,7 +192,16 @@ async function main() {
       if (!groups.has(key)) groups.set(key, { subject, dir: rec.dir, files: [] });
       groups.get(key).files.push({ rel, rec });
     }
-    console.log(`[${subject}] 卷组 ${groups.size} 个（ok 卷）`);
+    // 配对索引：全局按「去版后缀文件名」找解析版（解析版常在专项顶层，与原卷版跨目录）
+    const pairIndex = new Map();
+    for (const [rel, rec] of Object.entries(prog)) {
+      if (/解析版/.test(rel) && rec.parseStatus === 'skipped-doc') {
+        const k = stripVersion(path.basename(rel));
+        if (!pairIndex.has(k)) pairIndex.set(k, []);
+        pairIndex.get(k).push({ rel, rec });
+      }
+    }
+    console.log(`[${subject}] 卷组 ${groups.size} 个（ok 卷）/ 解析版索引 ${pairIndex.size} 个`);
 
     const node = await ensureSubjectNode(subject);
     const catCache = new Map();
@@ -165,16 +220,17 @@ async function main() {
       const main = g.files.find((f) => f.rec.parseStatus === 'ok' && /原卷版/.test(f.rel)) || g.files[0];
       const questions = main.rec.questions || [];
 
-      // 配对解析版（同组内 skipped-doc 的解析版文件）→ 答案/解析
+      // 配对解析版（全局索引，跨目录按去版名匹配）→ 答案/解析
       const ansMap = new Map();
-      for (const f of g.files) {
-        if (!/解析版/.test(f.rel) || f.rec.parseStatus !== 'skipped-doc') continue;
+      const pairKey = stripVersion(path.basename(main.rel));
+      for (const f of pairIndex.get(pairKey) || []) {
         try {
           const text = await extractText(path.join(PAPER_ROOT, subject, f.rel));
           const m = parseAnswerFile(text);
           for (const [qno, v] of m) ansMap.set(qno, v);
-        } catch { /* 解析失败忽略 */ }
+        } catch (e) { console.log(`    [配对失败] ${f.rel.slice(0, 50)}: ${String(e.message || e).slice(0, 60)}`); }
       }
+      if (ansMap.size > 0) console.log(`  [配对源] ${main.rec.name || ''}: ${ansMap.size} 题答案`);
 
       // 题级图（extract-question-images.py 产物；按 sourceFile 匹配，避免目录 ID 算法差异）
       const imgMap = imgIndex.get(main.rel) || {};
@@ -184,7 +240,7 @@ async function main() {
       if (!questions.length) {
         doneMap[key] = { q: 0, skipped: 'empty' };
         console.log(`  [空题跳过] ${title}`);
-        fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
+        if (!DRY) fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
         continue;
       }
       const existPaper = await prisma.questionPaper.findFirst({ where: { sourceFile: main.rel } });
@@ -192,7 +248,7 @@ async function main() {
         doneMap[key] = { q: questions.length, paper: existPaper.id, skipped: true };
         qTotal += questions.length; pTotal += 1;
         console.log(`  [已存在] ${title}`);
-        fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
+        if (!DRY) fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
         continue;
       }
       const paper = await prisma.questionPaper.create({
@@ -208,10 +264,12 @@ async function main() {
 
       // 题目入库
       let qn = 0;
+      const ansList = [...ansMap.values()]; // 顺序兜底：解析版通常与题目同序
       for (const q of questions) {
         const hasOpts = Array.isArray(q.options) && q.options.length > 0;
         const qtype = toQType(q, hasOpts);
-        const paired = ansMap.get(q.no) || {};
+        // 配对：题号优先，题号不匹配时按题目顺序兜底
+        const paired = ansMap.get(q.no) || ansList[qn] || {};
         const content = {
           stem: q.question || '',
           image: imgMap[q.no] ? `/uploads/questions/${imgMap[q.no]}` : '',
@@ -239,8 +297,8 @@ async function main() {
       qTotal += questions.length; pTotal += 1;
       doneMap[key] = { q: questions.length, paper: paper.id };
       if (qn === 0) console.log(`  [空题] ${title}`);
-      if (!DRY && qn > 0) console.log(`  [入] ${title} -> ${qn} 题（配对答案 ${ansMap.size} 题/图 ${Object.keys(imgMap).length} 张）`);
-      fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
+      if (qn > 0) console.log(`  [入] ${title} -> ${qn} 题（配对答案 ${ansMap.size} 题/图 ${Object.keys(imgMap).length} 张）`);
+      if (!DRY) fs.writeFileSync(IMPORT_PROGRESS, JSON.stringify(doneMap, null, 1));
     }
   }
   console.log(`\n=== 入库完成：${pTotal} 卷 / ${qTotal} 题${DRY ? '（DRY 未写库）' : ''} ===`);
