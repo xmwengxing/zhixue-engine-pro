@@ -1,4 +1,5 @@
 import express, { Application, Request, Response } from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -78,6 +79,9 @@ import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import parentRoutes from './routes/parent';
 import studentRoutes from './routes/student';
+
+// 静态文件（题库题目图片等；content.image 指向 /uploads/...）
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), { maxAge: '7d' }));
 
 app.use('/api/test', testRoutes);
 app.use('/api/auth', authRoutes);

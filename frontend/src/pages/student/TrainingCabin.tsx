@@ -74,6 +74,7 @@ export interface TrainingSession {
 export interface Question {
   id: string;
   stem: string;
+  image?: string;
   type: 'single_choice' | 'multiple_choice' | 'fill_blank' | 'short_answer';
   options?: string[];
   correctAnswer?: string;

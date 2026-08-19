@@ -9,11 +9,56 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PY = 'C:/Users/wxgo8/.workbuddy/binaries/python/envs/tts/Scripts/python.exe';
+const OCR_USAGE = 'E:/Projects/zhixue-engine-pro/开发文档/试卷转换产物/ocr-usage.json';
+const OCR_LIMIT = 20000; // 飞桨日额度（页）
+let quotaStopped = false; // 额度耗尽全局中断
+
+/** 获取飞桨 token（本地 DB ocr_providers） */
+function getPaddleToken() {
+  try {
+    const out = execFileSync('docker', ['exec', 'training-platform-db', 'psql', '-U', 'training_user',
+      '-d', 'training_platform', '-t', '-c', "SELECT api_key FROM ocr_providers WHERE method='PADDLE_OCR_VL';"],
+      { encoding: 'utf8' });
+    return out.split('\n')[0].trim();
+  } catch (e) {
+    console.error('[OCR] 读取飞桨 token 失败:', String(e.message || e).slice(0, 120));
+    return '';
+  }
+}
+
+/** 扫描件 OCR：pymupdf 渲染 + 飞桨 PaddleOCR-VL → 文本（额度耗尽 exit 3 中断全量） */
+function ocrPdf(abs) {
+  const token = getPaddleToken();
+  if (!token) throw new Error('未配置飞桨 PaddleOCR-VL token');
+  const outTxt = path.join(OUT_DIR, '.ocr-tmp.txt');
+  const res = execFileSync(PY, ['scripts/ocr-papers.py', '--file', abs, '--token', token,
+    '--out', outTxt, '--usage', OCR_USAGE, '--limit', String(OCR_LIMIT)],
+    { encoding: 'utf8', timeout: 25 * 60 * 1000 });
+  if (res.includes('QUOTA_EXCEED') || res.includes('QUOTA_EXHAUSTED')) {
+    quotaStopped = true;
+    console.log('⚠️ 飞桨日额度耗尽，全量转换中断');
+    throw new Error('QUOTA_EXHAUSTED');
+  }
+  const txt = fs.existsSync(outTxt) ? fs.readFileSync(outTxt, 'utf8') : '';
+  try { fs.unlinkSync(outTxt); } catch { /* ignore */ }
+  return txt;
+}
+
+/** 用 pymupdf 数 PDF 页数（超长册跳过 OCR：大册多为答案/练习合集，OCR 价值低且易超时） */
+function countPdfPages(abs) {
+  try {
+    const out = execFileSync(PY, ['-c', `import fitz,sys; d=fitz.open(sys.argv[1]); print(len(d)); d.close()`, abs],
+      { encoding: 'utf8', timeout: 30000 });
+    return parseInt(out.split('\n').pop() || '0', 10);
+  } catch { return 999; }
+}
 
 // ---------- 参数 ----------
 const args = process.argv.slice(2);
@@ -175,16 +220,38 @@ async function main() {
   const pick = [];
   const per = Math.max(1, Math.floor(LIMIT / 5));
   for (const k of Object.keys(byCat)) pick.push(...byCat[k].slice(0, per));
-  const files = pick.slice(0, LIMIT);
-  console.log(`[抽样] ${files.length} 个（期中${byCat.期中.length}/期末${byCat.期末.length}/专项${byCat.专项.length}/单元${byCat.单元.length}/其他${byCat.其他.length}）`);
+  console.log(`[抽样] ${pick.slice(0, LIMIT).length} 个（期中${byCat.期中.length}/期末${byCat.期末.length}/专项${byCat.专项.length}/单元${byCat.单元.length}/其他${byCat.其他.length}）`);
 
   // 断点续传
   const done = fs.existsSync(PROGRESS) ? JSON.parse(fs.readFileSync(PROGRESS, 'utf8')) : {};
+
+  // ---- 补跑模式：--retry-errors：只重试 progress 中 error/text-empty 的文件 ----
+  // ---- OCR 模式：--ocr-only：只处理 progress 中 pending-ocr 的扫描件（页数≤20 才 OCR） ----
+  let files = pick.slice(0, LIMIT);
+  if (args.includes('--retry-errors')) {
+    files = [];
+    for (const [rel, rec] of Object.entries(done)) {
+      if (rec.parseStatus === 'error' || rec.parseStatus === 'text-empty' || rec.parseStatus === 'pending-ocr' || rec.parseStatus === 'skip-large') {
+        files.push({ abs: path.join(subjectRoot, rel), rel, dir: rec.dir || '' });
+      }
+    }
+    console.log(`[补跑] ${files.length} 个失败/空文件待重试`);
+  }
+  if (args.includes('--ocr-only')) {
+    files = [];
+    for (const [rel, rec] of Object.entries(done)) {
+      if (rec.parseStatus === 'pending-ocr' || rec.parseStatus === 'text-empty') {
+        files.push({ abs: path.join(subjectRoot, rel), rel, dir: rec.dir || '' });
+      }
+    }
+    console.log(`[OCR补跑] ${files.length} 个扫描件（页数≤20 才识别，大册跳过）`);
+  }
+
   const results = { subject: SUBJECT, generatedAt: new Date().toISOString(), files: [] };
   let ok = 0, empty = 0, failed = 0;
 
   for (const f of files) {
-    if (done[f.rel]) { console.log(`[跳过] ${f.rel}`); results.files.push(done[f.rel]); ok++; continue; }
+    if (done[f.rel] && !args.includes('--retry-errors') && !args.includes('--ocr-only')) { console.log(`[跳过] ${f.rel}`); results.files.push(done[f.rel]); ok++; continue; }
     const name = stripSuffixes(path.basename(f.abs));
     // 「解析版」文档跳过（非试卷本体，仅答案/解析汇总）
     if (/解析版/.test(path.basename(f.abs))) {
@@ -198,9 +265,27 @@ async function main() {
       questionCount: 0, parseStatus: 'ok', questions: [],
     };
     try {
-      const text = await extractText(f.abs);
+      let text = await extractText(f.abs);
+      let usedOcr = false;
       if (!text || text.trim().length < 50) {
-        record.parseStatus = 'text-empty'; // 扫描件：无文本层，需 OCR（试点不计入 OK）
+        // 扫描件：默认标记 pending-ocr（主流程不阻塞，避免超长册卡死整批）
+        // --ocr-only / --retry-errors：页数 ≤ 20 才跑飞桨 OCR（真实试卷扫描件）；大册跳过
+        if (args.includes('--ocr-only') || args.includes('--retry-errors')) {
+          const pages = countPdfPages(f.abs);
+          if (pages > 100) {
+            record.parseStatus = 'skip-large'; // 超长册（答案/练习合集）：OCR 价值低且易超时
+            console.log(`[跳过] 超长册(${pages}页): ${name}`);
+          } else {
+            text = await ocrPdf(f.abs);
+            usedOcr = true;
+          }
+        } else {
+          record.parseStatus = 'pending-ocr';
+          console.log(`[待OCR] ${name}`);
+        }
+      }
+      if (!text || text.trim().length < 50) {
+        record.parseStatus = 'text-empty';
         empty++;
         console.log(`[文本空] ${name}`);
       } else {
@@ -209,10 +294,15 @@ async function main() {
           : parseGenericDocx(text);
         record.questions = qs;
         record.questionCount = qs.length;
+        record.ocr = usedOcr;
         ok++;
-        console.log(`[成功] ${name} -> ${qs.length} 题`);
+        console.log(`[成功${usedOcr ? '+OCR' : ''}] ${name} -> ${qs.length} 题`);
       }
     } catch (e) {
+      if (String(e.message || e).includes('QUOTA_EXHAUSTED')) {
+        quotaStopped = true;
+        break; // 额度耗尽立即中断
+      }
       record.parseStatus = 'error';
       record.error = String(e.message || e).slice(0, 200);
       failed++;
@@ -222,6 +312,7 @@ async function main() {
     done[f.rel] = record;
     fs.writeFileSync(PROGRESS, JSON.stringify(done, null, 1));
     fs.writeFileSync(path.join(OUT_DIR, `产物-${SUBJECT}-${Date.now()}.json`), JSON.stringify(record, null, 2), 'utf8');
+    if (quotaStopped) break;
   }
 
   const report = {

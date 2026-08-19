@@ -819,6 +819,7 @@ export class StudentTrainingService {
       id: q.id,
       fromBank: true,
       stem: content.stem ?? '',
+      image: (content as any)?.image ?? '',
       options,
       correctAnswer: answerConfig.correctAnswer ?? q.answer,
       explanation: answerConfig.explanation ?? '',

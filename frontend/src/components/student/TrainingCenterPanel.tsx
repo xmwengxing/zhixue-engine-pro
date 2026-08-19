@@ -698,6 +698,17 @@ const TrainingCenterPanel: React.FC<TrainingCenterPanelProps> = ({
             {currentQuestion.stem}
           </p>
 
+          {/* 题目图片（几何/函数图形题；content.image → /uploads/questions/...） */}
+          {currentQuestion.image && (
+            <img
+              src={currentQuestion.image}
+              alt="题目图"
+              className="mt-4 max-w-full rounded-lg border border-[#324467]"
+              style={{ maxHeight: '320px', objectFit: 'contain' }}
+              onClick={(e) => e.currentTarget.requestFullscreen?.()}
+            />
+          )}
+
           {/* 选项（单选/多选） */}
           {hasOptions && (
             <div className="mt-6 space-y-3">
