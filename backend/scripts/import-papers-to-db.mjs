@@ -18,7 +18,7 @@ const require = createRequire(import.meta.url);
 const prisma = new PrismaClient();
 const PROGRESS_DIR = 'E:/Projects/zhixue-engine-pro/开发文档/试卷转换产物';
 const IMG_DIR = 'E:/Projects/zhixue-engine-pro/backend/uploads/questions';
-const PAPER_ROOT = 'E:/Projects/题库/试卷与习题';
+const PAPER_ROOT = 'E:/Projects/题库/八年级/试卷与习题';
 const IMPORT_PROGRESS = path.join(PROGRESS_DIR, 'progress-import.json');
 
 const args = process.argv.slice(2);
@@ -117,6 +117,19 @@ async function getAdminId() {
 async function main() {
   const adminId = await getAdminId();
   const doneMap = fs.existsSync(IMPORT_PROGRESS) ? JSON.parse(fs.readFileSync(IMPORT_PROGRESS, 'utf8')) : {};
+  // 图索引：遍历 uploads/questions/*/map.json → {sourceFile: {题号: 图路径}}（ID 无关）
+  const imgIndex = new Map();
+  if (fs.existsSync(IMG_DIR)) {
+    for (const vol of fs.readdirSync(IMG_DIR)) {
+      const mp = path.join(IMG_DIR, vol, 'map.json');
+      if (!fs.existsSync(mp)) continue;
+      try {
+        const m = JSON.parse(fs.readFileSync(mp, 'utf8'));
+        if (m.sourceFile && m.images) imgIndex.set(m.sourceFile, m.images);
+      } catch { /* 忽略坏 map */ }
+    }
+  }
+  console.log(`[图索引] ${imgIndex.size} 卷有题图`);
   let qTotal = 0, pTotal = 0;
 
   for (const subject of SUBJECTS) {
@@ -163,9 +176,8 @@ async function main() {
         } catch { /* 解析失败忽略 */ }
       }
 
-      // 题级图（extract-question-images.py 产物）
-      const mapPath = path.join(IMG_DIR, volId(subject, main.rel), 'map.json');
-      const imgMap = fs.existsSync(mapPath) ? JSON.parse(fs.readFileSync(mapPath, 'utf8')).images || {} : {};
+      // 题级图（extract-question-images.py 产物；按 sourceFile 匹配，避免目录 ID 算法差异）
+      const imgMap = imgIndex.get(main.rel) || {};
 
       // 试卷入库（sourceFile 幂等：已存在则跳过该卷；空题卷跳过）
       const title = stripVersion(main.rec.name || path.basename(main.rel));

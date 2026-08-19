@@ -82,15 +82,32 @@ def extract_for_pdf(pdf_path, vol_id, out_dir, max_pages_hint=0):
     return result
 
 
+def djb2_id(subject, rel):
+    h = 0
+    for ch in str(rel):
+        h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+    return f"{subject}-{abs(h) % 1000000}"
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--progress", required=True, help="progress-full-学科.json")
+    ap.add_argument("--progress", required=True, help="progress-full-学科.json（含 SUBJ 占位符）")
     ap.add_argument("--out", required=True, help="图片输出目录（backend/uploads/questions）")
     ap.add_argument("--subjects", default="", help="逗号分隔学科，默认全部")
     args = ap.parse_args()
 
     subjects = [s.strip() for s in args.subjects.split(",") if s.strip()]
     os.makedirs(args.out, exist_ok=True)
+
+    # 幂等：已生成 map.json 的 sourceFile 集合（按内容匹配，目录名算法变化也识别）
+    done_sources = set()
+    for vol in os.listdir(args.out):
+        mp = os.path.join(args.out, vol, "map.json")
+        if os.path.exists(mp):
+            try:
+                done_sources.add(json.load(open(mp, encoding="utf-8")).get("sourceFile", ""))
+            except Exception:
+                pass
 
     total_imgs = 0
     total_vols = 0
@@ -100,7 +117,7 @@ def main():
             print(f"[跳过] 无进度文件: {prog_path}")
             continue
         prog = json.load(open(prog_path, encoding="utf-8"))
-        base = r"E:\Projects\题库\试卷与习题"
+        base = r"E:\Projects\题库\八年级\试卷与习题"
         vol_imgs = 0
         for rel, rec in prog.items():
             if rec.get("parseStatus") != "ok" or not rec.get("questions"):
@@ -108,7 +125,9 @@ def main():
             pdf_path = os.path.join(base, sub, rel)
             if not os.path.exists(pdf_path):
                 continue
-            vol_id = f"{sub}-{abs(hash(rel)) % 1000000}"
+            if rel in done_sources:
+                continue  # 已生成过题图（幂等）
+            vol_id = djb2_id(sub, rel)
             try:
                 m = extract_for_pdf(pdf_path, vol_id, args.out)
             except Exception as e:

@@ -66,7 +66,7 @@ const getArg = (name, def) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : def;
 };
-const ROOT = getArg('--dir', 'E:/Projects/题库/试卷与习题');
+const ROOT = getArg('--dir', 'E:/Projects/题库/八年级/试卷与习题');
 const SUBJECT = getArg('--subject', '历史');
 const LIMIT = parseInt(getArg('--limit', '20'), 10);
 const OUT_DIR = getArg('--out', path.resolve(__dirname, '../../开发文档/试卷转换产物'));
