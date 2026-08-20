@@ -25,14 +25,9 @@ fi
 
 # 单词词库同步（幂等 upsert：已有词跳过，新增词写入，释义/音标为空则补全）
 echo "[init] 同步单词词库..."
-node scripts/import-words.mjs seed-data/words-stage-初中.json 初中 2>/dev/null || true
-node scripts/import-words.mjs seed-data/words-stage-CET4.json CET4 2>/dev/null || true
-WORD_COUNT=$(node -e "
-const { PrismaClient } = require('@prisma/client');
-const p = new PrismaClient();
-p.word.count().then(n => { console.log(n); return p.\$disconnect(); }).catch(() => { console.log(0); return p.\$disconnect(); });
-" 2>/dev/null || echo '?')
-echo "[init] 词库同步完成（当前 ${WORD_COUNT} 词）"
+node scripts/words.mjs import seed-data/words-stage-初中.json 2>/dev/null || true
+node scripts/words.mjs import seed-data/words-stage-CET4.json 2>/dev/null || true
+echo "[init] 词库同步完成"
 
 echo "[init] 启动后端服务..."
 exec "$@"
