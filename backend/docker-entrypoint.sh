@@ -23,21 +23,16 @@ else
   echo "[init] 教材体系已存在（${SUBJECT_COUNT} 学科节点），跳过种子"
 fi
 
-# 首次初始化：单词词库（幂等 upsert）
-echo "[init] 检查词库..."
+# 单词词库同步（幂等 upsert：已有词跳过，新增词写入，释义/音标为空则补全）
+echo "[init] 同步单词词库..."
+node scripts/import-words.mjs seed-data/words-stage-初中.json 初中 2>/dev/null || true
+node scripts/import-words.mjs seed-data/words-stage-CET4.json CET4 2>/dev/null || true
 WORD_COUNT=$(node -e "
 const { PrismaClient } = require('@prisma/client');
 const p = new PrismaClient();
 p.word.count().then(n => { console.log(n); return p.\$disconnect(); }).catch(() => { console.log(0); return p.\$disconnect(); });
-" 2>/dev/null || echo 0)
-if [ "${WORD_COUNT:-0}" -lt 100 ]; then
-  echo "[init] 首次部署：导入单词词库（初中 + CET4）..."
-  node scripts/import-words.mjs seed-data/words-stage-初中.json 初中 2>/dev/null || true
-  node scripts/import-words.mjs seed-data/words-stage-CET4.json CET4 2>/dev/null || true
-  echo "[init] 词库导入完成"
-else
-  echo "[init] 词库已存在（${WORD_COUNT} 词），跳过导入"
-fi
+" 2>/dev/null || echo '?')
+echo "[init] 词库同步完成（当前 ${WORD_COUNT} 词）"
 
 echo "[init] 启动后端服务..."
 exec "$@"
