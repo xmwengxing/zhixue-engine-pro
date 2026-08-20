@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as studentErrorService from '../../services/studentErrorService';
+import { LatexText } from "../../components/common/MathFormula";
 import type { ErrorQuestion, DueReviewResponse } from '../../services/studentErrorService';
 
 /**
@@ -335,11 +336,9 @@ const ErrorBook: React.FC = () => {
               {/* 题目内容预览 */}
               <div className="mb-3">
                 <div className="text-sm text-[#c3cfe6] line-clamp-2">
-                  {typeof error.question.content === 'string'
+                  <LatexText text={typeof error.question.content === 'string'
                     ? error.question.content
-                    : (error.question.content.text ||
-                      (error.question.content as { question?: string }).question ||
-                      '题目内容')}
+                    : (error.question.content.text || (error.question.content as { question?: string }).question || '')} />
                 </div>
               </div>
 
@@ -473,13 +472,13 @@ const ErrorBook: React.FC = () => {
                   题目内容：
                 </div>
                 <div className="text-sm text-white">
-                  {typeof selectedError.question.content === 'string'
+                  <LatexText text={typeof selectedError.question.content === 'string'
                     ? selectedError.question.content
                     : (selectedError.question.content.text ||
                       (selectedError.question.content as { question?: string }).question ||
-                      '题目内容')}
-                </div>
+                      '')} />
               </div>
+                </div>
 
               {/* 您的答案 */}
               <div className="bg-red-500/10 rounded-lg p-4">

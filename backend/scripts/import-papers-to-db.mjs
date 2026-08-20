@@ -16,14 +16,15 @@ import { PrismaClient } from '@prisma/client';
 
 const require = createRequire(import.meta.url);
 const prisma = new PrismaClient();
-const PROGRESS_DIR = 'E:/Projects/zhixue-engine-pro/开发文档/试卷转换产物';
-const IMG_DIR = 'E:/Projects/zhixue-engine-pro/backend/uploads/questions';
-const PAPER_ROOT = 'E:/Projects/题库/八年级/试卷与习题';
-const IMPORT_PROGRESS = path.join(PROGRESS_DIR, 'progress-import.json');
 
+// ---------- 配置（支持环境变量和 CLI 参数） ----------
 const args = process.argv.slice(2);
-const getArg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
-const SUBJECTS = (getArg('--subjects', '历史,语文,英语,数学,物理') || '').split(',').map((s) => s.trim());
+function getArgVal(n, d) { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; }
+const PROGRESS_DIR = getArgVal('--progress-dir', process.env.PROGRESS_DIR || path.resolve(__dirname, '../../开发文档/试卷转换产物'));
+const IMG_DIR = getArgVal('--img-dir', process.env.IMG_DIR || path.resolve(__dirname, '../../uploads/questions'));
+const PAPER_ROOT = getArgVal('--paper-root', process.env.PAPER_ROOT || 'E:/Projects/题库/八年级/试卷与习题');
+const IMPORT_PROGRESS = path.join(PROGRESS_DIR, 'progress-import.json');
+const SUBJECTS = (getArgVal('--subjects', '历史,语文,英语,数学,物理') || '').split(',').map((s) => s.trim());
 const DRY = args.includes('--dry');
 
 // ---------- 文本提取（解析版用） ----------
@@ -40,44 +41,71 @@ async function extractText(fp) {
   return '';
 }
 
-// ---------- 解析版答案提取（复制自 import-real-papers） ----------
+// ---------- 解析版答案提取（v2：适配实际格式） ----------
 function parseAnswerFile(text) {
   const out = new Map();
   if (!text) return out;
-  const t = String(text)
-    .replace(/(\d+)\s*[．.、]\s*(?=【答案】|答案[：:])/g, '\n$1.')
-    .replace(/\r/g, '')
-    .replace(/\n{2,}/g, '\n');
-  const blocks = t.split(/\n(?=\d+\s*[．.、])/);
-  let seq = 0;
-  for (const blk of blocks) {
-    const line = blk.trim();
-    if (!line) continue;
-    const tm = line.match(/^(\d+)\s*[．.、]/);
-    if (tm) seq = parseInt(tm[1], 10);
-    else seq += 1;
-    let answer = '';
-    let analysis = '';
-    const am = line.match(/【答案】\s*([\s\S]*?)(?=【|$)/);
-    if (am) {
-      answer = am[1].replace(/\s+/g, ' ').trim();
-      const anm = line.match(/【解析】\s*([\s\S]*?)(?=【|$)/);
-      if (anm) analysis = anm[1].replace(/\s+/g, ' ').trim();
-    } else {
-      const cm = line.match(/答案[：:]\s*([A-H0-9、.,\s]+)/);
-      if (cm) {
-        answer = cm[1].replace(/\s+/g, ' ').trim();
-        const cn = line.match(/解析[：:]\s*([^\n]*)/);
-        if (cn) analysis = cn[1].replace(/\s+/g, ' ').trim();
-      } else {
-        const bare = line.replace(/^\d+\s*[．.、]\s*/, '').trim();
-        if (/^[A-H](?:、|\.)?/i.test(bare)) answer = bare.replace(/\s+/g, ' ').trim();
+  const t = String(text).replace(/\r/g, '').replace(/\n{3,}/g, '\n\n');
+  
+  // ===== 策略1：从答案表格提取 =====
+  // 格式：题号12621222627313246  答案BDDDDDDCDD
+  const tableRegex = /题号\s*([\d\s]+)\s*\n?\s*答案\s*([A-Ha-h0-9\s]+)/g;
+  let tableMatch;
+  while ((tableMatch = tableRegex.exec(t)) !== null) {
+    const nums = tableMatch[1].trim().split(/\s+/).map(Number);
+    const answers = tableMatch[2].trim().split(/\s+/);
+    for (let i = 0; i < nums.length && i < answers.length; i++) {
+      if (!out.has(nums[i])) {
+        if (nums[i] <= 200) out.set(nums[i], { answer: answers[i], analysis: '' });
       }
     }
-    if (answer && !out.has(seq)) out.set(seq, { answer: answer.replace(/[（(【\[]+/g, '').trim(), analysis });
   }
+  
+  // ===== 策略2：从逐题格式提取 =====
+  // 格式：N．答案【详解】解：... 或 N．答案【解析】...
+  // 也兼容：N．答案\n【详解】解：...
+  const qBlocks = t.split(/\n(?=\d+\s*[．.、])/);
+  for (const blk of qBlocks) {
+    const block = blk.trim();
+    if (!block) continue;
+    const numMatch = block.match(/^(\d+)\s*[．.、]\s*/);
+    if (!numMatch) continue;
+    const qno = parseInt(numMatch[1], 10);
+    const rest = block.slice(numMatch[0].length).trim();
+    
+    // 提取答案：答案在【详解】/【解析】/【分析】之前
+    let answer = '';
+    let analysis = '';
+    
+    // 匹配：答案【详解】... 或 答案【解析】...
+    const ansMatch = rest.match(/^([^\s【]+)\s*【/);
+    if (ansMatch) {
+      answer = ansMatch[1].trim();
+    } else {
+      // 没有【标记，取第一行非空内容作为答案
+      const firstLine = rest.split('\n')[0].trim();
+      if (firstLine && firstLine.length < 20) {
+        answer = firstLine;
+      }
+    }
+    
+    // 提取解析
+    const anaMatch = rest.match(/【详解】\s*([\s\S]*?)$/);
+    const anaMatch2 = rest.match(/【解析】\s*([\s\S]*?)$/);
+    const anaMatch3 = rest.match(/【分析】\s*([\s\S]*?)$/);
+    analysis = (anaMatch || anaMatch2 || anaMatch3 || [])[1] || '';
+    analysis = analysis.replace(/\s+/g, ' ').trim().slice(0, 500); // 截断过长解析
+    
+    if (answer && !out.has(qno)) {
+      // 清理答案：移除括号等
+      answer = answer.replace(/[（(【\[]+/g, '').replace(/[）)】\]]+/g, '').trim();
+      if (qno <= 200) out.set(qno, { answer, analysis });
+    }
+  }
+  
   return out;
 }
+
 
 // ---------- 映射 ----------
 const DIFF_MAP = { 简单: 2, 容易: 2, 适中: 3, 中等: 3, 偏难: 4, 较难: 4, 困难: 5, 难: 5 };
@@ -179,7 +207,7 @@ async function main() {
   let qTotal = 0, pTotal = 0;
 
   for (const subject of SUBJECTS) {
-    const progPath = path.join(PROGRESS_DIR, `progress-full-${subject}.json`);
+    const progPath = path.join(PROGRESS_DIR, `progress-v2-${subject}.json`);
     if (!fs.existsSync(progPath)) { console.log(`[跳过] 无进度: ${subject}`); continue; }
     const prog = JSON.parse(fs.readFileSync(progPath, 'utf8'));
 
@@ -274,7 +302,7 @@ async function main() {
           stem: q.question || '',
           image: imgMap[q.no] ? `/uploads/questions/${imgMap[q.no]}` : '',
           options: hasOpts ? q.options.map((o) => ({ key: o.key, text: o.text })) : [],
-          correctAnswer: paired.answer || q.answer || '',
+          correctAnswer: (q.answer && q.answer.length < 20 ? q.answer : paired.answer) || q.answer || '',
           explanation: paired.analysis || q.analysis || '',
         };
         const created = await prisma.question.create({

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import request from '../../utils/request';
+import { LatexText } from "../../components/common/MathFormula";
 import { getErrorMessage } from '../../types/error';
 
 /**
@@ -517,7 +518,7 @@ const ReportDetail: React.FC = () => {
                       </span>
                     </div>
                     <p className="mb-2 text-sm text-[#c7d3ea]">
-                      {a.question.content?.text || '（题干缺失）'}
+                      <LatexText text={(() => { const c = a.question.content; return typeof c === "string" ? c : (c?.text || (c as any)?.stem || "") })()} />
                     </p>
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
                       <span className="text-[#92a4c9]">

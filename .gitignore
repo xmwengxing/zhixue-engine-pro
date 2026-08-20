@@ -80,3 +80,9 @@ update.sh
 sync-server.sh
 sync-server.py
 sync-server.py
+
+# DataWork 数据目录（源数据和转换产物不入仓库）
+DataWork/SourceData/**
+DataWork/OutputData/**
+!DataWork/SourceData/.gitkeep
+!DataWork/OutputData/.gitkeep

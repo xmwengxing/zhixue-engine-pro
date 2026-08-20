@@ -15,13 +15,32 @@ import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PY = 'C:/Users/wxgo8/.workbuddy/binaries/python/envs/tts/Scripts/python.exe';
-const OCR_USAGE = 'E:/Projects/zhixue-engine-pro/开发文档/试卷转换产物/ocr-usage.json';
-const OCR_LIMIT = 20000; // 飞桨日额度（页）
 let quotaStopped = false; // 额度耗尽全局中断
 
-/** 获取飞桨 token（本地 DB ocr_providers） */
+// ---------- 配置（支持环境变量和 CLI 参数） ----------
+function findPython() {
+  if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH;
+  // 尝试常见路径
+  const candidates = process.platform === 'win32'
+    ? ['python', 'python3', 'py -3']
+    : ['python3', 'python'];
+  for (const c of candidates) {
+    try {
+      const bin = c.includes(' ') ? c.split(' ')[0] : c;
+      execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 5000, stdio: 'pipe' });
+      return c.includes(' ') ? c.split(' ') : c;
+    } catch { continue; }
+  }
+  console.error('[错误] 未找到 Python，请设置环境变量 PYTHON_PATH 或确保 python3 在 PATH 中');
+  process.exit(1);
+}
+const PY = findPython();
+
+/** 获取飞桨 token：优先环境变量 PADDLE_API_KEY，其次数据库查询 */
 function getPaddleToken() {
+  if (process.env.PADDLE_API_KEY) {
+    return process.env.PADDLE_API_KEY;
+  }
   try {
     const out = execFileSync('docker', ['exec', 'training-platform-db', 'psql', '-U', 'training_user',
       '-d', 'training_platform', '-t', '-c', "SELECT api_key FROM ocr_providers WHERE method='PADDLE_OCR_VL';"],
@@ -29,6 +48,7 @@ function getPaddleToken() {
     return out.split('\n')[0].trim();
   } catch (e) {
     console.error('[OCR] 读取飞桨 token 失败:', String(e.message || e).slice(0, 120));
+    console.error('  提示：可通过环境变量 PADDLE_API_KEY 或 DataWork/.env 配置');
     return '';
   }
 }
@@ -66,11 +86,13 @@ const getArg = (name, def) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : def;
 };
-const ROOT = getArg('--dir', 'E:/Projects/题库/八年级/试卷与习题');
+const ROOT = getArg('--dir', process.env.PAPER_ROOT || 'E:/Projects/题库/八年级/试卷与习题');
 const SUBJECT = getArg('--subject', '历史');
 const LIMIT = parseInt(getArg('--limit', '20'), 10);
-const OUT_DIR = getArg('--out', path.resolve(__dirname, '../../开发文档/试卷转换产物'));
+const OUT_DIR = getArg('--out', process.env.OUT_DIR || path.resolve(__dirname, '../../开发文档/试卷转换产物'));
 const PROGRESS = getArg('--progress', path.join(OUT_DIR, `progress-${SUBJECT}.json`));
+const OCR_USAGE = getArg('--ocr-usage', process.env.OCR_USAGE || path.join(OUT_DIR, 'ocr-usage.json'));
+const OCR_LIMIT = parseInt(getArg('--ocr-limit', process.env.OCR_LIMIT || '20000'), 10);
 
 // ---------- 文本提取 ----------
 async function extractText(fp) {
@@ -147,36 +169,67 @@ function parseGenericDocx(text) {
   const lines = joinBrokenLines(tidy(text).split('\n'));
   const questions = [];
   let current = null;
+  
   for (const line of lines) {
-    const m = line.match(/^(\d+)[.．、]\s*(.+)$/);
-    if (m) {
+    // 检测题号（新题开始）
+    const qMatch = line.match(/^(\d+)[.．、]\s*(.+)$/);
+    if (qMatch) {
       if (current) questions.push(current);
-      current = { no: parseInt(m[1], 10), type: '未知', question: tidy(m[2]), options: [], answer: '', difficulty: null, analysis: '' };
+      current = {
+        no: parseInt(qMatch[1], 10),
+        type: '未知', // 稍后检测
+        question: tidy(qMatch[2]), // 先保留原始文本，后面再清洗
+        options: [],
+        answer: '',
+        difficulty: null,
+        analysis: '',
+      };
       continue;
     }
+    
     if (!current) continue;
-    // 行内多选项拆分（PDF 排版把「B．xxx」拼进「A．yyy」行尾：A．甲B．乙）
-    if (/[A-Z][.．、]/.test(line)) {
-      const segs = line.split(/(?=[A-Z][.．、])/);
-      let matched = false;
-      for (const s of segs) {
-        const o = s.match(/^([A-Z])[.．、]\s*(.+)$/);
-        if (o && current.options.length < 6) { current.options.push({ key: o[1], text: tidy(o[2]) }); matched = true; }
-      }
-      if (matched) continue;
+    
+    // 检测选项（但限制最多6个，避免解析文本被误识别）
+    const optMatch = line.match(/^([A-Z])[.．、]\s*(.+)$/);
+    if (optMatch && current.options.length < 6) {
+      current.options.push({ key: optMatch[1], text: tidy(optMatch[2]) });
+      continue;
     }
-    const opt = line.match(/^([A-Z])[.．、]\s*(.+)$/);
-    if (opt && current.options.length < 6) { current.options.push({ key: opt[1], text: tidy(opt[2]) }); continue; }
-    const ans = line.match(/【答案】\s*([A-Za-z、，,\s]+)/) || line.match(/答案[:：]?\s*([A-Za-z、，,\s]+)/);
-    if (ans) { current.answer = ans[1].replace(/[、，,\s]/g, ''); continue; }
-    const ana = line.match(/【解析】\s*(.+)/) || line.match(/解析[:：](.+)/);
-    if (ana) { current.analysis = tidy(ana[1]); continue; }
-    if (current.question) current.question += ' ' + tidy(line);
+    
+    // 其他内容追加到 question（包含【答案】【分析】【详解】标记）
+    current.question += ' ' + line;
   }
   if (current) questions.push(current);
-  return questions;
+  
+  // 后处理：分离答案/解析，清洗题干，检测题型，去重选项
+  return questions.map(q => {
+    // 从文本中提取答案和解析
+    const textAnswer = extractAnswerFromText(q.question);
+    const analysis = extractAnalysisFromText(q.question);
+    
+    // 清洗题干（移除答案解析标记及其内容）
+    const cleanStemText = cleanQuestionStem(q.question);
+    
+    // 检测题型
+    const type = detectQuestionType(cleanStemText, q.options);
+    
+    // 去重选项
+    const uniqueOptions = deduplicateOptions(q.options);
+    
+    // 答案：优先使用原始 answer 字段，其次从文本提取
+    const answer = q.answer || textAnswer;
+    
+    return {
+      no: q.no,
+      type,
+      question: cleanStemText,
+      options: uniqueOptions,
+      answer,
+      difficulty: q.difficulty,
+      analysis,
+    };
+  });
 }
-
 /** 去双后缀命名：循环剥掉 .pdf/.docx/.doc */
 function stripSuffixes(fname) {
   let n = fname;
@@ -327,3 +380,81 @@ async function main() {
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
+
+// ---------- 修复版：答案/解析分离 + 题型检测 ----------
+
+/** 题型自动检测 */
+function detectQuestionType(stem, options) {
+  const text = String(stem || '');
+  // 判断题（通常只有2个选项，且题干含"正确"/"错误"）
+  if (options.length === 2 && /正确|错误|对错|是.*否/.test(text)) {
+    return 'JUDGE';
+  }
+  // 选择题（有选项）
+  if (options.length >= 2 && options.length <= 6) {
+    return 'CHOICE';
+  }
+  // 填空题
+  if (/_{2,}|（\s*）|______|填空|计算.*=|求解/.test(text)) {
+    return 'FILL';
+  }
+  // 计算题/解答题
+  if (/计算|解答|证明|求解|化简|求值/.test(text)) {
+    return 'ESSAY';
+  }
+  return 'ESSAY'; // 默认
+}
+
+/** 清洗题干：移除答案解析标记及其内容 */
+function cleanQuestionStem(text) {
+  if (!text) return '';
+  // 移除【答案】及其后内容
+  let cleaned = text.replace(/【答案】[\s\S]*$/, '').trim();
+  // 移除【分析】及其后内容
+  cleaned = cleaned.replace(/【分析】[\s\S]*$/, '').trim();
+  // 移除【详解】及其后内容
+  cleaned = cleaned.replace(/【详解】[\s\S]*$/, '').trim();
+  // 移除答案：xxx 格式
+  cleaned = cleaned.replace(/答案[：:]\s*[\s\S]*$/, '').trim();
+  return cleaned;
+}
+
+/** 从文本中提取答案 */
+function extractAnswerFromText(text) {
+  if (!text) return '';
+  // 【答案】标记
+  const m1 = text.match(/【答案】\s*([\s\S]*?)(?=【|$)/);
+  if (m1) return m1[1].replace(/\s+/g, ' ').trim();
+  // 答案：xxx 格式
+  const m2 = text.match(/答案[：:]\s*([A-H0-9、.,\s]+)/);
+  if (m2) return m2[1].replace(/\s+/g, ' ').trim();
+  return '';
+}
+
+/** 从文本中提取解析 */
+function extractAnalysisFromText(text) {
+  if (!text) return '';
+  let analysis = '';
+  // 【分析】
+  const m1 = text.match(/【分析】\s*([\s\S]*?)(?=【|$)/);
+  if (m1) analysis += m1[1].trim();
+  // 【详解】
+  const m2 = text.match(/【详解】\s*([\s\S]*?)(?=【|$)/);
+  if (m2) analysis += (analysis ? '\n' : '') + m2[1].trim();
+  // 【解析】
+  const m3 = text.match(/【解析】\s*([\s\S]*?)(?=【|$)/);
+  if (m3) analysis += (analysis ? '\n' : '') + m3[1].trim();
+  return analysis;
+}
+
+/** 去重选项（按 key 去重） */
+function deduplicateOptions(options) {
+  const seen = new Set();
+  return options.filter(opt => {
+    const key = opt.key || '';
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
