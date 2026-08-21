@@ -13,8 +13,10 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { PrismaClient } from '@prisma/client';
+import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const prisma = new PrismaClient();
 
 // ---------- 配置（支持环境变量和 CLI 参数） ----------
